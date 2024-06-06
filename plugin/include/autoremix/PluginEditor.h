@@ -31,7 +31,7 @@ private:
     juce::String file_path;
 
     juce::Label file_lbl;
-    juce::Label remix_lbl;
+    juce::Label remix_selector_lbl;
     
     juce::TextButton loadfile_btn;
     juce::TextButton play_btn;

@@ -61,14 +61,14 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents() {
     // Load  File
     addAndMakeVisible(file_lbl);
     addAndMakeVisible(loadfile_btn);
-    loadfile_btn.setButtonText("Load Code File");
+    loadfile_btn.setButtonText("Load Audio File");
     loadfile_btn.onClick = [this] { loadFile(); };
 
 
     // remix Selector
     addAndMakeVisible(remix_selector_lbl);
-    lang_selector_lbl.setText("Language: ", juce::dontSendNotification);
-    lang_selector_lbl.attachToComponent(&lang_selector, true);
+    remix_selector_lbl.setText("Remix: ", juce::dontSendNotification);
+    remix_selector_lbl.attachToComponent(&remix_selector, true);
     addAndMakeVisible(remix_selector);
 
     
@@ -105,10 +105,10 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents() {
     const int startX = (getWidth() - ((3*60)+20)) / 2;  //3 buttons + 20px spacing
 
     play_btn.setBounds(startX, remix_selector.getY() + 50, 60, 40);
-    stop_btn.setBounds(play_btn.getRight() + 10, lang_selector.getY() + 50, 60, 40);
-    save_btn.setBounds(stop_btn.getRight() + 10, lang_selector.getY() + 50, 60, 40);
+    stop_btn.setBounds(play_btn.getRight() + 10, remix_selector.getY() + 50, 60, 40);
+    save_btn.setBounds(stop_btn.getRight() + 10, remix_selector.getY() + 50, 60, 40);
 
-    debug_text.setBounds(10, play_btn.getY() + 60, getWidth() - 20, 180);
+    debug_text.setBounds(10, play_btn.getY() + 60, getWidth() - 20, 280);
 
 }
 

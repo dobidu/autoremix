@@ -1,0 +1,103 @@
+"""
+AutoRemix Python Sidecar
+Serves stem separation and remix endpoints for the JUCE plugin.
+Default port: 17432
+"""
+
+import os
+import logging
+from pathlib import Path
+from fastapi import FastAPI, HTTPException
+from .models import (
+    SeparateRequest, SeparateResponse, StemPaths as StemPathsModel,
+    RemixRequest, RemixResponse, HealthResponse
+)
+from .registry import get_separator, get_engine, list_separators, list_engines
+from .separators.base import StemPaths
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="AutoRemix Sidecar", version="0.2.0")
+
+TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR", "/tmp/autoremix"))
+
+
+@app.get("/api/v1/health", response_model=HealthResponse)
+async def health():
+    return HealthResponse(
+        status="ok",
+        available_separators=list_separators(),
+        available_engines=list_engines(),
+    )
+
+
+@app.post("/api/v1/separate", response_model=SeparateResponse)
+async def separate(req: SeparateRequest):
+    try:
+        input_path = Path(req.input_path)
+        if not input_path.exists():
+            raise HTTPException(status_code=400, detail=f"File not found: {req.input_path}")
+
+        output_dir = TEMP_DIR / "stems" / input_path.stem
+        separator = get_separator(req.separator_id)
+
+        if not separator.is_available():
+            raise HTTPException(status_code=503, detail=f"Separator {req.separator_id} not available")
+
+        logger.info(f"Separating {input_path} with {req.separator_id}")
+        stems: StemPaths = separator.separate(input_path, output_dir)
+
+        return SeparateResponse(
+            success=True,
+            stems=StemPathsModel(
+                vocals=str(stems.vocals),
+                drums=str(stems.drums),
+                bass=str(stems.bass),
+                other=str(stems.other),
+            ),
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Separation failed")
+        return SeparateResponse(success=False, error=str(e))
+
+
+@app.post("/api/v1/remix", response_model=RemixResponse)
+async def remix(req: RemixRequest):
+    try:
+        stems = StemPaths(
+            vocals=Path(req.vocals_path),
+            drums=Path(req.drums_path),
+            bass=Path(req.bass_path),
+            other=Path(req.other_path),
+        )
+        output_path = Path(req.output_path)
+        engine = get_engine(req.engine_id)
+
+        from .remix.base import RemixParams
+        params = RemixParams(
+            tempo_factor=req.tempo_factor,
+            pitch_shift_semi=req.pitch_shift_semi,
+            reverb_mix=req.reverb_mix,
+            chop_interval_ms=req.chop_interval_ms,
+            bass_boost_db=req.bass_boost_db,
+            drums_tempo_factor=req.drums_tempo_factor,
+        )
+
+        logger.info(f"Remixing with engine {req.engine_id} → {output_path}")
+        result = engine.process(stems, params, output_path)
+
+        return RemixResponse(success=True, output_path=str(result))
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Remix failed")
+        return RemixResponse(success=False, error=str(e))
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("AUTOREMIX_PORT", "17432"))
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

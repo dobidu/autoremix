@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.0
+spleeter==2.4.0
+librosa==0.10.2
+soundfile==0.12.1
+pyrubberband==0.3.0
+pedalboard==0.9.8
+numpy==1.26.4
+scipy==1.13.0

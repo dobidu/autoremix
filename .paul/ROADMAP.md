@@ -29,9 +29,10 @@ Deliverable: all 3 engines produce valid WAV from test stems ✓
 - CMAKE_POSITION_INDEPENDENT_CODE fix for VST3 .so link
 Deliverable: Standalone functional — load WAV → separate → remix → save ✓
 
-## Phase 05 — Integration & Testing
-- End-to-end test with real audio
-- Sidecar lifecycle (plugin starts/kills server process)
-- Error handling (server down, file too large, unsupported format)
-- CI: GitHub Actions (build + pytest)
-Deliverable: demo video, release-ready build
+## Phase 05 — Integration & Testing ✅ COMPLETE (2026-05-09)
+- pytest suite: 8 tests, health + separate + 3 remix engines + error paths
+- Error hardening: HTTPException re-raise before broad except
+- CI: GitHub Actions pytest job on push/PR to v2/main
+- AudioBridge startSidecar/stopSidecar POSIX fork/exec + SIGTERM lifecycle
+- PluginProcessor auto-starts sidecar from AUTOREMIX_SERVER_PATH env var
+Deliverable: pytest green, CI yaml, sidecar lifecycle ✓

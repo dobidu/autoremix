@@ -1,6 +1,12 @@
 #include "AudioBridge.h"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <unistd.h>
+#include <chrono>
+#include <thread>
 
 namespace autoremix {
 
@@ -91,8 +97,48 @@ ProcessResult AudioBridge::applyRemix(
     } catch (...) { return {}; }
 }
 
-bool AudioBridge::startSidecar(const std::filesystem::path&) { return false; }
-void AudioBridge::stopSidecar() {}
+bool AudioBridge::startSidecar(const std::filesystem::path& server_script_path) {
+    if (sidecar_pid_ > 0) return true;
+
+    pid_t pid = fork();
+    if (pid < 0) return false;
+
+    if (pid == 0) {
+        std::string script = server_script_path.string();
+        execl("/usr/bin/python3", "python3", script.c_str(), nullptr);
+        execlp("python3", "python3", script.c_str(), nullptr);
+        _exit(127);
+    }
+
+    sidecar_pid_ = pid;
+
+    using clock = std::chrono::steady_clock;
+    auto deadline = clock::now() + std::chrono::seconds(10);
+    while (clock::now() < deadline) {
+        if (isServerAlive()) return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
+
+    kill(sidecar_pid_, SIGKILL);
+    waitpid(sidecar_pid_, nullptr, 0);
+    sidecar_pid_ = -1;
+    return false;
+}
+
+void AudioBridge::stopSidecar() {
+    if (sidecar_pid_ <= 0) return;
+    kill(sidecar_pid_, SIGTERM);
+    for (int i = 0; i < 8; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        if (waitpid(sidecar_pid_, nullptr, WNOHANG) == sidecar_pid_) {
+            sidecar_pid_ = -1;
+            return;
+        }
+    }
+    kill(sidecar_pid_, SIGKILL);
+    waitpid(sidecar_pid_, nullptr, 0);
+    sidecar_pid_ = -1;
+}
 
 std::string AudioBridge::makeUrl(const std::string& endpoint) const {
     return base_url_ + ":" + std::to_string(port_) + endpoint;

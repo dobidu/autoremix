@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cstdlib>
+#include <filesystem>
 
 //==============================================================================
 AutoRemixAudioProcessor::AutoRemixAudioProcessor()
@@ -14,10 +16,13 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
                        )
 #endif
 {
+    if (const char* path = std::getenv("AUTOREMIX_SERVER_PATH"))
+        bridge_.startSidecar(std::filesystem::path(path));
 }
 
 AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
 {
+    bridge_.stopSidecar();
 }
 
 //==============================================================================

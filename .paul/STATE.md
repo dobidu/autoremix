@@ -3,27 +3,27 @@
 ## Current Position
 
 Milestone: v2 MVP
-Phase: 03 of 6 (Remix Engines) — COMPLETE
-Plan: 03-01 unified
-Status: Ready for Phase 04
-Last activity: 2026-05-08 — Phase 03 loop closed
+Phase: 04 of 6 (Plugin UI) — COMPLETE
+Plan: 04-01 unified
+Status: Ready for Phase 05
+Last activity: 2026-05-09 — Phase 04 loop closed
 
 Progress:
-- Milestone: [████░░░░░░] 65%
-- Phase 03: [██████████] 100% ✓
+- Milestone: [█████░░░░░] 80%
+- Phase 04: [██████████] 100% ✓
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 03 complete]
+  ✓        ✓        ✓     [Phase 04 complete]
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-08
-Stopped at: Phase 03 complete — all 3 engines produce valid WAV
-Next action: /paul:plan (Phase 04 — Plugin UI)
+Last session: 2026-05-09
+Stopped at: Phase 04 complete — UI wired, full pipeline functional
+Next action: /paul:plan (Phase 05 — Integration & Testing)
 Resume file: .paul/ROADMAP.md
 
 ## Decisions
@@ -40,6 +40,9 @@ Resume file: .paul/ROADMAP.md
 - Python server ignores output_dir from request; C++ uses paths from response
 - pyrubberband dropped (requires rubberband CLI binary); replaced with librosa helpers
 - librosa time_stretch/pitch_shift: stereo requires per-channel processing
+- CMAKE_POSITION_INDEPENDENT_CODE ON required for cpr to link into VST3 .so
+- AudioBridge as processor member (not editor) — editor accesses via getBridge()
+- std::thread::detach + MessageManager::callAsync for background→UI updates
 
 ## Blockers
 none

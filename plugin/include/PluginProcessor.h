@@ -32,5 +32,10 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+    autoremix::AudioBridge& getBridge() { return bridge_; }
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessor)
+
+private:
+    autoremix::AudioBridge bridge_{"http://127.0.0.1", 17432};
 };

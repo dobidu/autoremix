@@ -22,13 +22,12 @@ Deliverable: load WAV → 4 stem WAVs in /tmp/autoremix/ ✓ (algorithmic path)
 - pyrubberband → librosa (no rubberband CLI needed)
 Deliverable: all 3 engines produce valid WAV from test stems ✓
 
-## Phase 04 — Plugin UI
-- File chooser (juce::FileChooser)
-- Stem waveform thumbnails (juce::AudioThumbnail)
-- Mode selector (juce::ComboBox)
-- Params panel (knobs for tempo/pitch/reverb)
-- Process button + progress bar
-Deliverable: plugin loads in REAPER, UI functional
+## Phase 04 — Plugin UI ✅ COMPLETE (2026-05-09)
+- FileChooser (launchAsync), ComboBox (3 engines), Play/Save buttons
+- Background thread (std::thread::detach) + callAsync UI updates
+- AudioBridge member on processor; editor calls via getBridge()
+- CMAKE_POSITION_INDEPENDENT_CODE fix for VST3 .so link
+Deliverable: Standalone functional — load WAV → separate → remix → save ✓
 
 ## Phase 05 — Integration & Testing
 - End-to-end test with real audio

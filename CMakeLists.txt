@@ -11,6 +11,8 @@ add_subdirectory(submodules/JUCE)
 include(FetchContent)
 set(LIBCPR_BUILD_SHARED OFF)
 set(BUILD_SHARED_LIBS OFF)
+# Required so libcpr.a can be linked into VST3 shared library (.so)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_Declare(
   cpr
   GIT_REPOSITORY https://github.com/libcpr/cpr.git

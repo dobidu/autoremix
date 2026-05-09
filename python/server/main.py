@@ -48,6 +48,8 @@ async def separate(req: SeparateRequest):
         stems: StemPaths = separator.separate(input_path, output_dir)
 
         return SeparateResponse(success=True, stems=StemPathsModel.from_domain(stems))
+    except HTTPException:
+        raise
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -67,6 +69,8 @@ async def remix(req: RemixRequest):
         result = engine.process(stems, params, output_path)
 
         return RemixResponse(success=True, output_path=str(result))
+    except HTTPException:
+        raise
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

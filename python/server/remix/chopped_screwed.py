@@ -2,8 +2,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import librosa
-import pyrubberband as pyrb
-from .base import IRemixEngine, RemixParams
+from .base import IRemixEngine, RemixParams, time_stretch, pitch_shift
 from ..separators.base import StemPaths
 
 class ChoppedAndScrewedEngine(IRemixEngine):
@@ -38,10 +37,10 @@ class ChoppedAndScrewedEngine(IRemixEngine):
         audio, sr = mixed
 
         # 1. Time-stretch (slow down)
-        audio = pyrb.time_stretch(audio, sr, params.tempo_factor)
+        audio = time_stretch(audio, params.tempo_factor)
 
         # 2. Pitch shift
-        audio = pyrb.pitch_shift(audio, sr, params.pitch_shift_semi)
+        audio = pitch_shift(audio, sr, params.pitch_shift_semi)
 
         # 3. Chop if requested
         if params.chop_interval_ms > 0:

@@ -2,8 +2,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import librosa
-import pyrubberband as pyrb
-from .base import IRemixEngine, RemixParams
+from .base import IRemixEngine, RemixParams, time_stretch, pitch_shift
 from ..separators.base import StemPaths
 
 class SlowedReverbEngine(IRemixEngine):
@@ -42,8 +41,8 @@ class SlowedReverbEngine(IRemixEngine):
         min_len = min(a.shape[1] for a in arrays)
         audio = sum(a[:, :min_len] for a in arrays) / len(arrays)
 
-        audio = pyrb.time_stretch(audio, sr, params.tempo_factor)
-        audio = pyrb.pitch_shift(audio, sr, params.pitch_shift_semi)
+        audio = time_stretch(audio, params.tempo_factor)
+        audio = pitch_shift(audio, sr, params.pitch_shift_semi)
 
         try:
             from pedalboard import Pedalboard, Reverb

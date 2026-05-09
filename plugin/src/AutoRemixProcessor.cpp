@@ -1,5 +1,5 @@
-#include "autoremix/PluginProcessor.h"
-#include "autoremix/PluginEditor.h"
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 //==============================================================================
 AutoRemixAudioProcessor::AutoRemixAudioProcessor()

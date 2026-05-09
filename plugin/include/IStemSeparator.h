@@ -13,6 +13,7 @@ namespace autoremix {
  */
 class IStemSeparator {
 public:
+    IStemSeparator() = default;
     virtual ~IStemSeparator() = default;
 
     /** Unique identifier for this separator (e.g. "spleeter_4stems") */

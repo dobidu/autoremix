@@ -6,10 +6,8 @@ is the class that implements the audio processing logic of the plugin.
 
 */
 
-#include <cpr/cpr.h>
-
-#include "autoremix/PluginProcessor.h"
-#include "autoremix/PluginEditor.h"
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 //TODO: rename classes (orchestrator pad instead of AutoRemix)
 //TODO: namespace for classes

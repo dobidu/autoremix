@@ -10,7 +10,7 @@ mkdir -p "$TEMP_DIR"
 
 if [ ! -d "$PYTHON_DIR/.venv" ]; then
   echo "[autoremix] Creating Python venv..."
-  uv venv "$PYTHON_DIR/.venv" --python 3.11
+  uv venv "$PYTHON_DIR/.venv"
   uv pip install -r "$PYTHON_DIR/requirements.txt" --python "$PYTHON_DIR/.venv/bin/python"
 fi
 

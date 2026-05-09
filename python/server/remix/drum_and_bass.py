@@ -2,9 +2,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import librosa
-import pyrubberband as pyrb
 from scipy.signal import butter, sosfilt
-from .base import IRemixEngine, RemixParams
+from .base import IRemixEngine, RemixParams, time_stretch, pitch_shift
 from ..separators.base import StemPaths
 
 class DrumAndBassEngine(IRemixEngine):
@@ -47,14 +46,14 @@ class DrumAndBassEngine(IRemixEngine):
         other  = load(stems.other)
 
         # Process drums: double tempo
-        drums = pyrb.time_stretch(drums, sr, params.drums_tempo_factor)
+        drums = time_stretch(drums, params.drums_tempo_factor)
 
         # Process bass: boost + keep tempo
         bass = self._bass_boost(bass, sr, params.bass_boost_db)
 
         # Vocals + other: pitch up, tempo adjust
-        vocals = pyrb.pitch_shift(pyrb.time_stretch(vocals, sr, params.tempo_factor), sr, params.pitch_shift_semi)
-        other  = pyrb.time_stretch(other, sr, params.tempo_factor)
+        vocals = pitch_shift(time_stretch(vocals, params.tempo_factor), sr, params.pitch_shift_semi)
+        other  = time_stretch(other, params.tempo_factor)
 
         # Align lengths
         min_len = min(arr.shape[1] for arr in [vocals, drums, bass, other])

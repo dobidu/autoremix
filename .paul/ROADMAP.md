@@ -1,25 +1,26 @@
 # AutoRemix v2 — Roadmap
 
-## Phase 00 — Setup & Scaffolding
+## Phase 00 — Setup & Scaffolding ✅ COMPLETE (2026-05-08)
 Clone repo, submodules, Python env, verify build, install tooling.
 Deliverable: green build + server health check passing.
 
-## Phase 01 — Interfaces & Types
+## Phase 01 — Interfaces & Types ✅ COMPLETE (2026-05-08)
 Define IStemSeparator, IRemixEngine, SeparatorRegistry, RemixRegistry, PluginTypes.
 Deliverable: header-only interfaces compile cleanly; stubs pass.
 
-## Phase 02 — Stem Separation
-- AlgorithmicSeparator (stub: splits by frequency band, no ML)
-- SpleeterSeparator (calls Python /api/v1/separate)
-- Python: spleeter_sep.py + FastAPI endpoint
-Deliverable: load WAV → 4 stem WAVs in /tmp/autoremix/
+## Phase 02 — Stem Separation ✅ COMPLETE (2026-05-08)
+- AlgorithmicSeparator (FFT band-split, working end-to-end via HTTP)
+- AudioBridge::separateStems() implemented (cpr::Post + nlohmann/json)
+- SpleeterSeparator: blocked by TF/cp312; replaced by demucs (Phase 02.1 or 05)
+Deliverable: load WAV → 4 stem WAVs in /tmp/autoremix/ ✓ (algorithmic path)
 
-## Phase 03 — Remix Engines
-- ChoppedAndScrewedEngine (pyrubberband + chopper)
-- SlowedReverbEngine (pyrubberband + pedalboard reverb)
+## Phase 03 — Remix Engines ✅ COMPLETE (2026-05-08)
+- ChoppedAndScrewedEngine (librosa time_stretch/pitch_shift + chopper)
+- SlowedReverbEngine (librosa + pedalboard reverb)
 - DrumAndBassEngine (drums 2x tempo + bass EQ)
-- AudioBridge calls /api/v1/remix
-Deliverable: each engine produces valid WAV output from test stems
+- AudioBridge::applyRemix() calls /api/v1/remix
+- pyrubberband → librosa (no rubberband CLI needed)
+Deliverable: all 3 engines produce valid WAV from test stems ✓
 
 ## Phase 04 — Plugin UI
 - File chooser (juce::FileChooser)

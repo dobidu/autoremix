@@ -13,7 +13,6 @@ from .models import (
     RemixRequest, RemixResponse, HealthResponse
 )
 from .registry import get_separator, get_engine, list_separators, list_engines
-from .separators.base import StemPaths
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,15 +47,7 @@ async def separate(req: SeparateRequest):
         logger.info(f"Separating {input_path} with {req.separator_id}")
         stems: StemPaths = separator.separate(input_path, output_dir)
 
-        return SeparateResponse(
-            success=True,
-            stems=StemPathsModel(
-                vocals=str(stems.vocals),
-                drums=str(stems.drums),
-                bass=str(stems.bass),
-                other=str(stems.other),
-            ),
-        )
+        return SeparateResponse(success=True, stems=StemPathsModel.from_domain(stems))
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -67,24 +58,10 @@ async def separate(req: SeparateRequest):
 @app.post("/api/v1/remix", response_model=RemixResponse)
 async def remix(req: RemixRequest):
     try:
-        stems = StemPaths(
-            vocals=Path(req.vocals_path),
-            drums=Path(req.drums_path),
-            bass=Path(req.bass_path),
-            other=Path(req.other_path),
-        )
+        stems = req.to_stems()
         output_path = Path(req.output_path)
         engine = get_engine(req.engine_id)
-
-        from .remix.base import RemixParams
-        params = RemixParams(
-            tempo_factor=req.tempo_factor,
-            pitch_shift_semi=req.pitch_shift_semi,
-            reverb_mix=req.reverb_mix,
-            chop_interval_ms=req.chop_interval_ms,
-            bass_boost_db=req.bass_boost_db,
-            drums_tempo_factor=req.drums_tempo_factor,
-        )
+        params = req.to_params()
 
         logger.info(f"Remixing with engine {req.engine_id} → {output_path}")
         result = engine.process(stems, params, output_path)

@@ -13,6 +13,7 @@ namespace autoremix {
  */
 class IRemixEngine {
 public:
+    IRemixEngine() = default;
     virtual ~IRemixEngine() = default;
 
     /** Unique identifier (e.g. "chopped_screwed") */

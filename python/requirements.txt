@@ -1,10 +1,12 @@
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 pydantic==2.7.0
-spleeter==2.4.0
+# spleeter==2.4.0  # BLOCKED: requires tensorflow<2.9 — no cp312 wheels.
+#   Resolution path: use demucs (PyTorch, cp312 ok) as ML separator instead.
+#   See libs/demucs.md. Implement in Phase 05 or as Phase 02.1 insertion.
 librosa==0.10.2
 soundfile==0.12.1
-pyrubberband==0.3.0
+pyrubberband>=0.4.0  # 0.3.0 uses `imp` removed in Python 3.12
 pedalboard==0.9.8
 numpy==1.26.4
 scipy==1.13.0

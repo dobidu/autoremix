@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pathlib import Path
 from typing import Optional
 
 class SeparateRequest(BaseModel):
@@ -11,6 +12,24 @@ class StemPaths(BaseModel):
     drums: str
     bass: str
     other: str
+
+    @classmethod
+    def from_domain(cls, stems: object) -> "StemPaths":
+        return cls(
+            vocals=str(stems.vocals),
+            drums=str(stems.drums),
+            bass=str(stems.bass),
+            other=str(stems.other),
+        )
+
+    def to_domain(self) -> object:
+        from .separators.base import StemPaths as _StemPaths
+        return _StemPaths(
+            vocals=Path(self.vocals),
+            drums=Path(self.drums),
+            bass=Path(self.bass),
+            other=Path(self.other),
+        )
 
 class SeparateResponse(BaseModel):
     success: bool
@@ -30,6 +49,26 @@ class RemixRequest(BaseModel):
     chop_interval_ms: float = 0.0
     bass_boost_db: float = 0.0
     drums_tempo_factor: float = 1.0
+
+    def to_stems(self) -> object:
+        from .separators.base import StemPaths as _StemPaths
+        return _StemPaths(
+            vocals=Path(self.vocals_path),
+            drums=Path(self.drums_path),
+            bass=Path(self.bass_path),
+            other=Path(self.other_path),
+        )
+
+    def to_params(self) -> object:
+        from .remix.base import RemixParams as _RemixParams
+        return _RemixParams(
+            tempo_factor=self.tempo_factor,
+            pitch_shift_semi=self.pitch_shift_semi,
+            reverb_mix=self.reverb_mix,
+            chop_interval_ms=self.chop_interval_ms,
+            bass_boost_db=self.bass_boost_db,
+            drums_tempo_factor=self.drums_tempo_factor,
+        )
 
 class RemixResponse(BaseModel):
     success: bool

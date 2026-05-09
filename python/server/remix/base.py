@@ -1,7 +1,23 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass
+import numpy as np
+import librosa
 from ..separators.base import StemPaths
+
+
+def time_stretch(audio: np.ndarray, rate: float) -> np.ndarray:
+    """Stereo-safe librosa time stretch. rate<1 = slower."""
+    if audio.ndim == 1:
+        return librosa.effects.time_stretch(audio, rate=rate)
+    return np.stack([librosa.effects.time_stretch(ch, rate=rate) for ch in audio])
+
+
+def pitch_shift(audio: np.ndarray, sr: int, n_steps: float) -> np.ndarray:
+    """Stereo-safe librosa pitch shift."""
+    if audio.ndim == 1:
+        return librosa.effects.pitch_shift(audio, sr=sr, n_steps=n_steps)
+    return np.stack([librosa.effects.pitch_shift(ch, sr=sr, n_steps=n_steps) for ch in audio])
 
 @dataclass
 class RemixParams:

@@ -8,8 +8,9 @@
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
+    format_manager_.registerBasicFormats();
     setLookAndFeel(&laf_);
-    juce::Component::setSize(480, 220);
+    juce::Component::setSize(480, 340);
     drawAndConfigComponents();
 }
 
@@ -37,6 +38,8 @@ void AutoRemixAudioProcessorEditor::loadFile()
                 file_lbl.setText(f.getFileName(), juce::dontSendNotification);
                 output_path_ = {};
                 save_btn.setEnabled(false);
+                thumbnail_.setSource(new juce::FileInputSource(f));
+                repaint();
             }
         });
 }
@@ -84,21 +87,23 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     file_lbl.setColour(juce::Label::textColourId,   juce::Colour(AR::FG));
     status_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::PURPLE));
 
-    loadfile_btn.setBounds(10, 16, 140, 30);
-    file_lbl.setBounds(158, 16, 312, 30);
+    loadfile_btn.setBounds(10, 10, 140, 30);
+    file_lbl.setBounds(158, 10, 312, 30);
     file_lbl.setJustificationType(juce::Justification::centredLeft);
     file_lbl.setFont(juce::Font(16.0f));
 
-    remix_selector_lbl.setBounds(10, 60, 60, 24);
-    remix_selector.setBounds(80, 58, getWidth() - 90, 30);
+    remix_selector_lbl.setBounds(10, 52, 60, 24);
+    remix_selector.setBounds(80, 50, getWidth() - 90, 30);
 
-    const int btnY   = 104;
+    // waveform area: y=90, h=96 — painted in paint(), not a component
+
+    const int btnY   = 200;
     const int startX = (getWidth() - (2 * 80 + 10)) / 2;
-    play_btn.setBounds(startX,       btnY, 80, 36);
-    save_btn.setBounds(startX + 90,  btnY, 80, 36);
+    play_btn.setBounds(startX,      btnY, 80, 36);
+    save_btn.setBounds(startX + 90, btnY, 80, 36);
 
-    status_lbl.setBounds(10, 152, getWidth() - 20, 24);
-    progress_bar_.setBounds(10, 182, getWidth() - 20, 18);
+    status_lbl.setBounds(10, 248, getWidth() - 20, 24);
+    progress_bar_.setBounds(10, 278, getWidth() - 20, 18);
 }
 
 //==============================================================================
@@ -202,8 +207,22 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
 void AutoRemixAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(AR::BG));
+
+    juce::Rectangle<int> waveArea(10, 90, getWidth() - 20, 96);
     g.setColour(juce::Colour(AR::SURFACE));
-    g.fillRect(0, 144, getWidth(), 1);
+    g.fillRoundedRectangle(waveArea.toFloat(), 4.0f);
+
+    if (thumbnail_.getTotalLength() > 0.0) {
+        g.setColour(juce::Colour(AR::PURPLE));
+        thumbnail_.drawChannels(g, waveArea, 0.0, thumbnail_.getTotalLength(), 1.0f);
+    } else {
+        g.setFont(juce::Font(13.0f));
+        g.setColour(juce::Colour(AR::COMMENT));
+        g.drawFittedText("No file loaded", waveArea, juce::Justification::centred, 1);
+    }
+
+    g.setColour(juce::Colour(AR::SURFACE));
+    g.fillRect(0, 194, getWidth(), 1);
 }
 
 void AutoRemixAudioProcessorEditor::resized() {}

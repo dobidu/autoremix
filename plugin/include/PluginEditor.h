@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include "PluginProcessor.h"
@@ -17,6 +18,10 @@ private:
     AutoRemixAudioProcessor& audioProcessor;
 
     AutoRemixLookAndFeel laf_;
+
+    juce::AudioFormatManager  format_manager_;
+    juce::AudioThumbnailCache thumbnail_cache_{5};
+    juce::AudioThumbnail      thumbnail_{512, format_manager_, thumbnail_cache_};
 
     juce::TextButton  loadfile_btn, play_btn, save_btn;
     juce::Label       file_lbl, remix_selector_lbl, status_lbl;

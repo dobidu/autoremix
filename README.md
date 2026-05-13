@@ -52,7 +52,31 @@ AUTOREMIX_SERVER_PATH=/path/to/autoremix/python/server/main.py \
   ./build/plugin/AutoRemix_artefacts/Debug/Standalone/AutoRemix
 ```
 
-Workflow: **Load File** → select a WAV/AIFF → **choose remix style** → **Play** → **Save**
+Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** → **Play** → **Save**
+
+## UI
+
+600 × 400 px dark-themed interface (Dracula-inspired palette):
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  AutoRemix          Style: [ Chopped & Screwed ▾ ]       │  ← header
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform      │  ← 160px
+│                                                          │
+├────────┬─────────────────────────────────────────────────┤
+│  Load  │  filename.wav                                   │
+│  Play  │                                                 │  ← controls
+│  Save  │                                                 │
+├────────┴─────────────────────────────────────────────────┤
+│  Ready                                                   │  ← status
+└──────────────────────────────────────────────────────────┘
+```
+
+- Waveform display updates after loading a file (AudioThumbnail)
+- Progress spinner appears during stem separation / remix
+- Sidecar connection status shown in status bar
 
 ## Running Tests
 
@@ -89,7 +113,7 @@ respective registry — no changes to existing code required.
 
 | Engine ID         | Description                                      | Key Params                          |
 |-------------------|--------------------------------------------------|-------------------------------------|
-| `chopped_screwed` | Slow tempo, pitch down, chop every 2s           | tempo 0.7×, −4 semitones           |
+| `chopped_screwed` | Slow tempo, pitch down, chop every 2s            | tempo 0.7×, −4 semitones           |
 | `slowed_reverb`   | Slow tempo, heavy algorithmic reverb             | tempo 0.75×, reverb mix 60%        |
 | `drum_and_bass`   | Double drum tempo, bass boost, high-pass other   | drums 2×, bass +6 dB               |
 

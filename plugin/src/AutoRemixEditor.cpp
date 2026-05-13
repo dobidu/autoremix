@@ -55,19 +55,33 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     title_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
     title_lbl.setBounds(16, 0, 120, 40);
 
-    // ── Header: style selector
-    addAndMakeVisible(remix_selector_lbl);
-    remix_selector_lbl.setText("Style:", juce::dontSendNotification);
-    remix_selector_lbl.setFont(AR::font(AR::FontRole::section));
-    remix_selector_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
-    remix_selector_lbl.setBounds(148, 8, 44, 24);
+    // ── Header: style tab bar
+    addAndMakeVisible(style_tab_);
+    style_tab_.setBounds(148, 4, 436, 32);
+    style_tab_.onChange = [this](int idx) { loadEngineDefaults(idx); };
 
-    addAndMakeVisible(remix_selector);
-    remix_selector.addItem("Chopped & Screwed", 1);
-    remix_selector.addItem("Slowed + Reverb",   2);
-    remix_selector.addItem("Drum and Bass",      3);
-    remix_selector.setSelectedId(1, juce::dontSendNotification);
-    remix_selector.setBounds(196, 7, 280, 26);
+    // ── Params zone: 4 sliders (x=96..584, y=200..336)
+    auto setupSlider = [this](juce::Slider& s, juce::Label& lbl,
+                               const juce::String& name,
+                               double lo, double hi, double val, int y) {
+        addAndMakeVisible(lbl);
+        lbl.setText(name, juce::dontSendNotification);
+        lbl.setFont(AR::font(AR::FontRole::label));
+        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
+        lbl.setBounds(96, y, 488, 11);
+
+        addAndMakeVisible(s);
+        s.setSliderStyle(juce::Slider::LinearHorizontal);
+        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 16);
+        s.setRange(lo, hi, 0.0);
+        s.setValue(val, juce::dontSendNotification);
+        s.setBounds(96, y + 12, 488, 18);
+    };
+
+    setupSlider(tempo_slider_,  tempo_lbl_,  "Tempo",   0.3,    2.0,    0.70,   204);
+    setupSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,   237);
+    setupSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,   270);
+    setupSlider(chop_slider_,   chop_lbl_,   "Chop ms", 0.0, 4000.0, 2000.0,   303);
 
     // ── Controls zone right: filename label
     addAndMakeVisible(file_lbl);
@@ -113,6 +127,20 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 }
 
 //==============================================================================
+void AutoRemixAudioProcessorEditor::loadEngineDefaults(int idx)
+{
+    static const std::array<std::array<double, 4>, 3> defs {{
+        {{0.70, -4.0, 0.05, 2000.0}},
+        {{0.75, -2.0, 0.60,    0.0}},
+        {{1.40,  2.0, 0.00,    0.0}},
+    }};
+    auto i = static_cast<std::size_t>(idx);
+    tempo_slider_.setValue(defs[i][0], juce::dontSendNotification);
+    pitch_slider_.setValue(defs[i][1], juce::dontSendNotification);
+    reverb_slider_.setValue(defs[i][2], juce::dontSendNotification);
+    chop_slider_.setValue(defs[i][3], juce::dontSendNotification);
+}
+
 void AutoRemixAudioProcessorEditor::onClick_Play()
 {
     if (file_path_.isEmpty()) {
@@ -126,22 +154,30 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         return;
     }
 
-    struct EngineConfig {
-        std::string id;
-        autoremix::RemixParams params;
-    };
-    static const std::array<EngineConfig, 3> engines {{
-        {"chopped_screwed", {0.70f, -4.0f, 0.05f, 2000.0f, 0.0f, 1.0f, "chopped_screwed", "algorithmic"}},
-        {"slowed_reverb",   {0.75f, -2.0f, 0.60f,    0.0f, 0.0f, 1.0f, "slowed_reverb",   "algorithmic"}},
-        {"drum_and_bass",   {1.40f,  2.0f, 0.00f,    0.0f, 6.0f, 2.0f, "drum_and_bass",   "algorithmic"}},
+    static const std::array<std::array<float, 2>, 3> engine_extras {{
+        {{0.0f, 1.0f}},   // chopped_screwed: bass_boost_db, drums_tempo_factor
+        {{0.0f, 1.0f}},   // slowed_reverb
+        {{6.0f, 2.0f}},   // drum_and_bass
     }};
-    int idx = remix_selector.getSelectedId() - 1;
-    auto cfg = engines[static_cast<std::size_t>(idx)];
+    static const std::array<std::string, 3> engine_ids {{
+        "chopped_screwed", "slowed_reverb", "drum_and_bass"
+    }};
+    auto idx = static_cast<std::size_t>(style_tab_.getSelectedIndex());
+    autoremix::RemixParams params {
+        (float)tempo_slider_.getValue(),
+        (float)pitch_slider_.getValue(),
+        (float)reverb_slider_.getValue(),
+        (float)chop_slider_.getValue(),
+        engine_extras[idx][0],
+        engine_extras[idx][1],
+        engine_ids[idx],
+        "algorithmic"
+    };
 
     auto input_file = juce::File(file_path_);
     std::filesystem::path output_path =
         std::filesystem::path("/tmp/autoremix/remix") /
-        (input_file.getFileNameWithoutExtension().toStdString() + "_" + cfg.id + ".wav");
+        (input_file.getFileNameWithoutExtension().toStdString() + "_" + engine_ids[idx] + ".wav");
 
     play_btn.setEnabled(false);
     progress_ = -1.0;
@@ -150,7 +186,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
 
     std::string input_str = file_path_.toStdString();
 
-    std::thread([this, cfg, output_path, input_str]() mutable {
+    std::thread([this, params, output_path, input_str]() mutable {
         auto& bridge = audioProcessor.getBridge();
 
         auto stems = bridge.separateStems(
@@ -171,7 +207,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
             status_lbl.setText("Remixing\xe2\x80\xa6", juce::dontSendNotification);
         });
 
-        auto result = bridge.applyRemix(stems, cfg.params, output_path);
+        auto result = bridge.applyRemix(stems, params, output_path);
 
         juce::MessageManager::callAsync([this, result]() mutable {
             progress_bar_.setVisible(false);

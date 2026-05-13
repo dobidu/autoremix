@@ -15,10 +15,11 @@ public:
 private:
     AutoRemixAudioProcessor& audioProcessor;
 
-    juce::TextButton loadfile_btn, play_btn, stop_btn, save_btn;
-    juce::Label file_lbl, remix_selector_lbl;
-    juce::ComboBox remix_selector;
-    juce::TextEditor debug_text;
+    juce::TextButton  loadfile_btn, play_btn, save_btn;
+    juce::Label       file_lbl, remix_selector_lbl, status_lbl;
+    juce::ComboBox    remix_selector;
+    double            progress_   = 0.0;
+    juce::ProgressBar progress_bar_{progress_};
 
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String file_path_;
@@ -27,7 +28,6 @@ private:
     void loadFile();
     void drawAndConfigComponents();
     void onClick_Play();
-    void onClick_Stop();
     void onClick_Save();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessorEditor)

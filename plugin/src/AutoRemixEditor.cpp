@@ -8,7 +8,7 @@
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    juce::Component::setSize(480, 540);
+    juce::Component::setSize(480, 220);
     drawAndConfigComponents();
 }
 
@@ -58,48 +58,48 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     play_btn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
     play_btn.onClick = [this] { onClick_Play(); };
 
-    addAndMakeVisible(stop_btn);
-    stop_btn.setButtonText("Stop");
-    stop_btn.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
-    stop_btn.onClick = [this] { onClick_Stop(); };
-
     addAndMakeVisible(save_btn);
     save_btn.setButtonText("Save");
     save_btn.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
     save_btn.setEnabled(false);
     save_btn.onClick = [this] { onClick_Save(); };
 
-    addAndMakeVisible(debug_text);
-    debug_text.setMultiLine(true);
-    debug_text.setReadOnly(true);
+    addAndMakeVisible(status_lbl);
+    status_lbl.setText("Ready", juce::dontSendNotification);
+    status_lbl.setJustificationType(juce::Justification::centred);
+    status_lbl.setFont(juce::Font(14.0f));
 
-    loadfile_btn.setBounds(10, 20, 130, 30);
-    file_lbl.setBounds(150, 20, 310, 30);
+    addAndMakeVisible(progress_bar_);
+    progress_bar_.setVisible(false);
+
+    loadfile_btn.setBounds(10, 16, 140, 30);
+    file_lbl.setBounds(158, 16, 312, 30);
     file_lbl.setJustificationType(juce::Justification::centredLeft);
     file_lbl.setFont(juce::Font(16.0f));
 
-    remix_selector_lbl.setBounds(10, 70, 60, 20);
-    remix_selector.setBounds(80, 70, (int)(getWidth() * 0.75), 30);
+    remix_selector_lbl.setBounds(10, 60, 60, 24);
+    remix_selector.setBounds(80, 58, getWidth() - 90, 30);
 
-    const int startX = (getWidth() - ((3 * 70) + 20)) / 2;
-    play_btn.setBounds(startX,       120, 70, 36);
-    stop_btn.setBounds(startX + 80,  120, 70, 36);
-    save_btn.setBounds(startX + 160, 120, 70, 36);
+    const int btnY   = 104;
+    const int startX = (getWidth() - (2 * 80 + 10)) / 2;
+    play_btn.setBounds(startX,       btnY, 80, 36);
+    save_btn.setBounds(startX + 90,  btnY, 80, 36);
 
-    debug_text.setBounds(10, 170, getWidth() - 20, 350);
+    status_lbl.setBounds(10, 152, getWidth() - 20, 24);
+    progress_bar_.setBounds(10, 182, getWidth() - 20, 18);
 }
 
 //==============================================================================
 void AutoRemixAudioProcessorEditor::onClick_Play()
 {
     if (file_path_.isEmpty()) {
-        debug_text.insertTextAtCaret("No file loaded.\n");
+        status_lbl.setText("No file loaded.", juce::dontSendNotification);
         return;
     }
 
     auto& bridge = audioProcessor.getBridge();
     if (!bridge.isServerAlive()) {
-        debug_text.insertTextAtCaret("Sidecar not running. Start python server on port 17432.\n");
+        status_lbl.setText("Sidecar not running on port 17432.", juce::dontSendNotification);
         return;
     }
 
@@ -121,8 +121,9 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         (input_file.getFileNameWithoutExtension().toStdString() + "_" + cfg.id + ".wav");
 
     play_btn.setEnabled(false);
-    debug_text.clear();
-    debug_text.insertTextAtCaret("Separating...\n");
+    progress_ = -1.0;
+    progress_bar_.setVisible(true);
+    status_lbl.setText("Separating stems\xe2\x80\xa6", juce::dontSendNotification);
 
     std::string input_str = file_path_.toStdString();
 
@@ -136,34 +137,31 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
 
         if (!stems.valid) {
             juce::MessageManager::callAsync([this] {
-                debug_text.insertTextAtCaret("Error: stem separation failed.\n");
+                status_lbl.setText("Error: separation failed.", juce::dontSendNotification);
+                progress_bar_.setVisible(false);
                 play_btn.setEnabled(true);
             });
             return;
         }
 
         juce::MessageManager::callAsync([this] {
-            debug_text.insertTextAtCaret("Remixing...\n");
+            status_lbl.setText("Remixing\xe2\x80\xa6", juce::dontSendNotification);
         });
 
         auto result = bridge.applyRemix(stems, cfg.params, output_path);
 
         juce::MessageManager::callAsync([this, result]() mutable {
+            progress_bar_.setVisible(false);
             if (result.success) {
                 output_path_ = juce::String(result.output_path.string());
-                debug_text.insertTextAtCaret("Done: " + output_path_ + "\n");
+                status_lbl.setText("Done \xe2\x80\x94 click Save to export.", juce::dontSendNotification);
                 save_btn.setEnabled(true);
             } else {
-                debug_text.insertTextAtCaret("Error: " + juce::String(result.error_message) + "\n");
+                status_lbl.setText("Error: " + juce::String(result.error_message), juce::dontSendNotification);
             }
             play_btn.setEnabled(true);
         });
     }).detach();
-}
-
-void AutoRemixAudioProcessorEditor::onClick_Stop()
-{
-    // Stop mid-processing deferred to Phase 05.
 }
 
 void AutoRemixAudioProcessorEditor::onClick_Save()
@@ -183,7 +181,7 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
             auto results = fc.getResults();
             if (!results.isEmpty()) {
                 juce::File(output_path_).copyFileTo(results[0]);
-                debug_text.insertTextAtCaret("Saved to: " + results[0].getFullPathName() + "\n");
+                status_lbl.setText("Saved: " + results[0].getFileName(), juce::dontSendNotification);
             }
         });
 }

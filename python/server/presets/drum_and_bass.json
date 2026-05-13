@@ -1,0 +1,19 @@
+{
+  "id": "drum_and_bass",
+  "version": "1.0",
+  "name": "Drum & Bass",
+  "description": "Drums doubled in tempo, heavy bass boost, pitched-up feel.",
+  "author": "AutoRemix",
+  "tags": ["dnb", "electronic", "energetic"],
+  "engine": "drum_and_bass",
+  "params": {
+    "tempo_factor": 1.40,
+    "pitch_shift_semi": 2.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 6.0,
+    "drums_tempo_factor": 2.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.0, "bass": 1.2, "other": 0.8 },
+  "effects": []
+}

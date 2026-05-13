@@ -2,14 +2,39 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace AR {
-    constexpr uint32_t BG      = 0xFF282A36;
-    constexpr uint32_t SURFACE = 0xFF44475A;
+    // Background layers
+    constexpr uint32_t BG_DEEP  = 0xFF1E1F29;
+    constexpr uint32_t BG       = 0xFF282A36;
+    constexpr uint32_t ELEVATED = 0xFF343746;
+    constexpr uint32_t SURFACE  = 0xFF44475A;
+
+    // Foreground
     constexpr uint32_t FG      = 0xFFF8F8F2;
     constexpr uint32_t COMMENT = 0xFF6272A4;
-    constexpr uint32_t GREEN   = 0xFF50FA7B;
-    constexpr uint32_t CYAN    = 0xFF8BE9FD;
-    constexpr uint32_t PURPLE  = 0xFFBD93F9;
-    constexpr float    RADIUS  = 6.0f;
+
+    // Accents
+    constexpr uint32_t GREEN  = 0xFF50FA7B;
+    constexpr uint32_t CYAN   = 0xFF8BE9FD;
+    constexpr uint32_t PURPLE = 0xFFBD93F9;
+    constexpr uint32_t RED    = 0xFFFF5555;
+    constexpr uint32_t ORANGE = 0xFFFFB86C;
+
+    constexpr float RADIUS = 6.0f;
+
+    enum class FontRole { header, section, label, value, secondary, status, button };
+
+    inline juce::Font font(FontRole role) {
+        switch (role) {
+            case FontRole::header:    return juce::Font(16.0f, juce::Font::bold);
+            case FontRole::section:   return juce::Font(11.0f, juce::Font::bold);
+            case FontRole::label:     return juce::Font(11.0f, juce::Font::plain);
+            case FontRole::value:     return juce::Font(13.0f, juce::Font::plain);
+            case FontRole::secondary: return juce::Font(10.0f, juce::Font::plain);
+            case FontRole::status:    return juce::Font(12.0f, juce::Font::plain);
+            case FontRole::button:    return juce::Font(12.0f, juce::Font::bold);
+            default:                  return juce::Font(13.0f, juce::Font::plain);
+        }
+    }
 }
 
 class AutoRemixLookAndFeel : public juce::LookAndFeel_V4 {
@@ -32,6 +57,16 @@ public:
 
         setColour(juce::ProgressBar::backgroundColourId,              juce::Colour(AR::SURFACE));
         setColour(juce::ProgressBar::foregroundColourId,              juce::Colour(AR::PURPLE));
+
+        setColour(juce::Slider::backgroundColourId,                   juce::Colour(AR::SURFACE));
+        setColour(juce::Slider::thumbColourId,                        juce::Colour(AR::FG));
+        setColour(juce::Slider::trackColourId,                        juce::Colour(AR::PURPLE));
+        setColour(juce::Slider::textBoxTextColourId,                  juce::Colour(AR::FG));
+        setColour(juce::Slider::textBoxBackgroundColourId,            juce::Colour(AR::ELEVATED));
+        setColour(juce::Slider::textBoxOutlineColourId,               juce::Colours::transparentBlack);
+
+        setColour(juce::TextButton::textColourOffId,                  juce::Colour(AR::FG));
+        setColour(juce::TextButton::textColourOnId,                   juce::Colour(AR::BG));
     }
 
     void drawButtonBackground(juce::Graphics& g,
@@ -58,7 +93,7 @@ public:
     void drawButtonText(juce::Graphics& g, juce::TextButton& button,
                         bool, bool) override
     {
-        g.setFont(juce::Font(14.0f, juce::Font::bold));
+        g.setFont(AR::font(AR::FontRole::button));
         g.setColour(button.isEnabled() ? juce::Colour(AR::FG)
                                        : juce::Colour(AR::FG).withAlpha(0.4f));
         g.drawFittedText(button.getButtonText(),

@@ -3,28 +3,28 @@
 ## Current Position
 
 Milestone: v2 UI Polish
-Phase: 07 of 9 (UI Redesign) — Apply
-Plan: 07-03 complete
-Status: Phase 07 COMPLETE — all 3 plans unified
-Last activity: 2026-05-13 — 07-03 PLAN ✓ APPLY ✓ UNIFY ✓
+Phase: 08 of 9 (Pro UI) — Planning
+Plan: 08-01 complete
+Status: 08-01 loop closed
+Last activity: 2026-05-13 — 08-01 PLAN ✓ APPLY ✓ UNIFY ✓
 
 Progress:
-- Milestone: [████████░░] 80%
-- Phase 07: [██████████] 100% COMPLETE
+- Milestone: [████████░░] 82%
+- Phase 08: [████░░░░░░] 20%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [07-03 closed]
+  ✓        ✓        ✓     [08-01 closed]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-13
-Stopped at: Phase 07 complete
-Next action: /paul:plan for Phase 08 (Pro UI)
-Resume file: .paul/phases/08-pro-ui/
+Stopped at: 08-01 unified
+Next action: /paul:plan for 08-02 (layout overhaul: window 600×400, header bar, zones)
+Resume file: .paul/phases/08-pro-ui/08-02-PLAN.md
 
 ## Decisions
 - Python sidecar port: 17432

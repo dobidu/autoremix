@@ -36,11 +36,18 @@ Deliverable: Standalone functional — load WAV → separate → remix → save 
 - git tag v2.0.0-rc1 + GitHub release draft
 Deliverable: tagged release candidate, VST3 verified in REAPER ✓
 
-## Phase 07 — UI Redesign (planned)
-- Waveform display
-- Progress indicator during separation/remix
-- Remove debug text area from production UI
-- General visual polish
+## Phase 07 — UI Redesign ✅ COMPLETE (2026-05-13)
+- Status label + ProgressBar (removed debug_text/stop_btn)
+- Dark theme via AutoRemixLookAndFeel (Dracula palette)
+- Waveform display via AudioThumbnail (480×340 window)
+
+## Phase 08 — Pro UI (planned)
+Research-first heavy redesign toward pro audio plugin aesthetics.
+- 08-01: Design spec + LookAndFeel foundation (color tokens, typography system)
+- 08-02: Layout overhaul (600×400 window, header bar, zone layout)
+- 08-03: StyleTabBar replacing ComboBox + RemixParams sliders
+- 08-04: WaveformDisplay overhaul + SidecarHealthDot
+- 08-05: Polish pass + visual sign-off
 
 ## Phase 05 — Integration & Testing ✅ COMPLETE (2026-05-09)
 - pytest suite: 8 tests, health + separate + 3 remix engines + error paths

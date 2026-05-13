@@ -9,13 +9,15 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
     format_manager_.registerBasicFormats();
+    thumbnail_.addChangeListener(this);
     setLookAndFeel(&laf_);
-    juce::Component::setSize(480, 340);
+    juce::Component::setSize(600, 400);
     drawAndConfigComponents();
 }
 
 AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
 {
+    thumbnail_.removeChangeListener(this);
     setLookAndFeel(nullptr);
 }
 
@@ -46,64 +48,68 @@ void AutoRemixAudioProcessorEditor::loadFile()
 
 void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 {
-    addAndMakeVisible(file_lbl);
-    addAndMakeVisible(loadfile_btn);
-    loadfile_btn.setButtonText("Load Audio File");
-    loadfile_btn.onClick = [this] { loadFile(); };
+    // ── Header: title
+    addAndMakeVisible(title_lbl);
+    title_lbl.setText("AutoRemix", juce::dontSendNotification);
+    title_lbl.setFont(AR::font(AR::FontRole::header));
+    title_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
+    title_lbl.setBounds(16, 0, 120, 40);
 
+    // ── Header: style selector
     addAndMakeVisible(remix_selector_lbl);
-    remix_selector_lbl.setText("Remix: ", juce::dontSendNotification);
-    remix_selector_lbl.attachToComponent(&remix_selector, true);
+    remix_selector_lbl.setText("Style:", juce::dontSendNotification);
+    remix_selector_lbl.setFont(AR::font(AR::FontRole::section));
+    remix_selector_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
+    remix_selector_lbl.setBounds(148, 8, 44, 24);
+
     addAndMakeVisible(remix_selector);
     remix_selector.addItem("Chopped & Screwed", 1);
     remix_selector.addItem("Slowed + Reverb",   2);
     remix_selector.addItem("Drum and Bass",      3);
     remix_selector.setSelectedId(1, juce::dontSendNotification);
+    remix_selector.setBounds(196, 7, 280, 26);
+
+    // ── Controls zone right: filename label
+    addAndMakeVisible(file_lbl);
+    file_lbl.setFont(AR::font(AR::FontRole::value));
+    file_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
+    file_lbl.setJustificationType(juce::Justification::centredLeft);
+    file_lbl.setBounds(100, 204, 492, 22);
+
+    // ── Transport strip: Load / Play / Save
+    addAndMakeVisible(loadfile_btn);
+    loadfile_btn.setButtonText("Load");
+    loadfile_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
+    loadfile_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
+    loadfile_btn.onClick = [this] { loadFile(); };
+    loadfile_btn.setBounds(8, 212, 72, 26);
 
     addAndMakeVisible(play_btn);
     play_btn.setButtonText("Play");
     play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::GREEN));
     play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::GREEN));
     play_btn.onClick = [this] { onClick_Play(); };
+    play_btn.setBounds(8, 246, 72, 26);
 
     addAndMakeVisible(save_btn);
     save_btn.setButtonText("Save");
-    save_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::CYAN));
-    save_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::CYAN));
+    save_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
+    save_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
     save_btn.setEnabled(false);
     save_btn.onClick = [this] { onClick_Save(); };
+    save_btn.setBounds(8, 280, 72, 26);
 
+    // ── Status zone
     addAndMakeVisible(status_lbl);
     status_lbl.setText("Ready", juce::dontSendNotification);
-    status_lbl.setJustificationType(juce::Justification::centred);
-    status_lbl.setFont(juce::Font(14.0f));
+    status_lbl.setFont(AR::font(AR::FontRole::status));
+    status_lbl.setJustificationType(juce::Justification::centredLeft);
+    status_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
+    status_lbl.setBounds(16, 344, getWidth() - 32, 20);
 
     addAndMakeVisible(progress_bar_);
     progress_bar_.setVisible(false);
-
-    loadfile_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::COMMENT));
-    loadfile_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::COMMENT));
-
-    file_lbl.setColour(juce::Label::textColourId,   juce::Colour(AR::FG));
-    status_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::PURPLE));
-
-    loadfile_btn.setBounds(10, 10, 140, 30);
-    file_lbl.setBounds(158, 10, 312, 30);
-    file_lbl.setJustificationType(juce::Justification::centredLeft);
-    file_lbl.setFont(juce::Font(16.0f));
-
-    remix_selector_lbl.setBounds(10, 52, 60, 24);
-    remix_selector.setBounds(80, 50, getWidth() - 90, 30);
-
-    // waveform area: y=90, h=96 — painted in paint(), not a component
-
-    const int btnY   = 200;
-    const int startX = (getWidth() - (2 * 80 + 10)) / 2;
-    play_btn.setBounds(startX,      btnY, 80, 36);
-    save_btn.setBounds(startX + 90, btnY, 80, 36);
-
-    status_lbl.setBounds(10, 248, getWidth() - 20, 24);
-    progress_bar_.setBounds(10, 278, getWidth() - 20, 18);
+    progress_bar_.setBounds(16, 368, getWidth() - 32, 12);
 }
 
 //==============================================================================
@@ -208,21 +214,33 @@ void AutoRemixAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(AR::BG));
 
-    juce::Rectangle<int> waveArea(10, 90, getWidth() - 20, 96);
-    g.setColour(juce::Colour(AR::SURFACE));
-    g.fillRoundedRectangle(waveArea.toFloat(), 4.0f);
+    // header zone
+    g.setColour(juce::Colour(AR::ELEVATED));
+    g.fillRect(0, 0, getWidth(), 40);
 
+    // waveform zone
+    juce::Rectangle<int> waveArea(8, 48, getWidth() - 16, 144);
+    g.setColour(juce::Colour(AR::BG_DEEP));
+    g.fillRoundedRectangle(waveArea.toFloat(), 4.0f);
     if (thumbnail_.getTotalLength() > 0.0) {
         g.setColour(juce::Colour(AR::PURPLE));
         thumbnail_.drawChannels(g, waveArea, 0.0, thumbnail_.getTotalLength(), 1.0f);
     } else {
-        g.setFont(juce::Font(13.0f));
+        g.setFont(AR::font(AR::FontRole::secondary));
         g.setColour(juce::Colour(AR::COMMENT));
         g.drawFittedText("No file loaded", waveArea, juce::Justification::centred, 1);
     }
 
+    // transport strip bg
+    g.setColour(juce::Colour(AR::ELEVATED));
+    g.fillRect(0, 200, 88, 136);
+
+    // separators
     g.setColour(juce::Colour(AR::SURFACE));
-    g.fillRect(0, 194, getWidth(), 1);
+    g.fillRect(0, 40,  getWidth(), 1);   // header / waveform
+    g.fillRect(0, 200, getWidth(), 1);   // waveform / controls
+    g.fillRect(88, 200, 1, 136);         // transport / params vertical
+    g.fillRect(0, 336, getWidth(), 1);   // controls / status
 }
 
 void AutoRemixAudioProcessorEditor::resized() {}

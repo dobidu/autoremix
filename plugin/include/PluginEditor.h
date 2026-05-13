@@ -6,18 +6,22 @@
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
 
-class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor {
+class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                       public juce::ChangeListener {
 public:
     explicit AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor&);
     ~AutoRemixAudioProcessorEditor() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
+    void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
 
 private:
     AutoRemixAudioProcessor& audioProcessor;
 
     AutoRemixLookAndFeel laf_;
+
+    juce::Label title_lbl;
 
     juce::AudioFormatManager  format_manager_;
     juce::AudioThumbnailCache thumbnail_cache_{5};

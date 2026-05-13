@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include "PluginProcessor.h"
+#include "AutoRemixLookAndFeel.h"
 
 class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor {
 public:
@@ -14,6 +15,8 @@ public:
 
 private:
     AutoRemixAudioProcessor& audioProcessor;
+
+    AutoRemixLookAndFeel laf_;
 
     juce::TextButton  loadfile_btn, play_btn, save_btn;
     juce::Label       file_lbl, remix_selector_lbl, status_lbl;

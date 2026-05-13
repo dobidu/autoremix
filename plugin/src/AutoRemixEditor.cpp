@@ -8,11 +8,15 @@
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
+    setLookAndFeel(&laf_);
     juce::Component::setSize(480, 220);
     drawAndConfigComponents();
 }
 
-AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor() {}
+AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
+{
+    setLookAndFeel(nullptr);
+}
 
 //==============================================================================
 void AutoRemixAudioProcessorEditor::loadFile()
@@ -55,12 +59,14 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 
     addAndMakeVisible(play_btn);
     play_btn.setButtonText("Play");
-    play_btn.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::GREEN));
+    play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::GREEN));
     play_btn.onClick = [this] { onClick_Play(); };
 
     addAndMakeVisible(save_btn);
     save_btn.setButtonText("Save");
-    save_btn.setColour(juce::TextButton::buttonColourId, juce::Colours::blue);
+    save_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::CYAN));
+    save_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::CYAN));
     save_btn.setEnabled(false);
     save_btn.onClick = [this] { onClick_Save(); };
 
@@ -71,6 +77,12 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 
     addAndMakeVisible(progress_bar_);
     progress_bar_.setVisible(false);
+
+    loadfile_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::COMMENT));
+    loadfile_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::COMMENT));
+
+    file_lbl.setColour(juce::Label::textColourId,   juce::Colour(AR::FG));
+    status_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::PURPLE));
 
     loadfile_btn.setBounds(10, 16, 140, 30);
     file_lbl.setBounds(158, 16, 312, 30);
@@ -189,7 +201,9 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
 //==============================================================================
 void AutoRemixAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    g.fillAll(juce::Colour(AR::BG));
+    g.setColour(juce::Colour(AR::SURFACE));
+    g.fillRect(0, 144, getWidth(), 1);
 }
 
 void AutoRemixAudioProcessorEditor::resized() {}

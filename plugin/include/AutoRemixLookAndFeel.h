@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <BinaryData.h>
 
 namespace AR {
     // Background layers
@@ -40,6 +41,11 @@ namespace AR {
 class AutoRemixLookAndFeel : public juce::LookAndFeel_V4 {
 public:
     AutoRemixLookAndFeel() {
+        inter_regular_  = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::InterRegular_otf,  BinaryData::InterRegular_otfSize);
+        inter_semibold_ = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::InterSemiBold_otf, BinaryData::InterSemiBold_otfSize);
+
         setColour(juce::ResizableWindow::backgroundColourId,          juce::Colour(AR::BG));
 
         setColour(juce::Label::textColourId,                          juce::Colour(AR::FG));
@@ -67,6 +73,10 @@ public:
 
         setColour(juce::TextButton::textColourOffId,                  juce::Colour(AR::FG));
         setColour(juce::TextButton::textColourOnId,                   juce::Colour(AR::BG));
+    }
+
+    juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override {
+        return (f.getStyleFlags() & juce::Font::bold) ? inter_semibold_ : inter_regular_;
     }
 
     void drawButtonBackground(juce::Graphics& g,
@@ -99,6 +109,9 @@ public:
         g.drawFittedText(button.getButtonText(),
                          button.getLocalBounds(), juce::Justification::centred, 1);
     }
+
+    juce::Typeface::Ptr inter_regular_;
+    juce::Typeface::Ptr inter_semibold_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixLookAndFeel)
 };

@@ -1,3 +1,10 @@
+juce_add_binary_data(AutoRemixFonts SOURCES
+    ../assets/fonts/Inter-Regular.otf
+    ../assets/fonts/Inter-SemiBold.otf
+    ../assets/fonts/Inter-Bold.otf
+)
+set_target_properties(AutoRemixFonts PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 juce_add_plugin(AutoRemix
   COMPANY_NAME "LAViD-UFPB"
   IS_SYNTH FALSE
@@ -37,6 +44,7 @@ target_compile_definitions(AutoRemix PUBLIC
 )
 
 target_link_libraries(AutoRemix PRIVATE
+  AutoRemixFonts
   juce::juce_audio_utils
   juce::juce_audio_processors
   juce::juce_gui_extra

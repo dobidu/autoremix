@@ -3,28 +3,28 @@
 ## Current Position
 
 Milestone: v2 UI Polish
-Phase: 08 of 9 (Pro UI) — Executing
-Plan: 08-04 complete
-Status: 08-04 loop closed — awaiting human verify
-Last activity: 2026-05-13 — 08-04 PLAN ✓ APPLY ✓ UNIFY ✓
+Phase: 08 of 9 (Pro UI) — COMPLETE
+Plan: 08-05 complete
+Status: Phase 08 loop closed
+Last activity: 2026-05-13 — 08-05 PLAN ✓ APPLY ✓ UNIFY ✓
 
 Progress:
-- Milestone: [█████████░] 90%
-- Phase 08: [██████████] 85%
+- Milestone: [██████████] 95%
+- Phase 08: [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [08-04 closed]
+  ✓        ✓        ✓     [08-05 closed — Phase 08 DONE]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-13
-Stopped at: 08-04 unified
-Next action: /paul:plan for 08-05 (Inter font + polish pass)
-Resume file: .paul/phases/08-pro-ui/08-05-PLAN.md
+Stopped at: Phase 08 complete
+Next action: /paul:plan for Phase 09 (release prep: version bump, README, packaging)
+Resume file: .paul/phases/09-release/09-01-PLAN.md
 
 ## Decisions
 - Python sidecar port: 17432

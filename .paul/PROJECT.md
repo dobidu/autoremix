@@ -10,9 +10,8 @@ and ML backends coexist behind stable interfaces.
 - libcpr: HTTP client for plugin→Python IPC
 - nlohmann/json: JSON serialization
 - FastAPI + uvicorn: Python sidecar
-- Spleeter (Deezer): ML stem separation (2/4/5 stems)
-- librosa + soundfile: audio processing in Python
-- rubberband (via pyrubberband): time-stretch and pitch-shift
+- librosa + soundfile + pedalboard: audio processing in Python
+- Note: Spleeter deferred (TF/cp312 incompatibility); pyrubberband dropped (requires CLI binary); algorithmic FFT separator used in MVP
 
 ## MVP Remix Modes
 1. Chopped & Screwed: slow tempo (0.7x), pitch down (-4 semi), chop every N bars
@@ -26,11 +25,11 @@ and ML backends coexist behind stable interfaces.
 - MIDI output
 
 ## Success Criteria
-- [ ] Load a WAV/AIFF, press "Separate" → Spleeter runs → 4 stems in temp dir
-- [ ] Select "Chopped & Screwed" → press "Remix" → output WAV generated
-- [ ] Plugin loads in REAPER without crash (VST3)
-- [ ] Python sidecar starts/stops cleanly from plugin lifecycle
-- [ ] IStemSeparator implementors can be swapped via config without recompile
+- [x] Load a WAV/AIFF, press "Separate" → 4 stems in temp dir (algorithmic FFT separator; Spleeter deferred — TF/cp312)
+- [x] Select "Chopped & Screwed" → press "Remix" → output WAV generated (all 3 engines verified Phase 03 + pytest)
+- [ ] Plugin loads in REAPER without crash (VST3) — Deferred: pending manual REAPER smoke test
+- [x] Python sidecar starts/stops cleanly from plugin lifecycle (AudioBridge::startSidecar/stopSidecar, Phase 05-02)
+- [x] IStemSeparator implementors can be swapped via config without recompile (SeparatorRegistry + RemixRegistry, Phase 01)
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)

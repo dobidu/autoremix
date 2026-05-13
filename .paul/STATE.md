@@ -3,28 +3,28 @@
 ## Current Position
 
 Milestone: v2 MVP
-Phase: 05 of 6 (Integration & Testing) — COMPLETE
-Plan: 05-02 complete
-Status: Phase 05 loop closed (commit 4ea887b)
-Last activity: 2026-05-09 — 05-02 PLAN ✓ APPLY ✓ UNIFY ✓
+Phase: 06 of 6 (Release) — Planning
+Plan: 06-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-05-09 — Created .paul/phases/06-release/06-01-PLAN.md
 
 Progress:
 - Milestone: [█████████░] 90%
-- Phase 05: [██████████] 100%
+- Phase 06: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 05 complete]
+  ✓        ○        ○     [Plan created, awaiting approval]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-09
-Stopped at: Phase 05 complete
-Next action: /paul:plan for Phase 06 (release / demo video) or ship v2 tag
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 06-01 created
+Next action: Review and approve plan, then run /paul:apply .paul/phases/06-release/06-01-PLAN.md
+Resume file: .paul/phases/06-release/06-01-PLAN.md
 
 ## Decisions
 - Python sidecar port: 17432

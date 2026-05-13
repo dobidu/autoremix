@@ -20,7 +20,8 @@ void AutoRemixAudioProcessorEditor::loadFile()
     chooser_ = std::make_unique<juce::FileChooser>(
         "Load audio file...",
         juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-        "*.wav;*.aif;*.aiff;*.mp3;*.flac");
+        "*.wav;*.aif;*.aiff;*.mp3;*.flac",
+        false);  // native dialog fails silently on WSL2
 
     chooser_->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
@@ -173,7 +174,8 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
         "Save remixed file...",
         juce::File::getSpecialLocation(juce::File::userHomeDirectory)
             .getChildFile(juce::File(output_path_).getFileName()),
-        "*.wav");
+        "*.wav",
+        false);  // native dialog fails silently on WSL2
 
     chooser_->launchAsync(
         juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,

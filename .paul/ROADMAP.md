@@ -29,6 +29,13 @@ Deliverable: all 3 engines produce valid WAV from test stems ✓
 - CMAKE_POSITION_INDEPENDENT_CODE fix for VST3 .so link
 Deliverable: Standalone functional — load WAV → separate → remix → save ✓
 
+## Phase 06 — Release
+- README.md full build/setup/usage guide
+- PROJECT.md success criteria audit
+- VST3 REAPER smoke test
+- git tag v2.0.0-rc1 + GitHub release draft
+Deliverable: tagged release candidate, VST3 verified in REAPER
+
 ## Phase 05 — Integration & Testing ✅ COMPLETE (2026-05-09)
 - pytest suite: 8 tests, health + separate + 3 remix engines + error paths
 - Error hardening: HTTPException re-raise before broad except

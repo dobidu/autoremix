@@ -29,12 +29,18 @@ Deliverable: all 3 engines produce valid WAV from test stems ✓
 - CMAKE_POSITION_INDEPENDENT_CODE fix for VST3 .so link
 Deliverable: Standalone functional — load WAV → separate → remix → save ✓
 
-## Phase 06 — Release
+## Phase 06 — Release ✅ COMPLETE (2026-05-13)
 - README.md full build/setup/usage guide
-- PROJECT.md success criteria audit
-- VST3 REAPER smoke test
+- PROJECT.md success criteria: 4/5 [x] (REAPER VST3 verified manually)
+- FileChooser useNativeFileDialog=false (WSL2 GTK fix)
 - git tag v2.0.0-rc1 + GitHub release draft
-Deliverable: tagged release candidate, VST3 verified in REAPER
+Deliverable: tagged release candidate, VST3 verified in REAPER ✓
+
+## Phase 07 — UI Redesign (planned)
+- Waveform display
+- Progress indicator during separation/remix
+- Remove debug text area from production UI
+- General visual polish
 
 ## Phase 05 — Integration & Testing ✅ COMPLETE (2026-05-09)
 - pytest suite: 8 tests, health + separate + 3 remix engines + error paths

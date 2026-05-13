@@ -6,6 +6,8 @@
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
 #include "StyleTabBar.h"
+#include "SidecarHealthDot.h"
+#include "WaveformDisplay.h"
 
 class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor,
                                        public juce::ChangeListener {
@@ -15,19 +17,21 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
-    void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
+    void changeListenerCallback(juce::ChangeBroadcaster*) override { waveform_display_.sourceChanged(); }
 
 private:
     AutoRemixAudioProcessor& audioProcessor;
 
     AutoRemixLookAndFeel laf_;
 
-    juce::Label    title_lbl;
-    StyleTabBar    style_tab_;
+    juce::Label      title_lbl;
+    StyleTabBar      style_tab_;
+    SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
 
     juce::AudioFormatManager  format_manager_;
     juce::AudioThumbnailCache thumbnail_cache_{5};
     juce::AudioThumbnail      thumbnail_{512, format_manager_, thumbnail_cache_};
+    WaveformDisplay           waveform_display_{thumbnail_};
 
     juce::TextButton  loadfile_btn, play_btn, save_btn;
     juce::Label       file_lbl, status_lbl;

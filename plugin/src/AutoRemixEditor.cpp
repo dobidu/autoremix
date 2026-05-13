@@ -41,7 +41,7 @@ void AutoRemixAudioProcessorEditor::loadFile()
                 output_path_ = {};
                 save_btn.setEnabled(false);
                 thumbnail_.setSource(new juce::FileInputSource(f));
-                repaint();
+                waveform_display_.sourceChanged();
             }
         });
 }
@@ -55,10 +55,18 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     title_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
     title_lbl.setBounds(16, 0, 120, 40);
 
-    // ── Header: style tab bar
+    // ── Header: style tab bar (narrowed to leave room for health dot)
     addAndMakeVisible(style_tab_);
-    style_tab_.setBounds(148, 4, 436, 32);
+    style_tab_.setBounds(148, 4, 400, 32);
     style_tab_.onChange = [this](int idx) { loadEngineDefaults(idx); };
+
+    // ── Header: sidecar health dot
+    addAndMakeVisible(health_dot_);
+    health_dot_.setBounds(getWidth() - 24, 16, 8, 8);
+
+    // ── Waveform zone
+    addAndMakeVisible(waveform_display_);
+    waveform_display_.setBounds(8, 48, getWidth() - 16, 144);
 
     // ── Params zone: 4 sliders (x=96..584, y=200..336)
     auto setupSlider = [this](juce::Slider& s, juce::Label& lbl,
@@ -253,19 +261,6 @@ void AutoRemixAudioProcessorEditor::paint(juce::Graphics& g)
     // header zone
     g.setColour(juce::Colour(AR::ELEVATED));
     g.fillRect(0, 0, getWidth(), 40);
-
-    // waveform zone
-    juce::Rectangle<int> waveArea(8, 48, getWidth() - 16, 144);
-    g.setColour(juce::Colour(AR::BG_DEEP));
-    g.fillRoundedRectangle(waveArea.toFloat(), 4.0f);
-    if (thumbnail_.getTotalLength() > 0.0) {
-        g.setColour(juce::Colour(AR::PURPLE));
-        thumbnail_.drawChannels(g, waveArea, 0.0, thumbnail_.getTotalLength(), 1.0f);
-    } else {
-        g.setFont(AR::font(AR::FontRole::secondary));
-        g.setColour(juce::Colour(AR::COMMENT));
-        g.drawFittedText("No file loaded", waveArea, juce::Justification::centred, 1);
-    }
 
     // transport strip bg
     g.setColour(juce::Colour(AR::ELEVATED));

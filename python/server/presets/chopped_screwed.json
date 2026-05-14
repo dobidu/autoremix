@@ -1,0 +1,19 @@
+{
+  "id": "chopped_screwed",
+  "version": "1.0",
+  "name": "Chop & Screw",
+  "description": "Houston-style slowed and chopped. Tempo down, pitch down, periodic chops.",
+  "author": "AutoRemix",
+  "tags": ["hip-hop", "southern", "slowed"],
+  "engine": "chopped_screwed",
+  "params": {
+    "tempo_factor": 0.70,
+    "pitch_shift_semi": -4.0,
+    "reverb_mix": 0.05,
+    "chop_interval_ms": 2000.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "effects": []
+}

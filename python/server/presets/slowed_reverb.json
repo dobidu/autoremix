@@ -1,0 +1,19 @@
+{
+  "id": "slowed_reverb",
+  "version": "1.0",
+  "name": "Slowed + Reverb",
+  "description": "Slowed tempo with heavy reverb wash. Ethereal, lo-fi aesthetic.",
+  "author": "AutoRemix",
+  "tags": ["lo-fi", "ambient", "slowed"],
+  "engine": "slowed_reverb",
+  "params": {
+    "tempo_factor": 0.75,
+    "pitch_shift_semi": -2.0,
+    "reverb_mix": 0.60,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "effects": []
+}

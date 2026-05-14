@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoremix/schemas/remix-preset-1.0.json",
+  "title": "RemixPreset",
+  "description": "Declarative remix mode definition. engine field maps to a registered IRemixEngine. effects is reserved for Phase 10 DSL pipeline.",
+  "type": "object",
+  "required": ["id", "version", "name", "engine", "params"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique snake_case identifier. Used as engine_id in RemixRequest."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Preset schema version (major.minor)."
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 32,
+      "description": "Display name shown in UI tab bar."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 10
+    },
+    "engine": {
+      "type": "string",
+      "description": "Registered engine ID to use for processing (e.g. chopped_screwed)."
+    },
+    "params": {
+      "type": "object",
+      "required": [
+        "tempo_factor",
+        "pitch_shift_semi",
+        "reverb_mix",
+        "chop_interval_ms",
+        "bass_boost_db",
+        "drums_tempo_factor"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tempo_factor":       { "type": "number", "minimum": 0.1,   "maximum": 4.0   },
+        "pitch_shift_semi":   { "type": "number", "minimum": -24.0, "maximum": 24.0  },
+        "reverb_mix":         { "type": "number", "minimum": 0.0,   "maximum": 1.0   },
+        "chop_interval_ms":   { "type": "number", "minimum": 0.0,   "maximum": 10000.0 },
+        "bass_boost_db":      { "type": "number", "minimum": -24.0, "maximum": 24.0  },
+        "drums_tempo_factor": { "type": "number", "minimum": 0.1,   "maximum": 4.0   }
+      }
+    },
+    "stem_mix": {
+      "type": "object",
+      "required": ["vocals", "drums", "bass", "other"],
+      "additionalProperties": false,
+      "properties": {
+        "vocals": { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+        "drums":  { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+        "bass":   { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+        "other":  { "type": "number", "minimum": 0.0, "maximum": 2.0 }
+      }
+    },
+    "effects": {
+      "type": "array",
+      "items": {},
+      "description": "Reserved for Phase 10 effect-chain DSL. Must be empty in version 1.x presets."
+    }
+  }
+}

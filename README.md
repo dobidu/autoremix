@@ -63,7 +63,7 @@ Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** →
 │  AutoRemix          Style: [ Chopped & Screwed ▾ ]       │  ← header
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform      │  ← 160px
+│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform        │  ← 160px
 │                                                          │
 ├────────┬─────────────────────────────────────────────────┤
 │  Load  │  filename.wav                                   │

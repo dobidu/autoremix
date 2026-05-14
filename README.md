@@ -63,7 +63,7 @@ Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** →
 │  AutoRemix          Style: [ Chopped & Screwed ▾ ]       │  ← header
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform      │  ← 160px
+│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform        │  ← 160px
 │                                                          │
 ├────────┬─────────────────────────────────────────────────┤
 │  Load  │  filename.wav                                   │
@@ -91,8 +91,8 @@ CI runs on every push/PR to `v2` and `main` via GitHub Actions.
 ## Architecture
 
 ```
-┌─────────────────────────┐     HTTP/JSON      ┌──────────────────────────┐
-│  JUCE Plugin (C++20)    │ ◄────────────────► │  Python Sidecar (FastAPI)│
+┌─────────────────────────┐     HTTP/JSON       ┌──────────────────────────┐
+│  JUCE Plugin (C++20)    │ ◄─────────────────► │  Python Sidecar (FastAPI)│
 │                         │   port 17432        │                          │
 │  PluginProcessor        │                     │  POST /api/v1/separate   │
 │  PluginEditor           │                     │  POST /api/v1/remix      │
@@ -111,8 +111,8 @@ respective registry — no changes to existing code required.
 
 ## Remix Modes
 
-| Engine ID         | Description                                      | Key Params                          |
-|-------------------|--------------------------------------------------|-------------------------------------|
+| Engine ID         | Description                                      | Key Params                         |
+|-------------------|--------------------------------------------------|------------------------------------|
 | `chopped_screwed` | Slow tempo, pitch down, chop every 2s            | tempo 0.7×, −4 semitones           |
 | `slowed_reverb`   | Slow tempo, heavy algorithmic reverb             | tempo 0.75×, reverb mix 60%        |
 | `drum_and_bass`   | Double drum tempo, bass boost, high-pass other   | drums 2×, bass +6 dB               |

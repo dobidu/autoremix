@@ -4,27 +4,27 @@
 
 Milestone: v2 Remix Preset Format
 Phase: 09 of 10 (Remix Presets) — Planning
-Plan: 09-05 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-05-14 — Created .paul/phases/09-remix-presets/09-05-PLAN.md
+Plan: 09-05 complete — Phase 09 CLOSED
+Status: Milestone v2 Remix Preset Format COMPLETE
+Last activity: 2026-05-14 — v2.1.0 tagged, merged to main
 
 Progress:
-- Milestone: [████████░░] 80%
-- Phase 09: [████████░░] 80%
+- Milestone: [██████████] 100%
+- Phase 09: [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan created, awaiting approval]
+  ✓        ✓        ✓     [09-05 closed — Phase 09 complete]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-14
-Stopped at: Plan 09-05 created
-Next action: Review and approve plan, then run /paul:apply
-Resume file: .paul/phases/09-remix-presets/09-05-PLAN.md
+Stopped at: Phase 09 closed, v2.1.0 tagged
+Next action: Phase 10 (Effect Chain DSL) — future milestone, no immediate timeline
+Resume file: n/a
 
 ## Decisions
 - Python sidecar port: 17432

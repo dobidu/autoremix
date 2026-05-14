@@ -117,6 +117,41 @@ respective registry — no changes to existing code required.
 | `slowed_reverb`   | Slow tempo, heavy algorithmic reverb             | tempo 0.75×, reverb mix 60%        |
 | `drum_and_bass`   | Double drum tempo, bass boost, high-pass other   | drums 2×, bass +6 dB               |
 
+## Remix Preset System
+
+Remix modes are data-driven JSON presets — no code changes required to add new styles.
+The sidecar discovers presets at startup from two locations:
+
+- **Built-in:** `python/server/presets/*.json` (3 included: chopped_screwed, slowed_reverb, drum_and_bass)
+- **User:** `~/.config/autoremix/modes/*.json` (user presets override built-ins on ID collision)
+
+The plugin UI fetches available presets from the sidecar at startup via `GET /api/v1/presets`
+and populates the style tab bar dynamically. Adding a new preset JSON and restarting the
+sidecar is sufficient — no plugin recompile needed.
+
+**Preset JSON format:**
+```json
+{
+  "id": "my_style",
+  "version": "1.0",
+  "name": "My Style",
+  "engine": "chopped_screwed",
+  "params": {
+    "tempo_factor": 0.80,
+    "pitch_shift_semi": -2.0,
+    "reverb_mix": 0.20,
+    "chop_interval_ms": 1500.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "effects": []
+}
+```
+
+The `engine` field maps to a registered remix engine. `effects` is reserved for a future
+effect-chain DSL (Phase 10) and currently ignored.
+
 ## Known Limitations
 
 - ML stem separator (Spleeter/demucs) deferred — TensorFlow incompatibility with Python 3.12; algorithmic FFT separator used in MVP

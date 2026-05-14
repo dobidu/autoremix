@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://autoremix/schemas/remix-preset-1.0.json",
+  "$id": "https://autoremix/schemas/remix-preset-2.0.json",
   "title": "RemixPreset",
-  "description": "Declarative remix mode definition. engine field maps to a registered IRemixEngine. effects is reserved for Phase 10 DSL pipeline.",
+  "description": "Declarative remix mode definition. When effects is non-empty, engine field is ignored and the effect chain interpreter runs instead.",
   "type": "object",
-  "required": ["id", "version", "name", "engine", "params"],
+  "required": ["id", "version", "name", "params"],
   "additionalProperties": false,
   "properties": {
     "id": {
@@ -37,7 +37,7 @@
     },
     "engine": {
       "type": "string",
-      "description": "Registered engine ID to use for processing (e.g. chopped_screwed)."
+      "description": "Registered engine ID (e.g. chopped_screwed). Ignored when effects is non-empty."
     },
     "params": {
       "type": "object",
@@ -51,12 +51,12 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "tempo_factor":       { "type": "number", "minimum": 0.1,   "maximum": 4.0   },
-        "pitch_shift_semi":   { "type": "number", "minimum": -24.0, "maximum": 24.0  },
-        "reverb_mix":         { "type": "number", "minimum": 0.0,   "maximum": 1.0   },
+        "tempo_factor":       { "type": "number", "minimum": 0.1,   "maximum": 4.0    },
+        "pitch_shift_semi":   { "type": "number", "minimum": -24.0, "maximum": 24.0   },
+        "reverb_mix":         { "type": "number", "minimum": 0.0,   "maximum": 1.0    },
         "chop_interval_ms":   { "type": "number", "minimum": 0.0,   "maximum": 10000.0 },
-        "bass_boost_db":      { "type": "number", "minimum": -24.0, "maximum": 24.0  },
-        "drums_tempo_factor": { "type": "number", "minimum": 0.1,   "maximum": 4.0   }
+        "bass_boost_db":      { "type": "number", "minimum": -24.0, "maximum": 24.0   },
+        "drums_tempo_factor": { "type": "number", "minimum": 0.1,   "maximum": 4.0    }
       }
     },
     "stem_mix": {
@@ -72,8 +72,38 @@
     },
     "effects": {
       "type": "array",
-      "items": {},
-      "description": "Reserved for Phase 10 effect-chain DSL. Must be empty in version 1.x presets."
+      "description": "Effect chain DSL (Phase 10). When non-empty, engine field is ignored and the chain interpreter executes each step in order.",
+      "items": {
+        "type": "object",
+        "required": ["op", "stems", "params"],
+        "additionalProperties": false,
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["time_stretch", "pitch_shift", "reverb", "chop", "bass_boost", "eq_highpass"],
+            "description": "Operation to apply. See design-spec.md for per-op param shapes."
+          },
+          "stems": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["all", "vocals", "drums", "bass", "other"],
+                "description": "'all' applies the op to the summed mix of all stems."
+              },
+              {
+                "type": "array",
+                "items": { "type": "string", "enum": ["vocals", "drums", "bass", "other"] },
+                "minItems": 1,
+                "description": "Apply op only to the listed stem buffers."
+              }
+            ]
+          },
+          "params": {
+            "type": "object",
+            "description": "Op-specific parameters. Runtime-validated by interpreter. See design-spec.md."
+          }
+        }
+      }
     }
   }
 }

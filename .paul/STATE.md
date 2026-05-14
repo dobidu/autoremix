@@ -2,29 +2,29 @@
 
 ## Current Position
 
-Milestone: v2 Remix Preset Format
-Phase: 09 of 10 (Remix Presets) — Planning
-Plan: 10-01 complete
-Status: 10-01 loop closed
-Last activity: 2026-05-14 — 10-01 PLAN ✓ APPLY ✓ UNIFY ✓
+Milestone: v3 Effect Chain DSL
+Phase: 10 of 10 (Effect Chain DSL) — In Progress
+Plan: 10-02 complete (APPLY done, UNIFY pending)
+Status: 10-02 loop open — awaiting commit + UNIFY
+Last activity: 2026-05-14 — 10-02 PLAN ✓ APPLY ✓
 
 Progress:
-- Milestone: v3 Effect Chain DSL [██░░░░░░░░] 20%
-- Phase 10: [███░░░░░░░] 33%
+- Milestone: v3 Effect Chain DSL [████░░░░░░] 40%
+- Phase 10: [██████░░░░] 60%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [10-01 closed]
+  ✓        ✓        ░     [10-02 open]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-14
-Stopped at: 10-01 unified
-Next action: /paul:plan for 10-02 (EffectChainEngine interpreter + ops.py + dispatch routing)
-Resume file: .paul/phases/10-effect-chain/10-02-PLAN.md
+Stopped at: 10-02 APPLY complete
+Next action: UNIFY 10-02 (commit), then /paul:plan for 10-03 (pytest tests + release prep)
+Resume file: .paul/phases/10-effect-chain/10-02-SUMMARY.md
 
 ## Decisions
 - Python sidecar port: 17432

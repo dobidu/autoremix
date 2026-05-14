@@ -16,14 +16,14 @@ Progress:
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ░     [10-03 open — awaiting checkpoint commit]
+  ✓        ✓        ✓     [10-03 closed]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-14
-Stopped at: 10-03 APPLY complete; checkpoint pending
-Next action: commit, merge v2 → main, push, tag v2.2.0
+Stopped at: Phase 10 closed — merged v2→main, tagged v2.2.0, pushed
+Next action: start new milestone or deferred work (see Deferred below)
 
 ## Decisions
 - Python sidecar port: 17432

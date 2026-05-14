@@ -37,8 +37,7 @@ class EffectChainEngine:
                 processed = op_fn(mix, sr, params)
                 share = processed / len(STEM_NAMES)
                 for name in STEM_NAMES:
-                    min_len = min(share.shape[-1], stem_arrays[name].shape[-1])
-                    stem_arrays[name] = share[..., :min_len]
+                    stem_arrays[name] = share
             elif isinstance(stems_spec, str):
                 stem_arrays[stems_spec] = op_fn(stem_arrays[stems_spec], sr, params)
             else:

@@ -105,11 +105,17 @@ remix modes as JSON files; built-in modes become presets too. Foundation for Opt
 - 09-04: Dynamic UI — StyleTabBar populated from presets; loadEngineDefaults data-driven
 - 09-05: Release prep — merge v2→main, version bump 2.1.0, README update, git tag
 
-## Phase 10 — Effect Chain DSL (future)
-Option B: `effects` array in preset format becomes a declarative pipeline interpreter.
-Each effect step specifies: which stems, which operation, parameters. Python sidecar
-executes the chain instead of delegating to a registered engine. Enables truly custom
-processing without writing Python/C++.
+## Phase 10 — Effect Chain DSL ✅ COMPLETE (2026-05-14)
+
+Option B implemented: `effects` array drives a declarative pipeline interpreter.
+Each effect step specifies which stems, which operation, and parameters. Sidecar
+executes the chain instead of delegating to a registered engine.
+
+- 10-01: Design spec + schema v2.0 (engine field optional; effects items fully typed with 6-op enum)
+- 10-02: `ops.py` (6 op functions + OP_REGISTRY), `EffectChainEngine`, dispatch routing in main.py
+- 10-03: pytest coverage (26 tests total), version bump 2.2.0, release
+
+Deliverable: custom preset JSON with non-empty `effects` → chain interpreter executes → valid WAV ✓
 
 ## Phase 05 — Integration & Testing ✅ COMPLETE (2026-05-09)
 - pytest suite: 8 tests, health + separate + 3 remix engines + error paths

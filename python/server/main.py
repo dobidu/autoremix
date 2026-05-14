@@ -19,7 +19,7 @@ from .presets.loader import PresetLoader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AutoRemix Sidecar", version="0.2.0")
+app = FastAPI(title="AutoRemix Sidecar", version="0.3.0")
 
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR", "/tmp/autoremix"))
 _presets = PresetLoader().load_all()

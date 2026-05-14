@@ -2,29 +2,28 @@
 
 ## Current Position
 
-Milestone: v3 Effect Chain DSL
-Phase: 10 of 10 (Effect Chain DSL) — In Progress
-Plan: 10-02 complete (APPLY done, UNIFY pending)
-Status: 10-02 loop open — awaiting commit + UNIFY
-Last activity: 2026-05-14 — 10-02 PLAN ✓ APPLY ✓
+Milestone: v3 Effect Chain DSL ✅ COMPLETE
+Phase: 10 of 10 — ALL PLANS COMPLETE
+Plan: 10-03 complete
+Status: checkpoint — merge v2 → main, tag v2.2.0
+Last activity: 2026-05-14 — 10-03 PLAN ✓ APPLY ✓
 
 Progress:
-- Milestone: v3 Effect Chain DSL [████░░░░░░] 40%
-- Phase 10: [██████░░░░] 60%
+- Milestone: v3 Effect Chain DSL [██████████] 100%
+- Phase 10: [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ░     [10-02 open]
+  ✓        ✓        ░     [10-03 open — awaiting checkpoint commit]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-14
-Stopped at: 10-02 APPLY complete
-Next action: UNIFY 10-02 (commit), then /paul:plan for 10-03 (pytest tests + release prep)
-Resume file: .paul/phases/10-effect-chain/10-02-SUMMARY.md
+Stopped at: 10-03 APPLY complete; checkpoint pending
+Next action: commit, merge v2 → main, push, tag v2.2.0
 
 ## Decisions
 - Python sidecar port: 17432

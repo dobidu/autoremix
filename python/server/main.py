@@ -19,7 +19,7 @@ from .presets.loader import PresetLoader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AutoRemix Sidecar", version="0.2.0")
+app = FastAPI(title="AutoRemix Sidecar", version="0.3.0")
 
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR", "/tmp/autoremix"))
 _presets = PresetLoader().load_all()
@@ -73,11 +73,17 @@ async def remix(req: RemixRequest):
     try:
         stems = req.to_stems()
         output_path = Path(req.output_path)
-        engine = get_engine(req.engine_id)
-        params = req.to_params()
 
-        logger.info(f"Remixing with engine {req.engine_id} → {output_path}")
-        result = engine.process(stems, params, output_path)
+        preset = _presets.get(req.engine_id)
+        if preset and preset.effects:
+            from .remix.chain_interpreter import EffectChainEngine
+            logger.info(f"Remixing via effect chain {req.engine_id} → {output_path}")
+            result = EffectChainEngine().process(stems, preset, output_path)
+        else:
+            engine = get_engine(req.engine_id)
+            params = req.to_params()
+            logger.info(f"Remixing with engine {req.engine_id} → {output_path}")
+            result = engine.process(stems, params, output_path)
 
         return RemixResponse(success=True, output_path=str(result))
     except HTTPException:

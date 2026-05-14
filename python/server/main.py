@@ -10,9 +10,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from .models import (
     SeparateRequest, SeparateResponse, StemPaths as StemPathsModel,
-    RemixRequest, RemixResponse, HealthResponse
+    RemixRequest, RemixResponse, HealthResponse,
+    PresetSummary,
 )
 from .registry import get_separator, get_engine, list_separators, list_engines
+from .presets.loader import PresetLoader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="AutoRemix Sidecar", version="0.2.0")
 
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR", "/tmp/autoremix"))
+_presets = PresetLoader().load_all()
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)
@@ -29,6 +32,14 @@ async def health():
         available_separators=list_separators(),
         available_engines=list_engines(),
     )
+
+
+@app.get("/api/v1/presets", response_model=list[PresetSummary])
+async def list_presets():
+    return [
+        PresetSummary(id=p.id, name=p.name, params=p.params, stem_mix=p.stem_mix)
+        for p in _presets.values()
+    ]
 
 
 @app.post("/api/v1/separate", response_model=SeparateResponse)

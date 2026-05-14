@@ -80,3 +80,39 @@ class HealthResponse(BaseModel):
     version: str = "0.2.0"
     available_separators: list[str]
     available_engines: list[str]
+
+
+class PresetParams(BaseModel):
+    tempo_factor: float = 1.0
+    pitch_shift_semi: float = 0.0
+    reverb_mix: float = 0.0
+    chop_interval_ms: float = 0.0
+    bass_boost_db: float = 0.0
+    drums_tempo_factor: float = 1.0
+
+
+class StemMix(BaseModel):
+    vocals: float = 1.0
+    drums: float = 1.0
+    bass: float = 1.0
+    other: float = 1.0
+
+
+class RemixPreset(BaseModel):
+    id: str
+    version: str
+    name: str
+    engine: str
+    params: PresetParams
+    description: str = ""
+    author: str = ""
+    tags: list[str] = []
+    stem_mix: StemMix = StemMix()
+    effects: list = []
+
+
+class PresetSummary(BaseModel):
+    id: str
+    name: str
+    params: PresetParams
+    stem_mix: StemMix

@@ -3,6 +3,7 @@
 #include <string>
 #include <optional>
 #include <filesystem>
+#include <vector>
 
 namespace autoremix {
 
@@ -20,6 +21,9 @@ public:
 
     /** Check if the Python sidecar is alive */
     bool isServerAlive() const;
+
+    /** Fetch available remix presets from the sidecar. Returns empty on failure. */
+    std::vector<PresetInfo> getPresets();
 
     /**
      * Ask the sidecar to separate stems.

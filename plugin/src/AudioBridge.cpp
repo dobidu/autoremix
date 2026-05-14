@@ -97,6 +97,34 @@ ProcessResult AudioBridge::applyRemix(
     } catch (...) { return {}; }
 }
 
+std::vector<PresetInfo> AudioBridge::getPresets() {
+    try {
+        auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/presets")},
+                          cpr::Timeout{2000});
+        if (r.status_code != 200) return {};
+
+        auto arr = nlohmann::json::parse(r.text);
+        std::vector<PresetInfo> result;
+        result.reserve(arr.size());
+
+        for (auto& item : arr) {
+            PresetInfo info;
+            info.id   = item.at("id").get<std::string>();
+            info.name = item.at("name").get<std::string>();
+            auto& p   = item.at("params");
+            info.default_params.tempo_factor       = p.value("tempo_factor",       1.0f);
+            info.default_params.pitch_shift_semi   = p.value("pitch_shift_semi",   0.0f);
+            info.default_params.reverb_mix         = p.value("reverb_mix",         0.0f);
+            info.default_params.chop_interval_ms   = p.value("chop_interval_ms",   0.0f);
+            info.default_params.bass_boost_db      = p.value("bass_boost_db",      0.0f);
+            info.default_params.drums_tempo_factor = p.value("drums_tempo_factor", 1.0f);
+            info.default_params.engine_id          = info.id;
+            result.push_back(std::move(info));
+        }
+        return result;
+    } catch (...) { return {}; }
+}
+
 bool AudioBridge::startSidecar(const std::filesystem::path& server_script_path) {
     if (sidecar_pid_ > 0) return true;
 

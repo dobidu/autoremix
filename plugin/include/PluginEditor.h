@@ -3,6 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
+#include <vector>
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
 #include "StyleTabBar.h"
@@ -44,6 +45,7 @@ private:
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String file_path_;
     juce::String output_path_;
+    std::vector<autoremix::PresetInfo> presets_;
 
     void loadFile();
     void loadEngineDefaults(int idx);

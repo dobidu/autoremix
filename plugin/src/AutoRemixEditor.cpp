@@ -1,7 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <thread>
-#include <array>
 #include <filesystem>
 
 //==============================================================================
@@ -13,6 +12,19 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     setLookAndFeel(&laf_);
     juce::Component::setSize(600, 400);
     drawAndConfigComponents();
+
+    std::thread([this]() {
+        auto presets = audioProcessor.getBridge().getPresets();
+        if (presets.empty()) return;
+        juce::MessageManager::callAsync([this, presets = std::move(presets)]() mutable {
+            presets_ = std::move(presets);
+            std::vector<std::string> names;
+            names.reserve(presets_.size());
+            for (auto& p : presets_) names.push_back(p.name);
+            style_tab_.setLabels(std::move(names));
+            loadEngineDefaults(0);
+        });
+    }).detach();
 }
 
 AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
@@ -137,16 +149,12 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 //==============================================================================
 void AutoRemixAudioProcessorEditor::loadEngineDefaults(int idx)
 {
-    static const std::array<std::array<double, 4>, 3> defs {{
-        {{0.70, -4.0, 0.05, 2000.0}},
-        {{0.75, -2.0, 0.60,    0.0}},
-        {{1.40,  2.0, 0.00,    0.0}},
-    }};
-    auto i = static_cast<std::size_t>(idx);
-    tempo_slider_.setValue(defs[i][0], juce::dontSendNotification);
-    pitch_slider_.setValue(defs[i][1], juce::dontSendNotification);
-    reverb_slider_.setValue(defs[i][2], juce::dontSendNotification);
-    chop_slider_.setValue(defs[i][3], juce::dontSendNotification);
+    if (presets_.empty() || idx < 0 || (size_t)idx >= presets_.size()) return;
+    auto& p = presets_[(size_t)idx].default_params;
+    tempo_slider_.setValue(p.tempo_factor,     juce::dontSendNotification);
+    pitch_slider_.setValue(p.pitch_shift_semi, juce::dontSendNotification);
+    reverb_slider_.setValue(p.reverb_mix,      juce::dontSendNotification);
+    chop_slider_.setValue(p.chop_interval_ms,  juce::dontSendNotification);
 }
 
 void AutoRemixAudioProcessorEditor::onClick_Play()
@@ -162,30 +170,27 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         return;
     }
 
-    static const std::array<std::array<float, 2>, 3> engine_extras {{
-        {{0.0f, 1.0f}},   // chopped_screwed: bass_boost_db, drums_tempo_factor
-        {{0.0f, 1.0f}},   // slowed_reverb
-        {{6.0f, 2.0f}},   // drum_and_bass
-    }};
-    static const std::array<std::string, 3> engine_ids {{
-        "chopped_screwed", "slowed_reverb", "drum_and_bass"
-    }};
     auto idx = static_cast<std::size_t>(style_tab_.getSelectedIndex());
+    if (presets_.empty() || idx >= presets_.size()) {
+        status_lbl.setText("Presets not loaded \xe2\x80\x94 start sidecar first.", juce::dontSendNotification);
+        return;
+    }
+    auto& preset = presets_[idx];
     autoremix::RemixParams params {
         (float)tempo_slider_.getValue(),
         (float)pitch_slider_.getValue(),
         (float)reverb_slider_.getValue(),
         (float)chop_slider_.getValue(),
-        engine_extras[idx][0],
-        engine_extras[idx][1],
-        engine_ids[idx],
+        preset.default_params.bass_boost_db,
+        preset.default_params.drums_tempo_factor,
+        preset.id,
         "algorithmic"
     };
 
     auto input_file = juce::File(file_path_);
     std::filesystem::path output_path =
         std::filesystem::path("/tmp/autoremix/remix") /
-        (input_file.getFileNameWithoutExtension().toStdString() + "_" + engine_ids[idx] + ".wav");
+        (input_file.getFileNameWithoutExtension().toStdString() + "_" + preset.id + ".wav");
 
     play_btn.setEnabled(false);
     progress_ = -1.0;

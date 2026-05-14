@@ -49,7 +49,13 @@ Research-first heavy redesign toward pro audio plugin aesthetics.
 - 08-04: WaveformDisplay overhaul + SidecarHealthDot
 - 08-05: Inter font embedding via BinaryData + getTypefaceForFont override
 
-## Phase 09 — Remix Preset Format (planned)
+## Phase 09 — Remix Preset Format ✅ COMPLETE (2026-05-14)
+
+- 09-01: 3 built-in preset JSON files + JSON Schema (chopped_screwed, slowed_reverb, drum_and_bass)
+- 09-02: PresetLoader + GET /api/v1/presets endpoint + Pydantic models
+- 09-03: PresetInfo struct + AudioBridge::getPresets() C++ bridge
+- 09-04: StyleTabBar dynamic labels + editor fully data-driven from sidecar presets
+Deliverable: preset system end-to-end — JSON → sidecar → C++ → UI ✓
 
 Goal: replace hardcoded engines with a data-driven preset system. Users define custom
 remix modes as JSON files; built-in modes become presets too. Foundation for Option B

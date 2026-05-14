@@ -1,7 +1,8 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "AutoRemixLookAndFeel.h"
-#include <array>
+#include <string>
+#include <vector>
 #include <functional>
 
 class StyleTabBar : public juce::Component {
@@ -19,9 +20,17 @@ public:
         if (notify && onChange) onChange(selected_);
     }
 
+    void setLabels(std::vector<std::string> labels) {
+        labels_ = std::move(labels);
+        selected_ = 0;
+        repaint();
+    }
+
     void paint(juce::Graphics& g) override {
-        const int tabW = getWidth() / 3;
-        for (int i = 0; i < 3; ++i) {
+        if (labels_.empty()) return;
+        int n    = (int)labels_.size();
+        int tabW = getWidth() / n;
+        for (int i = 0; i < n; ++i) {
             juce::Rectangle<int> r(i * tabW, 0, tabW, getHeight());
             bool sel = (i == selected_);
 
@@ -34,19 +43,21 @@ public:
 
             g.setFont(AR::font(sel ? AR::FontRole::button : AR::FontRole::section));
             g.setColour(juce::Colour(sel ? AR::FG : AR::COMMENT));
-            g.drawFittedText(labels_[static_cast<size_t>(i)], r.reduced(4, 0),
+            g.drawFittedText(labels_[(size_t)i], r.reduced(4, 0),
                              juce::Justification::centred, 1);
         }
     }
 
     void mouseDown(const juce::MouseEvent& e) override {
-        int idx = e.x / (getWidth() / 3);
-        setSelectedIndex(juce::jlimit(0, 2, idx), true);
+        if (labels_.empty()) return;
+        int n   = (int)labels_.size();
+        int idx = e.x / (getWidth() / n);
+        setSelectedIndex(juce::jlimit(0, n - 1, idx), true);
     }
 
 private:
     int selected_ = 0;
-    const std::array<const char*, 3> labels_ {{"Chop & Screw", "Slowed + Reverb", "Drum & Bass"}};
+    std::vector<std::string> labels_ {"Chop & Screw", "Slowed + Reverb", "Drum & Bass"};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StyleTabBar)
 };

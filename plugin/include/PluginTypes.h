@@ -34,4 +34,11 @@ struct ProcessResult {
     std::filesystem::path output_path;
 };
 
+// --- Preset metadata returned by AudioBridge::getPresets() ---
+struct PresetInfo {
+    std::string id;
+    std::string name;
+    RemixParams default_params;
+};
+
 } // namespace autoremix

@@ -54,7 +54,13 @@ public:
 private:
     std::string base_url_;
     int port_;
+
+#ifdef _WIN32
+    void*         sidecar_handle_ = nullptr;  // HANDLE — avoids <windows.h> in header
+    unsigned long sidecar_pid_    = 0;        // DWORD
+#else
     int sidecar_pid_ = -1;
+#endif
 
     std::string makeUrl(const std::string& endpoint) const;
 };

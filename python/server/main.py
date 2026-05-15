@@ -6,6 +6,7 @@ Default port: 17432
 
 import os
 import logging
+import tempfile
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from .models import (
@@ -21,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AutoRemix Sidecar", version="0.3.0")
 
-TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR", "/tmp/autoremix"))
+TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR",
+    str(Path(tempfile.gettempdir()) / "autoremix")))
 _presets = PresetLoader().load_all()
 
 

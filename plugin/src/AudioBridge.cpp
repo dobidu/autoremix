@@ -1,12 +1,20 @@
 #include "AudioBridge.h"
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <unistd.h>
 #include <chrono>
 #include <thread>
+#include <vector>
+
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <windows.h>
+#else
+#  include <sys/types.h>
+#  include <sys/wait.h>
+#  include <signal.h>
+#  include <unistd.h>
+#endif
 
 namespace autoremix {
 
@@ -125,6 +133,66 @@ std::vector<PresetInfo> AudioBridge::getPresets() {
     } catch (...) { return {}; }
 }
 
+// ---------------------------------------------------------------------------
+// Sidecar lifecycle — platform-specific
+// ---------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+bool AudioBridge::startSidecar(const std::filesystem::path& server_script_path) {
+    if (sidecar_handle_) return true;
+
+    std::string script = server_script_path.string();
+    const char* candidates[] = {"python", "python3"};
+
+    for (const char* py : candidates) {
+        std::string cmdline = std::string(py) + " \"" + script + "\"";
+        std::vector<char> cmd(cmdline.begin(), cmdline.end());
+        cmd.push_back('\0');
+
+        STARTUPINFOA si = {};
+        si.cb = sizeof(si);
+        PROCESS_INFORMATION pi = {};
+
+        if (CreateProcessA(nullptr, cmd.data(),
+                           nullptr, nullptr,
+                           FALSE, CREATE_NO_WINDOW,
+                           nullptr, nullptr, &si, &pi)) {
+            CloseHandle(pi.hThread);
+            sidecar_handle_ = pi.hProcess;
+            sidecar_pid_    = pi.dwProcessId;
+            break;
+        }
+    }
+
+    if (!sidecar_handle_) return false;
+
+    using clock = std::chrono::steady_clock;
+    auto deadline = clock::now() + std::chrono::seconds(10);
+    while (clock::now() < deadline) {
+        if (isServerAlive()) return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
+
+    TerminateProcess(static_cast<HANDLE>(sidecar_handle_), 1);
+    CloseHandle(static_cast<HANDLE>(sidecar_handle_));
+    sidecar_handle_ = nullptr;
+    sidecar_pid_    = 0;
+    return false;
+}
+
+void AudioBridge::stopSidecar() {
+    if (!sidecar_handle_) return;
+    HANDLE h = static_cast<HANDLE>(sidecar_handle_);
+    TerminateProcess(h, 0);
+    WaitForSingleObject(h, 2000);
+    CloseHandle(h);
+    sidecar_handle_ = nullptr;
+    sidecar_pid_    = 0;
+}
+
+#else  // POSIX
+
 bool AudioBridge::startSidecar(const std::filesystem::path& server_script_path) {
     if (sidecar_pid_ > 0) return true;
 
@@ -167,6 +235,8 @@ void AudioBridge::stopSidecar() {
     waitpid(sidecar_pid_, nullptr, 0);
     sidecar_pid_ = -1;
 }
+
+#endif  // _WIN32
 
 std::string AudioBridge::makeUrl(const std::string& endpoint) const {
     return base_url_ + ":" + std::to_string(port_) + endpoint;

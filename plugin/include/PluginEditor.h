@@ -34,7 +34,7 @@ private:
     juce::AudioThumbnail      thumbnail_{512, format_manager_, thumbnail_cache_};
     WaveformDisplay           waveform_display_{thumbnail_};
 
-    juce::TextButton  loadfile_btn, play_btn, save_btn;
+    juce::TextButton  loadfile_btn, play_btn, save_btn, preview_btn;
     juce::Label       file_lbl, status_lbl;
     double            progress_   = 0.0;
     juce::ProgressBar progress_bar_{progress_};

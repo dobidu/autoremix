@@ -174,7 +174,7 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     loadfile_btn.setBounds(8, 218, 72, 26);
 
     addAndMakeVisible(play_btn);
-    play_btn.setButtonText("Play");
+    play_btn.setButtonText("Remix");
     play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::GREEN));
     play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::GREEN));
     play_btn.onClick = [this] { onClick_Play(); };
@@ -187,6 +187,17 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     save_btn.setEnabled(false);
     save_btn.onClick = [this] { onClick_Save(); };
     save_btn.setBounds(8, 284, 72, 26);
+
+    addAndMakeVisible(preview_btn);
+    preview_btn.setButtonText("Preview");
+    preview_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
+    preview_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ELEVATED));
+    preview_btn.setEnabled(false);
+    preview_btn.onClick = [this] {
+        audioProcessor.togglePreview();
+        preview_btn.setButtonText(audioProcessor.isPreviewPlaying() ? "Stop" : "Preview");
+    };
+    preview_btn.setBounds(8, 312, 72, 20);
 
     // ── Status zone
     addAndMakeVisible(status_lbl);
@@ -298,6 +309,9 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
                 output_path_ = juce::String(result.output_path.string());
                 status_lbl.setText("Done \xe2\x80\x94 click Save to export.", juce::dontSendNotification);
                 save_btn.setEnabled(true);
+                audioProcessor.loadPreviewFile(juce::File(output_path_));
+                preview_btn.setEnabled(true);
+                preview_btn.setButtonText("Preview");
             } else {
                 status_lbl.setText("Error: " + juce::String(result.error_message), juce::dontSendNotification);
             }

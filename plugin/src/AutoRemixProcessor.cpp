@@ -18,12 +18,38 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
 {
     if (const char* path = std::getenv("AUTOREMIX_SERVER_PATH"))
         bridge_.startSidecar(std::filesystem::path(path));
+    format_manager_.registerBasicFormats();
 }
 
 AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
 {
+    transport_.setSource(nullptr);
     bridge_.stopSidecar();
 }
+
+void AutoRemixAudioProcessor::loadPreviewFile(const juce::File& f)
+{
+    transport_.stop();
+    transport_.setSource(nullptr);
+    reader_source_.reset();
+    if (auto* reader = format_manager_.createReaderFor(f)) {
+        reader_source_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+        transport_.setSource(reader_source_.get(), 0, nullptr, reader->sampleRate);
+    }
+}
+
+void AutoRemixAudioProcessor::togglePreview()
+{
+    if (transport_.isPlaying())
+        transport_.stop();
+    else {
+        transport_.setPosition(0.0);
+        transport_.start();
+    }
+}
+
+void AutoRemixAudioProcessor::stopPreview() { transport_.stop(); }
+bool AutoRemixAudioProcessor::isPreviewPlaying() const { return transport_.isPlaying(); }
 
 //==============================================================================
 const juce::String AutoRemixAudioProcessor::getName() const
@@ -90,14 +116,12 @@ void AutoRemixAudioProcessor::changeProgramName (int index, const juce::String& 
 //==============================================================================
 void AutoRemixAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    transport_.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void AutoRemixAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    transport_.releaseResources();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -129,29 +153,11 @@ bool AutoRemixAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 void AutoRemixAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    buffer.clear();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
+    if (transport_.isPlaying()) {
+        juce::AudioSourceChannelInfo info(buffer);
+        transport_.getNextAudioBlock(info);
     }
 }
 

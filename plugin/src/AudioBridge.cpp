@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <chrono>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #ifdef _WIN32
@@ -127,6 +128,31 @@ std::vector<PresetInfo> AudioBridge::getPresets() {
             info.default_params.bass_boost_db      = p.value("bass_boost_db",      0.0f);
             info.default_params.drums_tempo_factor = p.value("drums_tempo_factor", 1.0f);
             info.default_params.engine_id          = info.id;
+            result.push_back(std::move(info));
+        }
+        return result;
+    } catch (...) { return {}; }
+}
+
+std::vector<SeparatorInfo> AudioBridge::getAvailableSeparators() {
+    static const std::unordered_map<std::string, std::string> kDisplayNames {
+        {"algorithmic", "Algorithmic FFT"},
+        {"demucs",      "Demucs (ML)"},
+    };
+    try {
+        auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/health")},
+                          cpr::Timeout{500});
+        if (r.status_code != 200) return {};
+
+        auto body = nlohmann::json::parse(r.text);
+        auto& arr = body.at("available_separators");
+        std::vector<SeparatorInfo> result;
+        result.reserve(arr.size());
+        for (auto& item : arr) {
+            SeparatorInfo info;
+            info.id = item.get<std::string>();
+            auto it = kDisplayNames.find(info.id);
+            info.display_name = (it != kDisplayNames.end()) ? it->second : info.id;
             result.push_back(std::move(info));
         }
         return result;

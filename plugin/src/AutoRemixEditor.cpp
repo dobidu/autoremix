@@ -14,15 +14,27 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     drawAndConfigComponents();
 
     std::thread([this]() {
-        auto presets = audioProcessor.getBridge().getPresets();
-        if (presets.empty()) return;
-        juce::MessageManager::callAsync([this, presets = std::move(presets)]() mutable {
-            presets_ = std::move(presets);
-            style_combo_.clear(juce::dontSendNotification);
-            for (int i = 0; i < (int)presets_.size(); ++i)
-                style_combo_.addItem(presets_[(size_t)i].name, i + 1);
-            style_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
-            loadEngineDefaults(0);
+        auto& bridge   = audioProcessor.getBridge();
+        auto presets   = bridge.getPresets();
+        auto seps      = bridge.getAvailableSeparators();
+        if (presets.empty() && seps.empty()) return;
+        juce::MessageManager::callAsync([this, presets = std::move(presets),
+                                               seps    = std::move(seps)]() mutable {
+            if (!presets.empty()) {
+                presets_ = std::move(presets);
+                style_combo_.clear(juce::dontSendNotification);
+                for (int i = 0; i < (int)presets_.size(); ++i)
+                    style_combo_.addItem(presets_[(size_t)i].name, i + 1);
+                style_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
+                loadEngineDefaults(0);
+            }
+            if (!seps.empty()) {
+                separators_ = std::move(seps);
+                separator_combo_.clear(juce::dontSendNotification);
+                for (int i = 0; i < (int)separators_.size(); ++i)
+                    separator_combo_.addItem(separators_[(size_t)i].display_name, i + 1);
+                separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
+            }
         });
     }).detach();
 }
@@ -74,7 +86,7 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 
     // ── Header: remix style combobox
     addAndMakeVisible(style_combo_);
-    style_combo_.setBounds(148, 6, 400, 28);
+    style_combo_.setBounds(148, 6, 250, 28);
     style_combo_.addItem("Chop & Screw",    1);
     style_combo_.addItem("Slowed + Reverb", 2);
     style_combo_.addItem("Drum & Bass",     3);
@@ -83,6 +95,15 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     style_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
     style_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::PURPLE));
     style_combo_.onChange = [this] { loadEngineDefaults(style_combo_.getSelectedItemIndex()); };
+
+    // ── Header: separator combobox (populated from sidecar health on connect)
+    addAndMakeVisible(separator_combo_);
+    separator_combo_.setBounds(406, 6, 162, 28);
+    separator_combo_.addItem("Algorithmic FFT", 1);
+    separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
+    separator_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
+    separator_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
+    separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::CYAN));
 
     // ── Header: sidecar health dot
     addAndMakeVisible(health_dot_);
@@ -188,6 +209,12 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         return;
     }
     auto& preset = presets_[idx];
+
+    auto sep_idx = separator_combo_.getSelectedItemIndex();
+    std::string sep_id = (separators_.empty() || sep_idx < 0)
+        ? "algorithmic"
+        : separators_[(size_t)sep_idx].id;
+
     autoremix::RemixParams params {
         (float)tempo_slider_.getValue(),
         (float)pitch_slider_.getValue(),
@@ -196,13 +223,18 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         preset.default_params.bass_boost_db,
         preset.default_params.drums_tempo_factor,
         preset.id,
-        "algorithmic"
+        sep_id
     };
 
+    auto juce_tmp   = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                          .getChildFile("autoremix");
     auto input_file = juce::File(file_path_);
-    std::filesystem::path output_path =
-        std::filesystem::path("/tmp/autoremix/remix") /
-        (input_file.getFileNameWithoutExtension().toStdString() + "_" + preset.id + ".wav");
+    std::filesystem::path stems_dir  = juce_tmp.getChildFile("stems")
+                                           .getFullPathName().toStdString();
+    std::filesystem::path output_path = juce_tmp.getChildFile("remix")
+                                            .getFullPathName().toStdString();
+    output_path /= input_file.getFileNameWithoutExtension().toStdString()
+                   + "_" + preset.id + ".wav";
 
     play_btn.setEnabled(false);
     progress_ = -1.0;
@@ -211,13 +243,13 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
 
     std::string input_str = file_path_.toStdString();
 
-    std::thread([this, params, output_path, input_str]() mutable {
+    std::thread([this, params, stems_dir, output_path, input_str, sep_id]() mutable {
         auto& bridge = audioProcessor.getBridge();
 
         auto stems = bridge.separateStems(
             std::filesystem::path(input_str),
-            std::filesystem::path("/tmp/autoremix/stems"),
-            "algorithmic");
+            stems_dir,
+            sep_id);
 
         if (!stems.valid) {
             juce::MessageManager::callAsync([this] {

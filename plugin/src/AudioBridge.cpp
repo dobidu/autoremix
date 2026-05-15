@@ -44,7 +44,7 @@ StemPaths AudioBridge::separateStems(
             cpr::Url{makeUrl("/api/v1/separate")},
             cpr::Header{{"Content-Type", "application/json"}},
             cpr::Body{body.dump()},
-            cpr::Timeout{30000}
+            cpr::Timeout{300000}
         );
 
         if (r.status_code != 200) return {};

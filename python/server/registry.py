@@ -3,6 +3,7 @@ from .separators.base import IStemSeparator
 from .remix.base import IRemixEngine
 from .separators.spleeter_sep import SpleeterSeparator
 from .separators.algorithmic_sep import AlgorithmicSeparator
+from .separators.demucs_sep import DemucsSeparator
 from .remix.chopped_screwed import ChoppedAndScrewedEngine
 from .remix.slowed_reverb import SlowedReverbEngine
 from .remix.drum_and_bass import DrumAndBassEngine
@@ -11,7 +12,7 @@ from .remix.drum_and_bass import DrumAndBassEngine
 _SEPARATORS: Dict[str, IStemSeparator] = {}
 
 def _init_separators():
-    for cls in [SpleeterSeparator, AlgorithmicSeparator]:
+    for cls in [DemucsSeparator, SpleeterSeparator, AlgorithmicSeparator]:
         inst = cls()
         _SEPARATORS[inst.separator_id] = inst
 

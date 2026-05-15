@@ -36,11 +36,16 @@ AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
 //==============================================================================
 void AutoRemixAudioProcessorEditor::loadFile()
 {
+#if defined(_WIN32) || defined(__APPLE__)
+    constexpr bool useNativeDialog = true;
+#else
+    constexpr bool useNativeDialog = false;  // WSL2/Linux: native dialog fails silently
+#endif
     chooser_ = std::make_unique<juce::FileChooser>(
         "Load audio file...",
         juce::File::getSpecialLocation(juce::File::userHomeDirectory),
         "*.wav;*.aif;*.aiff;*.mp3;*.flac",
-        false);  // native dialog fails silently on WSL2
+        useNativeDialog);
 
     chooser_->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,

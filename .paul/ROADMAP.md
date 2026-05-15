@@ -105,6 +105,17 @@ remix modes as JSON files; built-in modes become presets too. Foundation for Opt
 - 09-04: Dynamic UI — StyleTabBar populated from presets; loadEngineDefaults data-driven
 - 09-05: Release prep — merge v2→main, version bump 2.1.0, README update, git tag
 
+## Phase 11 — Demucs ML Separator ✅ COMPLETE (2026-05-15)
+
+Replaced FFT band-split with Meta's Demucs (htdemucs model) for professional-quality
+stem separation. Optional dep: `DemucsSeparator.is_available()=False` falls back to
+algorithmic when torch/demucs not installed. AudioBridge separation timeout 30s → 300s.
+
+- 11-01: `DemucsSeparator` + registry registration + 300s AudioBridge timeout
+- 11-02: `pip install demucs`, pytest coverage (`pytest.importorskip` for CI), v2.3.0 release
+
+Deliverable: `POST /api/v1/separate` with `separator_id=demucs` → 4 clean ML stems ✓
+
 ## Phase 10 — Effect Chain DSL ✅ COMPLETE (2026-05-14)
 
 Option B implemented: `effects` array drives a declarative pipeline interpreter.

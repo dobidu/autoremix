@@ -2,28 +2,28 @@
 
 ## Current Position
 
-Milestone: v3 Effect Chain DSL ✅ COMPLETE
-Phase: 10 of 10 — ALL PLANS COMPLETE
-Plan: 10-03 complete
-Status: checkpoint — merge v2 → main, tag v2.2.0
-Last activity: 2026-05-14 — 10-03 PLAN ✓ APPLY ✓
+Milestone: v4 ML Stem Separation ✅ COMPLETE
+Phase: 11 (Demucs Separator) — ALL PLANS COMPLETE
+Plan: 11-02 complete
+Status: checkpoint — merge v2 → main, tag v2.3.0
+Last activity: 2026-05-15 — 11-02 PLAN ✓ APPLY ✓
 
 Progress:
-- Milestone: v3 Effect Chain DSL [██████████] 100%
-- Phase 10: [██████████] 100%
+- Milestone: v4 ML Stem Separation [██████████] 100%
+- Phase 11: [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ░     [10-03 open — awaiting checkpoint commit]
+  ✓        ✓        ░     [11-02 open — awaiting checkpoint]
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-14
-Stopped at: 10-03 APPLY complete; checkpoint pending
-Next action: commit, merge v2 → main, push, tag v2.2.0
+Last session: 2026-05-15
+Stopped at: 11-02 APPLY complete; checkpoint pending
+Next action: commit, merge v2 → main, push, tag v2.3.0
 
 ## Decisions
 - Python sidecar port: 17432

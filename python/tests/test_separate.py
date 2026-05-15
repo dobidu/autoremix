@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 
@@ -33,3 +34,20 @@ async def test_separate_unknown_separator(client, test_wav):
         "separator_id": "does_not_exist",
     })
     assert r.status_code == 400, f"expected 400, got {r.status_code}: {r.text}"
+
+
+async def test_separate_demucs(client, test_wav, tmp_path):
+    pytest.importorskip("demucs", reason="demucs not installed — skipping ML separation test")
+    r = await client.post("/api/v1/separate", json={
+        "input_path":   str(test_wav),
+        "output_dir":   str(tmp_path),
+        "separator_id": "demucs",
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["success"] is True, f"demucs separation failed: {data.get('error')}"
+    stems = data["stems"]
+    for key in ("vocals", "drums", "bass", "other"):
+        p = Path(stems[key])
+        assert p.exists(), f"{key} stem missing at {p}"
+        assert p.stat().st_size > 0, f"{key} stem is empty"

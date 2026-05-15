@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(AutoRemix VERSION 2.2.0)
+project(AutoRemix VERSION 2.3.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 20)
@@ -11,8 +11,14 @@ add_subdirectory(submodules/JUCE)
 include(FetchContent)
 set(LIBCPR_BUILD_SHARED OFF)
 set(BUILD_SHARED_LIBS OFF)
-# Required so libcpr.a can be linked into VST3 shared library (.so)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# Required so libcpr.a can be linked into VST3 shared library (.so / .dylib)
+if(NOT WIN32)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+# On Windows let cpr auto-detect WinHTTP; disable system curl requirement
+if(WIN32)
+  set(CPR_USE_SYSTEM_CURL OFF CACHE BOOL "" FORCE)
+endif()
 FetchContent_Declare(
   cpr
   GIT_REPOSITORY https://github.com/libcpr/cpr.git

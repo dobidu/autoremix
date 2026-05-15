@@ -1,3 +1,5 @@
+import sys
+import os
 import logging
 from pathlib import Path
 from ..models import RemixPreset
@@ -5,9 +7,16 @@ from ..models import RemixPreset
 logger = logging.getLogger(__name__)
 
 
+def _user_preset_dir() -> Path:
+    if sys.platform == "win32":
+        base = Path(os.environ.get("APPDATA", Path.home()))
+        return base / "autoremix" / "modes"
+    return Path.home() / ".config" / "autoremix" / "modes"
+
+
 class PresetLoader:
     BUILTIN_DIR = Path(__file__).parent
-    USER_DIR = Path.home() / ".config" / "autoremix" / "modes"
+    USER_DIR = _user_preset_dir()
 
     def load_all(self) -> dict[str, RemixPreset]:
         presets: dict[str, RemixPreset] = {}

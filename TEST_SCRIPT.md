@@ -1,6 +1,6 @@
-# AutoRemix v2.2.0 — Human Test Script
+# AutoRemix v2.3.0 — Human Test Script
 
-Covers all 10 phases of v2 development. Run top-to-bottom; each section builds on
+Covers all 11 phases of v2 development. Run top-to-bottom; each section builds on
 the previous. Mark each item `[x]` as you go.
 
 ---
@@ -8,10 +8,14 @@ the previous. Mark each item `[x]` as you go.
 ## Prerequisites
 
 - [ ] A stereo WAV or AIFF file available for testing (called `INPUT.wav` below —
-  replace with your actual path). Any song, ≥ 30s, 44100 Hz stereo recommended.
+  replace with your actual path). Any song, ≥ 30 s, 44100 Hz stereo recommended.
 - [ ] Working directory: repo root (`autoremix/`)
-- [ ] Python venv activated: `cd python && source .venv/bin/activate`
-- [ ] cmake + ninja available in PATH (for Section C)
+- [ ] Python venv activated:
+  - Linux/macOS: `cd python && source .venv/bin/activate`
+  - Windows: `cd python && .venv\Scripts\activate`
+- [ ] cmake + ninja (Linux/macOS) or Visual Studio 2022 (Windows) available (Section C)
+- [ ] `demucs` installed for Section B-3b:
+  `pip install demucs` (~2 GB — skip B-3b if not installed)
 
 ---
 
@@ -23,13 +27,13 @@ the previous. Mark each item `[x]` as you go.
 
 ```bash
 cd python
-source .venv/bin/activate
 python -m pytest tests/ -v
 ```
 
-**Expected:** `26 passed` (no failures, only deprecation warnings acceptable)
+**Expected:** `27 passed` (demucs test skips if demucs absent — that is OK).
+No failures. Deprecation warnings are acceptable.
 
-- [ ] Pass — `26 passed`
+- [ ] Pass — `27 passed` (or `26 passed, 1 skipped` without demucs)
 - [ ] Note any failures: _______________
 
 ### A-2: Sidecar imports cleanly
@@ -38,11 +42,11 @@ python -m pytest tests/ -v
 python -c "from server.main import app; print('import ok')"
 ```
 
-**Expected:** `import ok` (no ImportError, no traceback)
+**Expected:** `import ok`
 
 - [ ] Pass
 
-### A-3: OP_REGISTRY has all 6 ops
+### A-3: OP_REGISTRY has all 6 effect ops
 
 ```bash
 python -c "from server.remix.ops import OP_REGISTRY; print(sorted(OP_REGISTRY))"
@@ -55,6 +59,15 @@ python -c "from server.remix.ops import OP_REGISTRY; print(sorted(OP_REGISTRY))"
 
 - [ ] Pass
 
+### A-4: DemucsSeparator availability check
+
+```bash
+python -c "from server.separators.demucs_sep import DemucsSeparator; print('demucs available:', DemucsSeparator().is_available())"
+```
+
+- [ ] If demucs installed: prints `demucs available: True`
+- [ ] If demucs absent: prints `demucs available: False` (no crash, no ImportError)
+
 ---
 
 ## Section B — Python Sidecar (HTTP)
@@ -63,13 +76,11 @@ Start the sidecar in a separate terminal and leave it running for all of Section
 
 ```bash
 cd python
-source .venv/bin/activate
 python server/main.py
 ```
 
 **Expected startup output:**
 ```
-INFO:     Started server process [...]
 INFO:     Uvicorn running on http://127.0.0.1:17432
 ```
 
@@ -83,12 +94,12 @@ INFO:     Uvicorn running on http://127.0.0.1:17432
 curl -s http://127.0.0.1:17432/api/v1/health | python -m json.tool
 ```
 
-**Expected:** JSON with `"status": "ok"` and non-empty `available_engines` and
-`available_separators` lists.
+**Expected:** `"status": "ok"` with non-empty lists.
 
 - [ ] `status` = `"ok"`
 - [ ] `available_engines` contains `chopped_screwed`, `slowed_reverb`, `drum_and_bass`
 - [ ] `available_separators` contains `algorithmic`
+- [ ] `available_separators` also contains `demucs` *(only if demucs installed)*
 
 ---
 
@@ -98,19 +109,17 @@ curl -s http://127.0.0.1:17432/api/v1/health | python -m json.tool
 curl -s http://127.0.0.1:17432/api/v1/presets | python -m json.tool
 ```
 
-**Expected:** JSON array with exactly 3 objects (built-in presets). Each has `id`,
-`name`, `params`, `stem_mix`.
+**Expected:** JSON array with exactly 3 built-in presets.
 
 - [ ] Exactly 3 presets returned
-- [ ] IDs present: `chopped_screwed`, `slowed_reverb`, `drum_and_bass`
-- [ ] Each preset has `params.tempo_factor`, `params.pitch_shift_semi`, etc.
-- [ ] Each preset has `stem_mix` with `vocals`, `drums`, `bass`, `other`
+- [ ] IDs: `chopped_screwed`, `slowed_reverb`, `drum_and_bass`
+- [ ] Each has `params`, `stem_mix`
 
 ---
 
-### B-3: Stem separation
+### B-3: Stem separation — algorithmic
 
-Replace `INPUT.wav` with your actual file path.
+Replace `/absolute/path/to/INPUT.wav` with your actual path.
 
 ```bash
 curl -s -X POST http://127.0.0.1:17432/api/v1/separate \
@@ -119,20 +128,15 @@ curl -s -X POST http://127.0.0.1:17432/api/v1/separate \
   | python -m json.tool
 ```
 
-**Expected:** `"success": true` with paths to 4 stem WAV files.
-
 - [ ] `success` = `true`
 - [ ] 4 stems returned: `vocals`, `drums`, `bass`, `other`
-- [ ] All 4 files exist on disk:
+- [ ] All 4 files exist and are > 0 bytes:
 
 ```bash
 ls -lh /tmp/autoremix_test/stems/*/
 ```
 
-- [ ] Each stem file is > 0 bytes
-- [ ] Each stem file is a valid WAV (optional: `file /tmp/autoremix_test/stems/*/*.wav`)
-
-**Note the stem paths** — needed for B-4 and B-5. Set shell variables:
+**Set shell variables for later sections:**
 
 ```bash
 STEMS_DIR=$(ls -d /tmp/autoremix_test/stems/*/); echo $STEMS_DIR
@@ -143,11 +147,31 @@ OTHER=$(ls  $STEMS_DIR/other.wav  2>/dev/null || ls $STEMS_DIR/*other*.wav)
 echo "vocals=$VOCALS drums=$DRUMS bass=$BASS other=$OTHER"
 ```
 
+- [ ] All 4 variables set to existing file paths
+
+---
+
+### B-3b: Stem separation — Demucs ML *(skip if demucs not installed)*
+
+```bash
+curl -s -X POST http://127.0.0.1:17432/api/v1/separate \
+  -H "Content-Type: application/json" \
+  -d '{"input_path": "/absolute/path/to/INPUT.wav", "output_dir": "/tmp/autoremix_test_demucs", "separator_id": "demucs"}' \
+  | python -m json.tool
+```
+
+**Note:** Demucs CPU inference takes 1–5 minutes for a typical song. The sidecar
+timeout is 300 s. Be patient — no output until inference completes.
+
+- [ ] `success` = `true`
+- [ ] 4 stems returned: `vocals`, `drums`, `bass`, `other`
+- [ ] All 4 files exist and are > 0 bytes
+- [ ] **Listen:** stems are noticeably cleaner than the algorithmic separator —
+  minimal bleed between vocals and instruments
+
 ---
 
 ### B-4: Built-in engine remix (×3)
-
-Run all 3. Each should produce a valid output WAV.
 
 #### B-4a: Chopped & Screwed
 
@@ -158,9 +182,8 @@ curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
   | python -m json.tool
 ```
 
-- [ ] `success` = `true`
-- [ ] `/tmp/autoremix_test/out_cs.wav` exists and is > 0 bytes
-- [ ] **Listen:** tempo is slower, pitch is lower, periodic chops audible
+- [ ] `success` = `true`; `/tmp/autoremix_test/out_cs.wav` > 0 bytes
+- [ ] **Listen:** slower tempo, lower pitch, periodic chops audible
 
 #### B-4b: Slowed Reverb
 
@@ -171,9 +194,8 @@ curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
   | python -m json.tool
 ```
 
-- [ ] `success` = `true`
-- [ ] `/tmp/autoremix_test/out_sr.wav` exists and is > 0 bytes
-- [ ] **Listen:** tempo is slower, heavy reverb tail audible
+- [ ] `success` = `true`; `/tmp/autoremix_test/out_sr.wav` > 0 bytes
+- [ ] **Listen:** slower tempo, heavy reverb tail
 
 #### B-4c: Drum and Bass
 
@@ -184,64 +206,56 @@ curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
   | python -m json.tool
 ```
 
-- [ ] `success` = `true`
-- [ ] `/tmp/autoremix_test/out_dnb.wav` exists and is > 0 bytes
-- [ ] **Listen:** drums are noticeably faster than other stems, bass has more presence
+- [ ] `success` = `true`; `/tmp/autoremix_test/out_dnb.wav` > 0 bytes
+- [ ] **Listen:** drums faster than other stems, bass more present
 
 ---
 
 ### B-5: Effect Chain DSL — custom chain preset
 
-#### B-5a: Create chain preset file
+#### B-5a: Create and install preset
 
 ```bash
-cat > /tmp/my_chain.json << 'EOF'
+# Linux/macOS
+mkdir -p ~/.config/autoremix/modes/
+cat > ~/.config/autoremix/modes/my_chain.json << 'EOF'
 {
   "id": "my_chain",
   "version": "2.0",
   "name": "My Chain",
   "params": {
-    "tempo_factor": 0.75,
-    "pitch_shift_semi": -2.0,
-    "reverb_mix": 0.1,
-    "chop_interval_ms": 0.0,
-    "bass_boost_db": 0.0,
-    "drums_tempo_factor": 1.0
+    "tempo_factor": 0.75, "pitch_shift_semi": -2.0, "reverb_mix": 0.1,
+    "chop_interval_ms": 0.0, "bass_boost_db": 0.0, "drums_tempo_factor": 1.0
   },
   "stem_mix": {"vocals": 1.0, "drums": 1.0, "bass": 1.2, "other": 0.8},
   "effects": [
-    {"op": "time_stretch", "stems": "all",       "params": {"factor": 0.75}},
-    {"op": "reverb",       "stems": "all",       "params": {"mix": 0.20, "room_size": 0.7}},
-    {"op": "bass_boost",   "stems": ["bass"],    "params": {"db": 6.0}},
-    {"op": "eq_highpass",  "stems": ["other"],   "params": {"cutoff_hz": 300}}
+    {"op": "time_stretch", "stems": "all",      "params": {"factor": 0.75}},
+    {"op": "reverb",       "stems": "all",      "params": {"mix": 0.20, "room_size": 0.7}},
+    {"op": "bass_boost",   "stems": ["bass"],   "params": {"db": 6.0}},
+    {"op": "eq_highpass",  "stems": ["other"],  "params": {"cutoff_hz": 300}}
   ]
 }
 EOF
 ```
 
-#### B-5b: Install preset and restart sidecar
-
-```bash
-mkdir -p ~/.config/autoremix/modes/
-cp /tmp/my_chain.json ~/.config/autoremix/modes/
+```bat
+rem Windows
+mkdir %APPDATA%\autoremix\modes
+rem Create the file above at %APPDATA%\autoremix\modes\my_chain.json
 ```
 
-Stop the running sidecar (Ctrl-C), restart it:
+Stop the sidecar (Ctrl-C) and restart it to pick up the new preset.
 
-```bash
-python server/main.py
-```
-
-#### B-5c: Verify preset appears in list
+#### B-5b: Verify preset appears
 
 ```bash
 curl -s http://127.0.0.1:17432/api/v1/presets | python -m json.tool
 ```
 
-- [ ] Now shows **4** presets (3 built-in + `my_chain`)
-- [ ] `my_chain` has `"id": "my_chain"` and `"name": "My Chain"`
+- [ ] Now **4** presets (3 built-in + `my_chain`)
+- [ ] `my_chain` has `"name": "My Chain"`
 
-#### B-5d: Trigger chain interpreter via remix
+#### B-5c: Trigger chain interpreter
 
 ```bash
 curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
@@ -250,49 +264,41 @@ curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
   | python -m json.tool
 ```
 
-- [ ] `success` = `true`
-- [ ] `/tmp/autoremix_test/out_chain.wav` exists and is > 0 bytes
-- [ ] **Listen:** tempo is slower (~0.75×), noticeable reverb, bass boost present
-- [ ] Sidecar log says `Remixing via effect chain my_chain` (not `with engine`)
+- [ ] `success` = `true`; `/tmp/autoremix_test/out_chain.wav` > 0 bytes
+- [ ] Sidecar log: `Remixing via effect chain my_chain` (not `with engine`)
+- [ ] **Listen:** slower (~0.75×), noticeable reverb, bass boost
 
-#### B-5e: Duration proportional to time_stretch factor
+#### B-5d: Duration check
 
 ```bash
 python -c "
 import soundfile as sf
 orig, sr = sf.read('$VOCALS')
 out, _   = sf.read('/tmp/autoremix_test/out_chain.wav')
-orig_dur = len(orig) / sr
-out_dur  = len(out)  / sr
-expected = orig_dur / 0.75
-ratio    = out_dur / expected
-print(f'Original stem: {orig_dur:.2f}s')
-print(f'Output:        {out_dur:.2f}s')
-print(f'Expected (~):  {expected:.2f}s')
-print(f'Ratio:         {ratio:.3f}  (should be close to 1.0)')
+expected = (len(orig) / sr) / 0.75
+actual   = len(out) / sr
+print(f'Ratio: {actual/expected:.3f}  (should be 0.90–1.10)')
 "
 ```
 
-- [ ] Ratio is between 0.90 and 1.10 (within 10% of expected duration)
+- [ ] Ratio between 0.90 and 1.10
 
 ---
 
 ### B-6: Error handling
 
-#### B-6a: Unknown engine ID
+#### B-6a: Unknown engine ID → HTTP 400
 
 ```bash
-curl -s -X POST http://127.0.0.1:17432/api/v1/remix \
+curl -s -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:17432/api/v1/remix \
   -H "Content-Type: application/json" \
-  -d "{\"vocals_path\":\"$VOCALS\",\"drums_path\":\"$DRUMS\",\"bass_path\":\"$BASS\",\"other_path\":\"$OTHER\",\"output_path\":\"/tmp/autoremix_test/err.wav\",\"engine_id\":\"does_not_exist\"}" \
-  | python -m json.tool
+  -d "{\"vocals_path\":\"$VOCALS\",\"drums_path\":\"$DRUMS\",\"bass_path\":\"$BASS\",\"other_path\":\"$OTHER\",\"output_path\":\"/tmp/err.wav\",\"engine_id\":\"does_not_exist\"}"
 ```
 
-- [ ] HTTP 400 returned (not 500, not 200)
-- [ ] Error message mentions `does_not_exist`
+- [ ] Returns `400`
 - [ ] Sidecar does NOT crash — still responds to next request
 
-#### B-6b: Unknown op in chain preset (inject via direct call)
+#### B-6b: Unknown effect op → success=false
 
 ```bash
 python -c "
@@ -311,22 +317,18 @@ async def run():
         r = await c.post('/api/v1/remix', json={
             'vocals_path': '$VOCALS', 'drums_path': '$DRUMS',
             'bass_path': '$BASS', 'other_path': '$OTHER',
-            'output_path': '/tmp/autoremix_test/err2.wav',
-            'engine_id': 'bad_op'})
+            'output_path': '/tmp/err2.wav', 'engine_id': 'bad_op'})
         print(r.status_code, r.json())
-
 asyncio.run(run())
 "
 ```
 
-- [ ] Response has `success` = `false` and error mentions `nonexistent`
-- [ ] No Python traceback escapes to stdout
+- [ ] `success` = `false`; error mentions `nonexistent`
+- [ ] No traceback to stdout
 
 ---
 
 ### B-7: User preset override
-
-Built-in `chopped_screwed` can be overridden by a user preset with the same `id`.
 
 ```bash
 cat > ~/.config/autoremix/modes/chopped_screwed.json << 'EOF'
@@ -335,12 +337,8 @@ cat > ~/.config/autoremix/modes/chopped_screwed.json << 'EOF'
   "version": "1.0",
   "name": "Chop & Screw (My Override)",
   "params": {
-    "tempo_factor": 0.60,
-    "pitch_shift_semi": -6.0,
-    "reverb_mix": 0.10,
-    "chop_interval_ms": 1000.0,
-    "bass_boost_db": 3.0,
-    "drums_tempo_factor": 1.0
+    "tempo_factor": 0.60, "pitch_shift_semi": -6.0, "reverb_mix": 0.10,
+    "chop_interval_ms": 1000.0, "bass_boost_db": 3.0, "drums_tempo_factor": 1.0
   },
   "stem_mix": {"vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0},
   "effects": []
@@ -355,9 +353,9 @@ curl -s http://127.0.0.1:17432/api/v1/presets \
   | python -c "import sys,json; p=[x for x in json.load(sys.stdin) if x['id']=='chopped_screwed'][0]; print(p['name'], p['params']['tempo_factor'])"
 ```
 
-- [ ] Output shows `Chop & Screw (My Override) 0.6` (user file took precedence)
+- [ ] Output: `Chop & Screw (My Override) 0.6`
 
-Clean up after:
+Clean up:
 
 ```bash
 rm ~/.config/autoremix/modes/chopped_screwed.json
@@ -367,215 +365,185 @@ rm ~/.config/autoremix/modes/chopped_screwed.json
 
 ## Section C — Plugin UI
 
-> Requires a successful cmake build. Sidecar must be running from Section B
-> (or restart it before running the plugin).
+> Sidecar must be running. Restart with `my_chain` preset installed (B-5a) for full tab tests.
 
 ### C-1: Build
 
+**Linux/macOS:**
 ```bash
-cd /path/to/autoremix   # repo root
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel
 ```
 
+**Windows:**
+```bat
+cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug --parallel
+```
+
 - [ ] Build completes with 0 errors
-- [ ] Warning count is stable (same as previous builds; no new warnings introduced)
-- [ ] Standalone binary present:
-
-```bash
-ls build/AutoRemix_artefacts/Debug/Standalone/AutoRemix
-```
-
-- [ ] VST3 bundle present:
-
-```bash
-ls build/AutoRemix_artefacts/Debug/VST3/AutoRemix.vst3
-```
+- [ ] Standalone binary present: `build/AutoRemix_artefacts/Debug/Standalone/AutoRemix` (`.exe` on Windows)
+- [ ] VST3 bundle present: `build/AutoRemix_artefacts/Debug/VST3/AutoRemix.vst3/`
 
 ---
 
 ### C-2: Standalone app — launch
 
 ```bash
-# Start sidecar first (separate terminal)
-cd python && source .venv/bin/activate && python server/main.py
-
-# Launch plugin (in another terminal)
 AUTOREMIX_SERVER_PATH=$(pwd)/python/server/main.py \
   build/AutoRemix_artefacts/Debug/Standalone/AutoRemix
 ```
 
-- [ ] App window opens without crash (600×400)
-- [ ] No assertion failures or JUCE leak detector alerts in terminal output
+- [ ] Window opens without crash (600×400, dark theme)
+- [ ] No assertion failures or JUCE leak detector alerts in terminal
 
 ---
 
-### C-3: Sidecar health indicator
+### C-3: Sidecar health dot
 
-With sidecar running:
-
-- [ ] Small dot in top-right corner of plugin window is **green**
-
-Stop the sidecar (Ctrl-C in its terminal):
-
-- [ ] Dot turns **red** within a few seconds (polling interval)
-
-Restart sidecar:
-
-- [ ] Dot returns to **green**
+- [ ] Dot in top-right corner is **green** when sidecar running
+- [ ] Dot turns **red** within a few seconds after stopping sidecar
+- [ ] Dot returns to **green** after restarting sidecar
 
 ---
 
 ### C-4: Preset tab bar — dynamic population
 
-With sidecar running and `my_chain` preset installed (from B-5b):
+With sidecar running and `my_chain` preset installed:
 
-- [ ] Tab bar shows **4 tabs** (not hardcoded 3): `Chop & Screw`, `Slowed Reverb`,
-  `Drum and Bass`, `My Chain`
+- [ ] Tab bar shows **4 tabs**: `Chop & Screw`, `Slowed Reverb`, `Drum and Bass`, `My Chain`
 - [ ] Tab labels match `name` field from `/api/v1/presets`
 
 With sidecar **not** running:
 
-- [ ] Tab bar shows default fallback labels (does not crash)
-- [ ] No assertion failure
+- [ ] Tab bar shows fallback labels — does not crash
 
 ---
 
-### C-5: Tab switching updates slider defaults
+### C-5: Tab switching updates sliders
 
-With sidecar running:
-
-- [ ] Click **Chop & Screw** tab → Tempo slider ≈ 0.70, Pitch ≈ −4.0
-- [ ] Click **Slowed Reverb** tab → Tempo slider matches that preset's `tempo_factor`
-- [ ] Click **Drum and Bass** tab → Tempo slider matches that preset's `tempo_factor`
-- [ ] Click **My Chain** tab → Tempo slider ≈ 0.75 (as defined in `my_chain.json`)
-- [ ] No crash when switching tabs rapidly
+- [ ] Click **Chop & Screw** → Tempo ≈ 0.70, Pitch ≈ −4.0
+- [ ] Click **Slowed Reverb** → Tempo matches preset
+- [ ] Click **Drum and Bass** → Tempo matches preset
+- [ ] Click **My Chain** → Tempo ≈ 0.75
+- [ ] No crash switching tabs rapidly
 
 ---
 
 ### C-6: Load audio file
 
-- [ ] Click **Open** / file chooser button
-- [ ] Native file dialog does NOT open (WSL2 / headless: `useNativeFileDialog=false`)
-  — JUCE file chooser opens instead
-- [ ] Navigate to `INPUT.wav` and select it
-- [ ] Waveform renders in the waveform display zone
-- [ ] Status label shows something like `Loaded: INPUT.wav` (or similar)
+- [ ] Click **Load** / Open button
+- [ ] **Linux/WSL2:** JUCE file browser opens (not native OS dialog)
+- [ ] **Windows/macOS:** native OS file dialog opens
+- [ ] Select `INPUT.wav` → waveform renders in display
+- [ ] Status label updates
 - [ ] No crash
 
 ---
 
 ### C-7: Play (separate + remix)
 
-With a file loaded and sidecar running:
+With file loaded and sidecar running:
 
-- [ ] Select **Chop & Screw** tab
-- [ ] Click **Play** button
-- [ ] Status label updates to indicate separation in progress
-- [ ] Status label updates to indicate remix in progress
-- [ ] After completion: status label shows success or output path
-- [ ] Output WAV written to `/tmp/autoremix/` (or wherever the plugin writes it)
-- [ ] **Listen:** output matches Chopped & Screwed character (slower, pitch-shifted, chopped)
+- [ ] Select **Chop & Screw** → click **Play**
+- [ ] Status label shows separation progress, then remix progress
+- [ ] Output WAV written (check sidecar log for output path)
+- [ ] **Listen:** slower, pitch-shifted, chopped
 
-Repeat with **Slowed Reverb** tab:
-
-- [ ] Output WAV exists and has reverb character
-
-Repeat with **My Chain** tab:
-
-- [ ] Output WAV exists — routed via chain interpreter (check sidecar log for
-  `Remixing via effect chain my_chain`)
+- [ ] Repeat with **Slowed Reverb** → reverb character audible
+- [ ] Repeat with **My Chain** → sidecar log says `Remixing via effect chain my_chain`
 
 ---
 
 ### C-8: Play with sidecar down
 
-Stop sidecar. With plugin open and file loaded:
+Stop sidecar. With file loaded:
 
 - [ ] Click **Play**
-- [ ] Status label shows error message (e.g. "Sidecar not available" or similar)
-- [ ] Plugin does **not** crash or freeze
-- [ ] UI remains responsive after error
+- [ ] Status label shows error message — no crash
+- [ ] UI remains responsive
 
 ---
 
-### C-9: VST3 in REAPER (if available)
+### C-9: VST3 in REAPER *(if available)*
 
 ```bash
-# Copy VST3 to REAPER search path (Linux default):
+# Linux: copy VST3 to scan path
 cp -r build/AutoRemix_artefacts/Debug/VST3/AutoRemix.vst3 ~/.vst3/
+
+# Windows: copy to C:\Program Files\Common Files\VST3\
 ```
 
-- [ ] Open REAPER → Options → Preferences → VST → Re-scan
-- [ ] `AutoRemix` appears in plugin list
-- [ ] Insert on a track → plugin window opens without crash
-- [ ] UI renders correctly (600×400, dark theme, tab bar, sliders visible)
-- [ ] Play button functional (same checks as C-7 apply)
+- [ ] REAPER → Options → VST → Re-scan → `AutoRemix` appears
+- [ ] Insert on track → plugin window opens, 600×400, dark theme
+- [ ] Tab bar, sliders, Load/Play/Save all visible
+- [ ] Play button functional (same as C-7)
 
 ---
 
 ## Section D — Regression Check
 
-After completing B and C, confirm nothing regressed.
-
-### D-1: Automated suite still green
+### D-1: Full pytest suite still green
 
 ```bash
 cd python
 python -m pytest tests/ -v
 ```
 
-- [ ] **26 passed** (same count as A-1)
+- [ ] `27 passed` (or `26 passed, 1 skipped` without demucs) — same as A-1
 
-### D-2: All 3 built-in engines still work end-to-end
-
-(Confirm output files from B-4 still exist and are playable)
+### D-2: Built-in engines still work
 
 - [ ] `/tmp/autoremix_test/out_cs.wav` — playable
 - [ ] `/tmp/autoremix_test/out_sr.wav` — playable
 - [ ] `/tmp/autoremix_test/out_dnb.wav` — playable
 
-### D-3: Chain preset output still works
+### D-3: Chain preset still works
 
 - [ ] `/tmp/autoremix_test/out_chain.wav` — playable, correct character
+
+### D-4: Demucs stems quality check *(if B-3b was run)*
+
+- [ ] `/tmp/autoremix_test_demucs/` — 4 stems exist
+- [ ] **Listen:** demucs stems noticeably cleaner than algorithmic stems from B-3
 
 ---
 
 ## Results Summary
 
-Fill in after completing the full script.
-
 | Section | Items | Passed | Failed | Notes |
 |---------|-------|--------|--------|-------|
-| A — Automated baseline | 3 | | | |
-| B-1 Health | 3 | | | |
-| B-2 Presets | 4 | | | |
-| B-3 Separation | 4 | | | |
-| B-4 Engine remix | 9 | | | |
-| B-5 Chain DSL | 8 | | | |
+| A-1 pytest | 1 | | | |
+| A-2 import | 1 | | | |
+| A-3 OP_REGISTRY | 1 | | | |
+| A-4 demucs avail | 2 | | | |
+| B-1 Health | 4 | | | |
+| B-2 Presets | 3 | | | |
+| B-3 Algorithmic sep | 4 | | | |
+| B-3b Demucs sep | 4 | | | *(skip if demucs absent)* |
+| B-4 Engine remix ×3 | 9 | | | |
+| B-5 Chain DSL | 7 | | | |
 | B-6 Error handling | 4 | | | |
 | B-7 User override | 1 | | | |
-| C-1 Build | 4 | | | |
+| C-1 Build | 3 | | | |
 | C-2 Standalone launch | 2 | | | |
 | C-3 Health dot | 3 | | | |
 | C-4 Tab bar | 4 | | | |
 | C-5 Tab switching | 5 | | | |
-| C-6 File load | 5 | | | |
-| C-7 Play | 6 | | | |
+| C-6 File load | 4 | | | |
+| C-7 Play | 5 | | | |
 | C-8 Play sidecar down | 3 | | | |
 | C-9 VST3 REAPER | 4 | | | |
-| D Regression | 5 | | | |
-| **Total** | **87** | | | |
+| D Regression | 7 | | | |
+| **Total** | **86** *(+4 demucs)* | | | |
 
 ---
 
 ## Known Limitations (not bugs)
 
-- Algorithmic FFT separator produces rough stems — vocals leaks into other stems.
-  This is expected; Demucs ML separator is deferred to a future phase.
-- `useNativeFileDialog=false` means no OS file picker on WSL2 — JUCE file browser
-  used instead.
-- Sidecar health dot polling interval may be several seconds — brief sidecar restarts
-  may not be detected immediately.
-- Duration ratio check (B-5e) allows 10% tolerance because librosa `time_stretch`
-  is approximate.
+- Demucs CPU inference: 1–5 minutes for a 3-minute song. Normal — sidecar timeout is 300 s.
+- Algorithmic separator has poor stem isolation (band-split only). Use `demucs` for quality.
+- Sidecar health dot polling: brief sidecar restarts may not be detected immediately.
+- Duration ratio check (B-5d) allows 10% tolerance — librosa `time_stretch` is approximate.
+- WSL2: native OS file dialog not available — JUCE file browser is used instead.
+- No real-time processing — offline batch only.

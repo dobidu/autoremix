@@ -34,12 +34,16 @@ class DemucsSeparator(IStemSeparator):
     def separate(self, input_path: Path, output_dir: Path) -> StemPaths:
         import torch
         import torchaudio
+        import soundfile as sf
+        import numpy as np
         from demucs.apply import apply_model
 
         model = _get_model()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        wav, sr = torchaudio.load(str(input_path))
+        # Use soundfile to avoid torchaudio backend (torchcodec) dependency
+        audio_np, sr = sf.read(str(input_path), dtype="float32", always_2d=True)
+        wav = torch.from_numpy(audio_np.T)  # [channels, samples]
 
         if sr != model.samplerate:
             wav = torchaudio.functional.resample(wav, sr, model.samplerate)
@@ -53,9 +57,9 @@ class DemucsSeparator(IStemSeparator):
 
         stem_paths = {}
         for i, name in enumerate(model.sources):
-            stem = sources[0, i]  # [channels, samples]
+            stem = sources[0, i].cpu().numpy().T  # [samples, channels]
             out = output_dir / f"{name}.wav"
-            torchaudio.save(str(out), stem.cpu(), model.samplerate)
+            sf.write(str(out), stem, model.samplerate)
             stem_paths[name] = out
 
         return StemPaths(

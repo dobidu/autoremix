@@ -1,5 +1,15 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 12 — Separator UI + Cross-Platform Temp Dir ✅ COMPLETE (2026-05-15)
+
+- `SeparatorInfo` type + `AudioBridge::getAvailableSeparators()` (parses `/api/v1/health`)
+- `separator_combo_` in plugin header — user selects Demucs (ML) or Algorithmic FFT at runtime
+- `onClick_Play` passes selected `sep_id` — no more hardcoded `"algorithmic"`
+- `/tmp/autoremix` replaced with `juce::File::tempDirectory` — cross-platform (Windows fix)
+- `StyleTabBar.h` deleted; version v2.4.0
+
+Deliverable: separator selection end-to-end from UI → bridge → sidecar ✓
+
 ## Phase 00 — Setup & Scaffolding ✅ COMPLETE (2026-05-08)
 Clone repo, submodules, Python env, verify build, install tooling.
 Deliverable: green build + server health check passing.

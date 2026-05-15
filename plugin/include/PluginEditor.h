@@ -39,8 +39,10 @@ private:
     double            progress_   = 0.0;
     juce::ProgressBar progress_bar_{progress_};
 
-    juce::Slider tempo_slider_, pitch_slider_, reverb_slider_, chop_slider_;
-    juce::Label  tempo_lbl_,   pitch_lbl_,    reverb_lbl_,    chop_lbl_;
+    juce::Slider tempo_slider_,  pitch_slider_,  reverb_slider_,  chop_slider_;
+    juce::Label  tempo_lbl_,    pitch_lbl_,     reverb_lbl_,     chop_lbl_;
+    juce::Slider vocals_slider_, drums_slider_,  bass_slider_,    other_slider_;
+    juce::Label  vocals_lbl_,   drums_lbl_,     bass_lbl_,       other_lbl_;
 
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String file_path_;

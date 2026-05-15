@@ -82,7 +82,13 @@ ProcessResult AudioBridge::applyRemix(
             {"reverb_mix",         params.reverb_mix},
             {"chop_interval_ms",   params.chop_interval_ms},
             {"bass_boost_db",      params.bass_boost_db},
-            {"drums_tempo_factor", params.drums_tempo_factor}
+            {"drums_tempo_factor", params.drums_tempo_factor},
+            {"stem_mix_override",  {
+                {"vocals", params.vocals_gain},
+                {"drums",  params.drums_gain},
+                {"bass",   params.bass_gain},
+                {"other",  params.other_gain},
+            }}
         };
 
         auto r = cpr::Post(

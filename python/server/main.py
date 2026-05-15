@@ -70,10 +70,35 @@ async def separate(req: SeparateRequest):
         return SeparateResponse(success=False, error=str(e))
 
 
+def _apply_stem_weights(stems, weights: dict, out_dir: Path):
+    """Scale each stem WAV by its weight factor; write to out_dir. Return new StemPaths."""
+    import soundfile as sf
+    import numpy as np
+    from .separators.base import StemPaths as _StemPaths
+    out_dir.mkdir(parents=True, exist_ok=True)
+    result = {}
+    for name in ("vocals", "drums", "bass", "other"):
+        path = getattr(stems, name)
+        audio, sr = sf.read(str(path), dtype="float32", always_2d=True)
+        factor = float(weights.get(name, 1.0))
+        out_path = out_dir / f"{name}.wav"
+        sf.write(str(out_path), audio * factor, sr)
+        result[name] = out_path
+    return _StemPaths(
+        vocals=result["vocals"], drums=result["drums"],
+        bass=result["bass"],    other=result["other"],
+    )
+
+
 @app.post("/api/v1/remix", response_model=RemixResponse)
 async def remix(req: RemixRequest):
     try:
         stems = req.to_stems()
+
+        if req.stem_mix_override:
+            weighted_dir = TEMP_DIR / "weighted" / Path(req.vocals_path).stem
+            stems = _apply_stem_weights(stems, req.stem_mix_override, weighted_dir)
+
         output_path = Path(req.output_path)
 
         preset = _presets.get(req.engine_id)

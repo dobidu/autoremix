@@ -49,6 +49,7 @@ class RemixRequest(BaseModel):
     chop_interval_ms: float = 0.0
     bass_boost_db: float = 0.0
     drums_tempo_factor: float = 1.0
+    stem_mix_override: Optional[dict[str, float]] = None
 
     def to_stems(self) -> object:
         from .separators.base import StemPaths as _StemPaths

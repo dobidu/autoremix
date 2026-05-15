@@ -2,28 +2,28 @@
 
 ## Current Position
 
-Milestone: v4 ML Stem Separation ✅ COMPLETE
-Phase: 11 (Demucs Separator) — ALL PLANS COMPLETE
-Plan: 11-02 complete
-Status: checkpoint — merge v2 → main, tag v2.3.0
-Last activity: 2026-05-15 — 11-02 PLAN ✓ APPLY ✓
+Milestone: v5 UX Polish ✅ COMPLETE
+Phase: 12 (Separator UI) ✅ COMPLETE
+Plan: 12-01 complete
+Status: Loop closed — ready for next phase
+Last activity: 2026-05-15 — 12-01 PLAN ✓ APPLY ✓ UNIFY ✓
 
 Progress:
-- Milestone: v4 ML Stem Separation [██████████] 100%
-- Phase 11: [██████████] 100%
+- Milestone: v5 UX Polish [██████████] 100%
+- Phase 12: [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ░     [11-02 open — awaiting checkpoint]
+  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-15
-Stopped at: 11-02 APPLY complete; checkpoint pending
-Next action: commit, merge v2 → main, push, tag v2.3.0
+Stopped at: Phase 12 complete (v2.4.0)
+Next action: merge v2 → main, then /paul:plan for next phase
 
 ## Decisions
 - Python sidecar port: 17432

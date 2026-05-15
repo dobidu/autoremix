@@ -25,6 +25,9 @@ public:
     /** Fetch available remix presets from the sidecar. Returns empty on failure. */
     std::vector<PresetInfo> getPresets();
 
+    /** Fetch available stem separators from the sidecar. Returns empty on failure. */
+    std::vector<SeparatorInfo> getAvailableSeparators();
+
     /**
      * Ask the sidecar to separate stems.
      * separator_id: "spleeter_4stems", "algorithmic", ...

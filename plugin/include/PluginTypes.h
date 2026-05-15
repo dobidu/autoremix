@@ -41,4 +41,10 @@ struct PresetInfo {
     RemixParams default_params;
 };
 
+// --- Separator metadata returned by AudioBridge::getAvailableSeparators() ---
+struct SeparatorInfo {
+    std::string id;           // "algorithmic", "demucs"
+    std::string display_name; // "Algorithmic FFT", "Demucs (ML)"
+};
+
 } // namespace autoremix

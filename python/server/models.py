@@ -77,7 +77,7 @@ class RemixResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    version: str = "0.2.0"
+    version: str = "0.4.0"
     available_separators: list[str]
     available_engines: list[str]
 

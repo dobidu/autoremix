@@ -6,7 +6,6 @@
 #include <vector>
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
-#include "StyleTabBar.h"
 #include "SidecarHealthDot.h"
 #include "WaveformDisplay.h"
 
@@ -25,8 +24,9 @@ private:
 
     AutoRemixLookAndFeel laf_;
 
-    juce::Label      title_lbl;
-    StyleTabBar      style_tab_;
+    juce::Label    title_lbl;
+    juce::ComboBox style_combo_;
+    juce::ComboBox separator_combo_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
 
     juce::AudioFormatManager  format_manager_;
@@ -45,7 +45,8 @@ private:
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String file_path_;
     juce::String output_path_;
-    std::vector<autoremix::PresetInfo> presets_;
+    std::vector<autoremix::PresetInfo>    presets_;
+    std::vector<autoremix::SeparatorInfo> separators_;
 
     void loadFile();
     void loadEngineDefaults(int idx);

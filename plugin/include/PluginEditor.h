@@ -6,7 +6,6 @@
 #include <vector>
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
-#include "StyleTabBar.h"
 #include "SidecarHealthDot.h"
 #include "WaveformDisplay.h"
 
@@ -25,8 +24,8 @@ private:
 
     AutoRemixLookAndFeel laf_;
 
-    juce::Label      title_lbl;
-    StyleTabBar      style_tab_;
+    juce::Label    title_lbl;
+    juce::ComboBox style_combo_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
 
     juce::AudioFormatManager  format_manager_;

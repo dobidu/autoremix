@@ -18,10 +18,10 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
         if (presets.empty()) return;
         juce::MessageManager::callAsync([this, presets = std::move(presets)]() mutable {
             presets_ = std::move(presets);
-            std::vector<std::string> names;
-            names.reserve(presets_.size());
-            for (auto& p : presets_) names.push_back(p.name);
-            style_tab_.setLabels(std::move(names));
+            style_combo_.clear(juce::dontSendNotification);
+            for (int i = 0; i < (int)presets_.size(); ++i)
+                style_combo_.addItem(presets_[(size_t)i].name, i + 1);
+            style_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
             loadEngineDefaults(0);
         });
     }).detach();
@@ -72,10 +72,17 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     title_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
     title_lbl.setBounds(16, 0, 120, 40);
 
-    // ── Header: style tab bar (narrowed to leave room for health dot)
-    addAndMakeVisible(style_tab_);
-    style_tab_.setBounds(148, 4, 400, 32);
-    style_tab_.onChange = [this](int idx) { loadEngineDefaults(idx); };
+    // ── Header: remix style combobox
+    addAndMakeVisible(style_combo_);
+    style_combo_.setBounds(148, 6, 400, 28);
+    style_combo_.addItem("Chop & Screw",    1);
+    style_combo_.addItem("Slowed + Reverb", 2);
+    style_combo_.addItem("Drum & Bass",     3);
+    style_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
+    style_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
+    style_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
+    style_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::PURPLE));
+    style_combo_.onChange = [this] { loadEngineDefaults(style_combo_.getSelectedItemIndex()); };
 
     // ── Header: sidecar health dot
     addAndMakeVisible(health_dot_);
@@ -175,7 +182,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         return;
     }
 
-    auto idx = static_cast<std::size_t>(style_tab_.getSelectedIndex());
+    auto idx = static_cast<std::size_t>(style_combo_.getSelectedItemIndex());
     if (presets_.empty() || idx >= presets_.size()) {
         status_lbl.setText("Presets not loaded \xe2\x80\x94 start sidecar first.", juce::dontSendNotification);
         return;

@@ -271,7 +271,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
 
     auto idx = static_cast<std::size_t>(style_combo_.getSelectedItemIndex());
     if (presets_.empty() || idx >= presets_.size()) {
-        status_lbl.setText("Presets not loaded \xe2\x80\x94 start sidecar first.", juce::dontSendNotification);
+        status_lbl.setText("Presets not loaded - start sidecar first.", juce::dontSendNotification);
         return;
     }
     auto& preset = presets_[idx];
@@ -314,7 +314,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
     play_btn.setEnabled(false);
     progress_ = -1.0;
     progress_bar_.setVisible(true);
-    status_lbl.setText("Separating stems\xe2\x80\xa6", juce::dontSendNotification);
+    status_lbl.setText("Separating stems...", juce::dontSendNotification);
 
     std::string input_str = file_path_.toStdString();
 
@@ -336,7 +336,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         }
 
         juce::MessageManager::callAsync([this] {
-            status_lbl.setText("Remixing\xe2\x80\xa6", juce::dontSendNotification);
+            status_lbl.setText("Remixing...", juce::dontSendNotification);
         });
 
         auto result = bridge.applyRemix(stems, params, output_path);
@@ -345,7 +345,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
             progress_bar_.setVisible(false);
             if (result.success) {
                 output_path_ = juce::String(result.output_path.string());
-                status_lbl.setText("Done \xe2\x80\x94 click Save to export.", juce::dontSendNotification);
+                status_lbl.setText("Done - click Save to export.", juce::dontSendNotification);
                 save_btn.setEnabled(true);
                 audioProcessor.loadPreviewFile(juce::File(output_path_));
                 preview_btn.setEnabled(true);
@@ -413,7 +413,7 @@ void AutoRemixAudioProcessorEditor::onClick_SavePreset()
         (float)other_slider_.getValue(),
     };
 
-    status_lbl.setText("Saving preset\xe2\x80\xa6", juce::dontSendNotification);
+    status_lbl.setText("Saving preset...", juce::dontSendNotification);
 
     std::string name_str = name.toStdString();
     std::thread([this, name_str, params]() mutable {

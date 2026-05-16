@@ -1,0 +1,24 @@
+{
+  "id": "onset_drill",
+  "version": "1.0",
+  "name": "Onset Drill",
+  "description": "UK drill-inspired tight onset chopping on vocals with energy-gated atmosphere.",
+  "author": "AutoRemix",
+  "tags": ["drill", "grime", "uk", "chop", "stutter"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 1.0,
+    "pitch_shift_semi": 0.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.2, "bass": 1.1, "other": 0.7 },
+  "effects": [
+    { "op": "chop_onsets",  "stems": "vocals",  "params": { "min_gap_ms": 60, "threshold": 0.25, "repeat": 2 } },
+    { "op": "gate_energy",  "stems": "other",   "params": { "threshold_db": -28, "hold_ms": 30 } },
+    { "op": "chop_beats",   "stems": "bass",    "params": { "division": 1.0, "repeat": 2, "offset_beats": 1 } },
+    { "op": "eq_highpass",  "stems": "other",   "params": { "cutoff_hz": 300 } }
+  ]
+}

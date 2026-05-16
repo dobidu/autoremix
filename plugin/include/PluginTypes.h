@@ -29,6 +29,7 @@ struct RemixParams {
     float drums_gain  = 1.0f;
     float bass_gain   = 1.0f;
     float other_gain  = 1.0f;
+    std::string chop_mode = "fixed";   // "fixed"|"beat"|"onset"|"bar"|"energy"|"structural"
 };
 
 // --- Processing result ---

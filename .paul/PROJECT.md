@@ -33,6 +33,7 @@ and ML backends coexist behind stable interfaces.
 - [x] Stem mix sliders (Vocals/Drums/Bass/Other 0–2×) send pre-weighting to sidecar — Phase 13-01
 - [x] In-plugin audio preview via AudioTransportSource plays remixed WAV through plugin output — Phase 13-02
 - [x] Save-as-preset writes custom preset JSON to user dir; style_combo_ refreshes live — Phase 13-03
+- [x] Musical chop modes (beat/onset/bar/energy/structural) selectable from UI; ops inject into effect chains — Phase 14
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)
@@ -45,5 +46,13 @@ and ML backends coexist behind stable interfaces.
 - AlertWindow runModalLoop() safe: JUCE_MODAL_LOOPS_PERMITTED=1 in CMakeLists
 - POST /api/v1/presets updates module-level _presets in-place (MVP-safe, no lock needed)
 
+## Phase 14 Key Decisions
+- analysis.py functions pure (no mutation): accept (audio, sr, **kwargs), return new arrays
+- Musical chop injection only for effect-chain presets (non-empty effects) — legacy engine path unchanged
+- copy.copy(preset) before injection prevents _presets dict mutation (shallow copy + new list)
+- Effect-chain presets use `"engine": "effect_chain"` string — RemixPreset.engine is str, not Optional[str]
+- chop_mode appended (not prepended) to effects — existing ops run first, chop on post-processed audio
+- OP_REGISTRY grows 6 → 11 entries; _chop_at_boundaries private helper shared by 3 boundary-based ops
+
 ---
-*Last updated: 2026-05-16 after Phase 13 (Interactive Mixing)*
+*Last updated: 2026-05-16 after Phase 14 (Musical Chop Intelligence)*

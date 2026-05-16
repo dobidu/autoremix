@@ -1,0 +1,25 @@
+{
+  "id": "structural_loop",
+  "version": "1.0",
+  "name": "Structural Loop",
+  "description": "Reverses song structure section-by-section. Vocals and atmosphere play in reverse segment order with reverb wash.",
+  "author": "AutoRemix",
+  "tags": ["experimental", "structural", "reverse", "ambient"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.90,
+    "pitch_shift_semi": -1.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 0.9, "bass": 1.0, "other": 1.1 },
+  "effects": [
+    { "op": "time_stretch",   "stems": ["drums", "bass"], "params": { "factor": 0.90 } },
+    { "op": "structural_cut", "stems": "vocals",          "params": { "n_segments": 4, "mode": "reverse" } },
+    { "op": "structural_cut", "stems": "other",           "params": { "n_segments": 4, "mode": "reverse" } },
+    { "op": "reverb",         "stems": "vocals",          "params": { "mix": 0.25, "room_size": 0.7 } },
+    { "op": "pitch_shift",    "stems": ["vocals", "other"], "params": { "semitones": -1.0 } }
+  ]
+}

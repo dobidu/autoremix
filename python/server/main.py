@@ -28,6 +28,14 @@ TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR",
     str(Path(tempfile.gettempdir()) / "autoremix")))
 _presets = PresetLoader().load_all()
 
+_CHOP_MODE_OPS: dict[str, dict] = {
+    "beat":       {"op": "chop_beats",    "stems": "vocals", "params": {"division": 1.0, "repeat": 2}},
+    "onset":      {"op": "chop_onsets",   "stems": "vocals", "params": {"min_gap_ms": 80, "threshold": 0.3, "repeat": 2}},
+    "bar":        {"op": "chop_bars",     "stems": "vocals", "params": {"beats_per_bar": 4, "repeat": 2}},
+    "energy":     {"op": "gate_energy",   "stems": "other",  "params": {"threshold_db": -20.0, "hold_ms": 50.0}},
+    "structural": {"op": "structural_cut","stems": "vocals",  "params": {"n_segments": 4, "mode": "reverse"}},
+}
+
 
 @app.get("/api/v1/health", response_model=HealthResponse)
 async def health():
@@ -134,10 +142,17 @@ async def remix(req: RemixRequest):
         output_path = Path(req.output_path)
 
         preset = _presets.get(req.engine_id)
+        chop_op = _CHOP_MODE_OPS.get(req.chop_mode) if req.chop_mode != "fixed" else None
+
         if preset and preset.effects:
+            active_preset = preset
+            if chop_op:
+                import copy
+                active_preset = copy.copy(preset)
+                active_preset.effects = list(preset.effects) + [chop_op]
             from .remix.chain_interpreter import EffectChainEngine
-            logger.info(f"Remixing via effect chain {req.engine_id} → {output_path}")
-            result = EffectChainEngine().process(stems, preset, output_path)
+            logger.info(f"Remixing via effect chain {req.engine_id} (chop_mode={req.chop_mode}) → {output_path}")
+            result = EffectChainEngine().process(stems, active_preset, output_path)
         else:
             engine = get_engine(req.engine_id)
             params = req.to_params()

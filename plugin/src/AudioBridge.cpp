@@ -88,7 +88,8 @@ ProcessResult AudioBridge::applyRemix(
                 {"drums",  params.drums_gain},
                 {"bass",   params.bass_gain},
                 {"other",  params.other_gain},
-            }}
+            }},
+            {"chop_mode", params.chop_mode},
         };
 
         auto r = cpr::Post(

@@ -27,6 +27,7 @@ private:
     juce::Label    title_lbl;
     juce::ComboBox style_combo_;
     juce::ComboBox separator_combo_;
+    juce::ComboBox chop_mode_combo_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
 
     juce::AudioFormatManager  format_manager_;

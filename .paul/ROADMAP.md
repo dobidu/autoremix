@@ -1,5 +1,18 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 14 — Musical Chop Intelligence ✅ COMPLETE (2026-05-16)
+
+Replaces fixed-interval chopping with musically-intelligent remixing. Four new chop modes
+(beat, onset, bar, energy) + structural segmentation enable preset authors to align cuts to
+the music's own rhythm and form rather than an arbitrary millisecond grid.
+
+- **14-01**: `analysis.py` — 5 librosa detection functions + 11 pytest tests
+- **14-02**: 5 new ops in `ops.py` (chop_beats, chop_onsets, chop_bars, gate_energy, structural_cut) + 12 pytest tests; OP_REGISTRY 6→11
+- **14-03**: 3 new built-in presets (trap_stutter, onset_drill, structural_loop); PresetLoader 3→6 presets
+- **14-04**: chop_mode ComboBox (6 modes) in editor; field flows RemixParams→AudioBridge→sidecar→EffectChainEngine injection
+
+Deliverable: beat/onset/bar/energy/structural chop modes selectable from UI; injected into effect-chain presets at remix time; 23 tests green ✓
+
 ## Phase 13 — Interactive Mixing ✅ COMPLETE (2026-05-16)
 
 Three sub-plans delivering real creative control over remix output:

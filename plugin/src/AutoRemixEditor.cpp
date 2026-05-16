@@ -150,7 +150,32 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     setupRemixSlider(tempo_slider_,  tempo_lbl_,  "Tempo",   0.3,    2.0,    0.70,  218);
     setupRemixSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,  246);
     setupRemixSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,  274);
-    setupRemixSlider(chop_slider_,   chop_lbl_,   "Chop ms", 0.0, 4000.0, 2000.0,  302);
+    // ── Chop mode selector (replaces chop_lbl_)
+    addAndMakeVisible(chop_mode_combo_);
+    chop_mode_combo_.setBounds(96, 302, 220, 20);
+    chop_mode_combo_.addItem("Fixed (ms)",      1);
+    chop_mode_combo_.addItem("Beat-Aligned",    2);
+    chop_mode_combo_.addItem("Onset-Triggered", 3);
+    chop_mode_combo_.addItem("Bar-Locked",      4);
+    chop_mode_combo_.addItem("Energy Gate",     5);
+    chop_mode_combo_.addItem("Structural",      6);
+    chop_mode_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
+    chop_mode_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
+    chop_mode_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
+    chop_mode_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::PURPLE));
+    chop_mode_combo_.onChange = [this] {
+        bool isFixed = (chop_mode_combo_.getSelectedItemIndex() == 0);
+        chop_slider_.setEnabled(isFixed);
+        chop_slider_.setAlpha(isFixed ? 1.0f : 0.4f);
+    };
+
+    // ── Chop ms slider (below combo, enabled only in Fixed mode)
+    addAndMakeVisible(chop_slider_);
+    chop_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
+    chop_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 16);
+    chop_slider_.setRange(0.0, 4000.0, 0.0);
+    chop_slider_.setValue(2000.0, juce::dontSendNotification);
+    chop_slider_.setBounds(96, 323, 220, 14);
 
     auto setupStemSlider = [this](juce::Slider& s, juce::Label& lbl,
                                    const juce::String& name, int y) {
@@ -256,6 +281,10 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         ? "algorithmic"
         : separators_[(size_t)sep_idx].id;
 
+    static const char* kChopModes[] = {"fixed","beat","onset","bar","energy","structural"};
+    int chopIdx = chop_mode_combo_.getSelectedItemIndex();
+    std::string chop_mode_str = (chopIdx >= 0 && chopIdx < 6) ? kChopModes[chopIdx] : "fixed";
+
     autoremix::RemixParams params {
         (float)tempo_slider_.getValue(),
         (float)pitch_slider_.getValue(),
@@ -270,6 +299,7 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         (float)bass_slider_.getValue(),
         (float)other_slider_.getValue(),
     };
+    params.chop_mode = chop_mode_str;
 
     auto juce_tmp   = juce::File::getSpecialLocation(juce::File::tempDirectory)
                           .getChildFile("autoremix");

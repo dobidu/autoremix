@@ -1,0 +1,25 @@
+{
+  "id": "trap_stutter",
+  "version": "1.0",
+  "name": "Trap Stutter",
+  "description": "Trap-style half-beat vocal stutter with onset-locked drum hits and bass boost.",
+  "author": "AutoRemix",
+  "tags": ["trap", "hip-hop", "stutter", "chop"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.85,
+    "pitch_shift_semi": -2.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.2, "drums": 1.0, "bass": 1.1, "other": 0.8 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["drums", "bass", "other"], "params": { "factor": 0.85 } },
+    { "op": "pitch_shift",  "stems": ["vocals", "bass"],         "params": { "semitones": -2.0 } },
+    { "op": "chop_beats",   "stems": "vocals",                   "params": { "division": 0.5, "repeat": 3, "offset_beats": 0 } },
+    { "op": "chop_onsets",  "stems": "drums",                    "params": { "min_gap_ms": 80, "threshold": 0.35, "repeat": 2 } },
+    { "op": "bass_boost",   "stems": "bass",                     "params": { "db": 4.0 } }
+  ]
+}

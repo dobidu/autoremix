@@ -23,39 +23,76 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
 
 AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
 {
-    transport_.setSource(nullptr);
+    mixer_.removeAllInputs();
+    for (auto& sp : stem_players_) {
+        sp.transport.stop();
+        sp.transport.setSource(nullptr);
+    }
+    preview_transport_.stop();
+    preview_transport_.setSource(nullptr);
     bridge_.stopSidecar();
 }
 
+//==============================================================================
 void AutoRemixAudioProcessor::loadPreviewFile(const juce::File& f)
 {
-    transport_.stop();
-    transport_.setSource(nullptr);
-    reader_source_.reset();
+    preview_transport_.stop();
+    preview_transport_.setSource(nullptr);
+    preview_reader_.reset();
     if (auto* reader = format_manager_.createReaderFor(f)) {
-        reader_source_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-        transport_.setSource(reader_source_.get(), 0, nullptr, reader->sampleRate);
+        preview_reader_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+        preview_transport_.setSource(preview_reader_.get(), 0, nullptr, reader->sampleRate);
     }
 }
 
 void AutoRemixAudioProcessor::togglePreview()
 {
-    if (transport_.isPlaying())
-        transport_.stop();
+    if (preview_transport_.isPlaying())
+        preview_transport_.stop();
     else {
-        transport_.setPosition(0.0);
-        transport_.start();
+        preview_transport_.setPosition(0.0);
+        preview_transport_.start();
     }
 }
 
-void AutoRemixAudioProcessor::stopPreview() { transport_.stop(); }
-bool AutoRemixAudioProcessor::isPreviewPlaying() const { return transport_.isPlaying(); }
+void AutoRemixAudioProcessor::stopPreview()     { preview_transport_.stop(); }
+bool AutoRemixAudioProcessor::isPreviewPlaying() const { return preview_transport_.isPlaying(); }
+
+void AutoRemixAudioProcessor::playStem(int idx, const juce::File& f)
+{
+    if (idx < 0 || idx >= 4) return;
+    auto& sp = stem_players_[idx];
+    sp.transport.stop();
+    sp.transport.setSource(nullptr);
+    sp.reader.reset();
+    if (auto* reader = format_manager_.createReaderFor(f)) {
+        sp.reader = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+        sp.transport.setSource(sp.reader.get(), 0, nullptr, reader->sampleRate);
+        sp.transport.setPosition(0.0);
+        sp.transport.start();
+    }
+}
+
+void AutoRemixAudioProcessor::stopStem(int idx)
+{
+    if (idx < 0 || idx >= 4) return;
+    stem_players_[idx].transport.stop();
+}
+
+bool AutoRemixAudioProcessor::isStemPlaying(int idx) const
+{
+    if (idx < 0 || idx >= 4) return false;
+    return stem_players_[idx].transport.isPlaying();
+}
+
+void AutoRemixAudioProcessor::stopAllStems()
+{
+    for (auto& sp : stem_players_)
+        sp.transport.stop();
+}
 
 //==============================================================================
-const juce::String AutoRemixAudioProcessor::getName() const
-{
-    return JucePlugin_Name;
-}
+const juce::String AutoRemixAudioProcessor::getName() const { return JucePlugin_Name; }
 
 bool AutoRemixAudioProcessor::acceptsMidi() const
 {
@@ -84,110 +121,86 @@ bool AutoRemixAudioProcessor::isMidiEffect() const
    #endif
 }
 
-double AutoRemixAudioProcessor::getTailLengthSeconds() const
-{
-    return 0.0;
-}
-
-int AutoRemixAudioProcessor::getNumPrograms()
-{
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
-}
-
-int AutoRemixAudioProcessor::getCurrentProgram()
-{
-    return 0;
-}
-
-void AutoRemixAudioProcessor::setCurrentProgram (int index)
-{
-}
-
-const juce::String AutoRemixAudioProcessor::getProgramName (int index)
-{
-    return {};
-}
-
-void AutoRemixAudioProcessor::changeProgramName (int index, const juce::String& newName)
-{
-}
+double AutoRemixAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+int    AutoRemixAudioProcessor::getNumPrograms()             { return 1; }
+int    AutoRemixAudioProcessor::getCurrentProgram()          { return 0; }
+void   AutoRemixAudioProcessor::setCurrentProgram(int)       {}
+const juce::String AutoRemixAudioProcessor::getProgramName(int)          { return {}; }
+void   AutoRemixAudioProcessor::changeProgramName(int, const juce::String&) {}
 
 //==============================================================================
-void AutoRemixAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void AutoRemixAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    transport_.prepareToPlay(samplesPerBlock, sampleRate);
+    for (auto& sp : stem_players_)
+        sp.transport.prepareToPlay(samplesPerBlock, sampleRate);
+    preview_transport_.prepareToPlay(samplesPerBlock, sampleRate);
+
+    mixer_.removeAllInputs();
+    for (auto& sp : stem_players_)
+        mixer_.addInputSource(&sp.transport, false);
+    mixer_.addInputSource(&preview_transport_, false);
+    mixer_.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void AutoRemixAudioProcessor::releaseResources()
 {
-    transport_.releaseResources();
+    mixer_.removeAllInputs();
+    for (auto& sp : stem_players_) {
+        sp.transport.stop();
+        sp.transport.setSource(nullptr);
+        sp.reader.reset();
+    }
+    preview_transport_.stop();
+    preview_transport_.setSource(nullptr);
+    preview_reader_.reset();
+    mixer_.releaseResources();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool AutoRemixAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool AutoRemixAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+    juce::ignoreUnused(layouts);
     return true;
   #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
-
-    // This checks if the input layout matches the output layout
    #if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
    #endif
-
     return true;
   #endif
 }
 #endif
 
-void AutoRemixAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void AutoRemixAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    if (transport_.isPlaying()) {
+    bool anyPlaying = preview_transport_.isPlaying();
+    for (auto& sp : stem_players_)
+        anyPlaying = anyPlaying || sp.transport.isPlaying();
+
+    if (anyPlaying) {
         juce::AudioSourceChannelInfo info(buffer);
-        transport_.getNextAudioBlock(info);
+        mixer_.getNextAudioBlock(info);
     }
 }
 
 //==============================================================================
-bool AutoRemixAudioProcessor::hasEditor() const
-{
-    return true; // (change this to false if you choose to not supply an editor)
-}
+bool AutoRemixAudioProcessor::hasEditor() const { return true; }
 
 juce::AudioProcessorEditor* AutoRemixAudioProcessor::createEditor()
 {
-    return new AutoRemixAudioProcessorEditor (*this);
+    return new AutoRemixAudioProcessorEditor(*this);
 }
 
-//==============================================================================
-void AutoRemixAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-}
+void AutoRemixAudioProcessor::getStateInformation(juce::MemoryBlock&)  {}
+void AutoRemixAudioProcessor::setStateInformation(const void*, int)    {}
 
-void AutoRemixAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-}
-
-//==============================================================================
-// This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new AutoRemixAudioProcessor();

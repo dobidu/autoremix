@@ -3,8 +3,8 @@
 ## Current Position
 
 Milestone: v9 — IN PROGRESS
-Phase: 19 — COMPLETE
-Status: Stem drag-to-DAW delivered; header cleanup complete
+Phase: 20 — COMPLETE
+Status: In-plugin audio playback delivered (stems + original/remix preview)
 Last activity: 2026-05-16
 
 Progress:
@@ -19,13 +19,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [18-03 complete] ScreenSeparating + ScreenStemsReady
   ✓        ✓        ✓     [18-04 complete] ScreenModeParams
   ✓        ✓        ✓     [18-05 complete] ScreenRender + editor migration
+  ✓        ✓        ✓     [19-01 complete] Stem drag-to-DAW
+  ✓        ✓        ✓     [20-01 complete] Audio playback (stems + original/remix preview)
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 18 complete; build clean
-Next action: git commit + push Phase 18; then plan Phase 19 if desired
+Stopped at: Phase 20 complete; build clean
+Next action: commit Phase 20; user testing
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

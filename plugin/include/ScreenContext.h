@@ -62,4 +62,16 @@ struct ScreenContext {
 
     // ── Status bar callback — set by editor ───────────────────────────────────
     std::function<void(const juce::String&)> set_status;
+
+    // ── Audio preview callbacks — set by editor, wired to processor ───────────
+    // Preview (original / remix) — exclusive: one file at a time
+    std::function<void(const juce::File&)> play_preview;   // load + start
+    std::function<void()>                  stop_preview;
+    std::function<bool()>                  is_preview_playing;
+
+    // Stem playback — 4 simultaneous streams, mixable
+    std::function<void(int, const juce::File&)> play_stem;
+    std::function<void(int)>                    stop_stem;
+    std::function<bool(int)>                    is_stem_playing;
+    std::function<void()>                       stop_all_stems;
 };

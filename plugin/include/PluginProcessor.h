@@ -35,17 +35,34 @@ public:
 
     autoremix::AudioBridge& getBridge() { return bridge_; }
 
+    // Preview playback — original or remix, exclusive
     void loadPreviewFile(const juce::File& f);
     void togglePreview();
     void stopPreview();
     bool isPreviewPlaying() const;
+
+    // Stem playback — 4 simultaneous, mixed
+    void playStem(int idx, const juce::File& f);
+    void stopStem(int idx);
+    bool isStemPlaying(int idx) const;
+    void stopAllStems();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessor)
 
 private:
     autoremix::AudioBridge bridge_{"http://127.0.0.1", 17432};
 
-    juce::AudioFormatManager    format_manager_;
-    std::unique_ptr<juce::AudioFormatReaderSource> reader_source_;
-    juce::AudioTransportSource  transport_;
+    juce::AudioFormatManager format_manager_;
+
+    std::unique_ptr<juce::AudioFormatReaderSource> preview_reader_;
+    juce::AudioTransportSource                     preview_transport_;
+
+    struct StemPlayer {
+        std::unique_ptr<juce::AudioFormatReaderSource> reader;
+        juce::AudioTransportSource                     transport;
+        StemPlayer() = default;
+        JUCE_DECLARE_NON_COPYABLE(StemPlayer)
+    };
+    StemPlayer             stem_players_[4];
+    juce::MixerAudioSource mixer_;
 };

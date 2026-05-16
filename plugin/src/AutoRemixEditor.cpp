@@ -31,6 +31,19 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
             status_lbl.setText(msg, juce::dontSendNotification);
         });
     };
+
+    ctx_.play_preview = [this](const juce::File& f) {
+        audioProcessor.stopPreview();
+        audioProcessor.loadPreviewFile(f);
+        audioProcessor.togglePreview();
+    };
+    ctx_.stop_preview        = [this] { audioProcessor.stopPreview(); };
+    ctx_.is_preview_playing  = [this] { return audioProcessor.isPreviewPlaying(); };
+    ctx_.play_stem           = [this](int idx, const juce::File& f) { audioProcessor.playStem(idx, f); };
+    ctx_.stop_stem           = [this](int idx) { audioProcessor.stopStem(idx); };
+    ctx_.is_stem_playing     = [this](int idx) { return audioProcessor.isStemPlaying(idx); };
+    ctx_.stop_all_stems      = [this] { audioProcessor.stopAllStems(); };
+
     navigateTo(ScreenId::Empty, false);
 
     std::thread([this]() {

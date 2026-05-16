@@ -1,5 +1,15 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 20 — Audio Playback ✅ COMPLETE (2026-05-16)
+
+In-plugin playback replacing OS media player:
+
+- **20-01**: Per-stem ▶/■ toggle buttons in ScreenStemsReady (4 simultaneous via MixerAudioSource); ▶ Original / ▶ Remix exclusive play in ScreenRender Done state; 100ms Timer polling for EOF sync; onExit() stops all playback
+
+Deliverable: no OS player launched anywhere; stems and remix auditioned entirely inside the plugin.
+
+---
+
 ## Phase 19 — Stem Drag-to-DAW ✅ COMPLETE (2026-05-16)
 
 Drag any stem row in ScreenStemsReady to a DAW track or file manager to export the temp WAV.

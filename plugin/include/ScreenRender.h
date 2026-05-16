@@ -53,11 +53,17 @@ public:
         done_lbl_.setJustificationType(juce::Justification::centred);
         done_lbl_.setVisible(false);
 
-        addAndMakeVisible(preview_btn_);
-        preview_btn_.setButtonText("Preview");
-        preview_btn_.setComponentID("ghost");
-        preview_btn_.onClick = [this] { openInPlayer(); };
-        preview_btn_.setVisible(false);
+        addAndMakeVisible(original_btn_);
+        original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+        original_btn_.setComponentID("ghost");
+        original_btn_.onClick = [this] { handleOriginalPlay(); };
+        original_btn_.setVisible(false);
+
+        addAndMakeVisible(remix_btn_);
+        remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+        remix_btn_.setComponentID("ghost");
+        remix_btn_.onClick = [this] { handleRemixPlay(); };
+        remix_btn_.setVisible(false);
 
         addAndMakeVisible(save_btn_);
         save_btn_.setButtonText("Save");
@@ -101,6 +107,7 @@ public:
     {
         state_ = State::Rendering;
         elapsed_secs_ = 0;
+        preview_mode_ = PreviewMode::None;
         cancel_requested_.store(false);
         timer_lbl_.setText("0 s", juce::dontSendNotification);
         applyState();
@@ -114,12 +121,22 @@ public:
     {
         stopTimer();
         cancel_requested_.store(true);
+        if (ctx_.stop_preview) ctx_.stop_preview();
     }
 
     void timerCallback() override
     {
-        ++elapsed_secs_;
-        timer_lbl_.setText(juce::String(elapsed_secs_) + " s", juce::dontSendNotification);
+        if (state_ == State::Rendering) {
+            ++elapsed_secs_;
+            timer_lbl_.setText(juce::String(elapsed_secs_) + " s", juce::dontSendNotification);
+        } else if (state_ == State::Done) {
+            bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
+            if (!playing && preview_mode_ != PreviewMode::None) {
+                preview_mode_ = PreviewMode::None;
+                original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+                remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+            }
+        }
     }
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
@@ -160,11 +177,14 @@ public:
                 cancel_btn_.setBounds(actionBar.withSizeKeepingCentre(120, 36));
                 break;
             case State::Done:
-                new_file_btn_ .setBounds(actionBar.removeFromLeft(120));
-                preview_btn_  .setBounds(actionBar.removeFromLeft(120));
+                new_file_btn_ .setBounds(actionBar.removeFromLeft(100));
                 actionBar.removeFromLeft(8);
-                save_btn_     .setBounds(actionBar.removeFromLeft(120));
-                new_remix_btn_.setBounds(actionBar.removeFromRight(160));
+                original_btn_ .setBounds(actionBar.removeFromLeft(120));
+                actionBar.removeFromLeft(8);
+                remix_btn_    .setBounds(actionBar.removeFromLeft(120));
+                actionBar.removeFromLeft(8);
+                save_btn_     .setBounds(actionBar.removeFromLeft(100));
+                new_remix_btn_.setBounds(actionBar.removeFromRight(140));
                 break;
             case State::Error:
                 new_file_btn_.setBounds(actionBar.removeFromLeft(120));
@@ -174,7 +194,8 @@ public:
     }
 
 private:
-    enum class State { Rendering, Done, Error };
+    enum class State     { Rendering, Done, Error };
+    enum class PreviewMode { None, Original, Remix };
 
     void applyState()
     {
@@ -188,7 +209,8 @@ private:
         cancel_btn_   .setVisible(rendering);
 
         done_lbl_     .setVisible(done);
-        preview_btn_  .setVisible(done);
+        original_btn_ .setVisible(done);
+        remix_btn_    .setVisible(done);
         save_btn_     .setVisible(done);
         new_remix_btn_.setVisible(done);
 
@@ -223,10 +245,8 @@ private:
             params.separator_id = preset_params.separator_id;
         }
 
-        // Use the preset id as engine_id (correct field)
-        if (!ctx_.presets.empty() && ctx_.selected_preset_idx < (int)ctx_.presets.size()) {
+        if (!ctx_.presets.empty() && ctx_.selected_preset_idx < (int)ctx_.presets.size())
             params.engine_id = ctx_.presets[(size_t)ctx_.selected_preset_idx].id;
-        }
 
         juce::File inFile(ctx_.file_path);
         juce::String outName = inFile.getFileNameWithoutExtension() + "_remix.wav";
@@ -252,6 +272,8 @@ private:
                     out_thumb_.setSource(new juce::FileInputSource(
                         juce::File(ctx_.output_path)));
                     state_ = State::Done;
+                    preview_mode_ = PreviewMode::None;
+                    startTimer(100);
                 } else {
                     state_ = State::Error;
                     error_lbl_.setText(juce::String(result.error_message),
@@ -271,10 +293,36 @@ private:
         ctx_.navigate(ScreenId::ModeParams);
     }
 
-    void openInPlayer()
+    void handleOriginalPlay()
     {
-        if (ctx_.output_path.isNotEmpty())
-            juce::File(ctx_.output_path).startAsProcess();
+        bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
+        if (preview_mode_ == PreviewMode::Original && playing) {
+            ctx_.stop_preview();
+            preview_mode_ = PreviewMode::None;
+            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+        } else {
+            if (ctx_.stop_preview) ctx_.stop_preview();
+            preview_mode_ = PreviewMode::Original;
+            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+            if (ctx_.play_preview) ctx_.play_preview(juce::File(ctx_.file_path));
+            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xA0 Original"));
+        }
+    }
+
+    void handleRemixPlay()
+    {
+        bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
+        if (preview_mode_ == PreviewMode::Remix && playing) {
+            ctx_.stop_preview();
+            preview_mode_ = PreviewMode::None;
+            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+        } else {
+            if (ctx_.stop_preview) ctx_.stop_preview();
+            preview_mode_ = PreviewMode::Remix;
+            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+            if (ctx_.play_preview) ctx_.play_preview(juce::File(ctx_.output_path));
+            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xA0 Remix"));
+        }
     }
 
     void saveOutput()
@@ -294,14 +342,16 @@ private:
 
     void resetAndGoEmpty()
     {
+        if (ctx_.stop_preview) ctx_.stop_preview();
         ctx_.file_path   = {};
         ctx_.stems       = {};
         ctx_.output_path = {};
         ctx_.navigate(ScreenId::Empty);
     }
 
-    State             state_        = State::Rendering;
-    int               elapsed_secs_ = 0;
+    State       state_        = State::Rendering;
+    PreviewMode preview_mode_ = PreviewMode::None;
+    int         elapsed_secs_ = 0;
     std::atomic<bool> cancel_requested_{false};
     RenderFn          render_fn_;
 
@@ -318,7 +368,8 @@ private:
     juce::TextButton  cancel_btn_;
 
     juce::Label      done_lbl_;
-    juce::TextButton preview_btn_;
+    juce::TextButton original_btn_;
+    juce::TextButton remix_btn_;
     juce::TextButton save_btn_;
     juce::TextButton new_remix_btn_;
     juce::TextButton new_file_btn_;

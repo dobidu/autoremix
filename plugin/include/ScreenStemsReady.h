@@ -8,7 +8,8 @@
 #include "PluginTypes.h"
 
 class ScreenStemsReady : public ScreenBase,
-                         public juce::ChangeListener
+                         public juce::ChangeListener,
+                         public juce::Timer
 {
 public:
     explicit ScreenStemsReady(ScreenContext& ctx)
@@ -40,6 +41,7 @@ public:
 
     ~ScreenStemsReady() override
     {
+        stopTimer();
         vocals_thumb_.removeChangeListener(this);
         drums_thumb_ .removeChangeListener(this);
         bass_thumb_  .removeChangeListener(this);
@@ -59,17 +61,32 @@ public:
             loadThumb(bass_thumb_,   ctx_.stems.bass);
             loadThumb(other_thumb_,  ctx_.stems.other);
         }
+        startTimer(100);
         resized();
         repaint();
     }
 
-    void onExit() override {}
+    void onExit() override
+    {
+        stopTimer();
+        if (ctx_.stop_all_stems) ctx_.stop_all_stems();
+    }
+
+    void timerCallback() override
+    {
+        for (int i = 0; i < 4; ++i) {
+            bool playing = ctx_.is_stem_playing && ctx_.is_stem_playing(i);
+            rows_[(size_t)i].play_btn.setButtonText(
+                playing ? juce::String::fromUTF8("\xE2\x96\xA0")   // ■
+                        : juce::String::fromUTF8("\xE2\x96\xB6")); // ▶
+        }
+    }
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
 
     void mouseDown(const juce::MouseEvent& e) override
     {
-        drag_stem_idx_ = stemRowAtY(e.y);
+        drag_stem_idx_  = stemRowAtY(e.y);
         mouse_down_pos_ = e.getPosition();
     }
 
@@ -79,10 +96,8 @@ public:
         if (e.getDistanceFromDragStart() < 8) return;
         auto path = stemPath(drag_stem_idx_);
         if (path.isEmpty() || !juce::File(path).existsAsFile()) return;
-        int idx = drag_stem_idx_;
         drag_stem_idx_ = -1;
         juce::DragAndDropContainer::performExternalDragDropOfFiles({ path }, false);
-        juce::ignoreUnused(idx);
     }
 
     void paint(juce::Graphics& g) override
@@ -91,7 +106,6 @@ public:
 
         auto b = getLocalBounds().withTrimmedBottom(72);
 
-        // Section header
         auto headerRow = b.removeFromTop(40);
         g.setFont(AR::font(AR::FontRole::section_label));
         g.setColour(juce::Colour(AR::COMMENT));
@@ -105,7 +119,7 @@ public:
     {
         auto b = getLocalBounds();
         auto actionBar = b.removeFromBottom(72);
-        b.removeFromTop(40);  // section header
+        b.removeFromTop(40);
 
         for (int i = 0; i < 4; ++i)
             layoutRow(b.removeFromTop(ROW_H), i);
@@ -118,7 +132,7 @@ public:
 private:
     static constexpr int ROW_H       = 56;
     static constexpr int LEFT_COL_W  = 156;
-    static constexpr int RIGHT_COL_W = 280;
+    static constexpr int RIGHT_COL_W = 320;
     static constexpr int TOGGLE_SIZE = 24;
     static constexpr int TOGGLE_GAP  = 4;
     static constexpr int SLIDER_W    = 220;
@@ -127,6 +141,7 @@ private:
         juce::String          name;
         uint32_t              color      = 0;
         juce::AudioThumbnail* thumb      = nullptr;
+        juce::TextButton      play_btn;
         juce::TextButton      mute_btn;
         juce::TextButton      solo_btn;
         juce::Slider          gain_slider;
@@ -152,6 +167,12 @@ private:
             r.ctx_gain  = &gain;
             r.ctx_muted = &muted;
             r.ctx_solo  = &solo;
+
+            addAndMakeVisible(r.play_btn);
+            r.play_btn.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6")); // ▶
+            r.play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
+            r.play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ACCENT));
+            r.play_btn.onClick = [this, i] { handlePlay(i); };
 
             addAndMakeVisible(r.mute_btn);
             r.mute_btn.setButtonText("M");
@@ -195,18 +216,16 @@ private:
         g.setColour(juce::Colour(AR::SURFACE));
         g.fillRect(row.removeFromBottom(1));
 
-        // Colored dot
-        auto leftCol  = row.removeFromLeft(LEFT_COL_W);
+        // Colored dot + stem name
+        auto leftCol   = row.removeFromLeft(LEFT_COL_W);
         auto dotCenter = leftCol.getCentre().toFloat();
         g.setColour(juce::Colour(r.color));
         g.fillEllipse(dotCenter.x - 20.0f, dotCenter.y - 6.0f, 12.0f, 12.0f);
-
-        // Stem name
         g.setFont(AR::font(AR::FontRole::label));
         g.setColour(juce::Colour(AR::FG));
         g.drawText(r.name, leftCol.withLeft(leftCol.getX() + 8), juce::Justification::centredLeft);
 
-        // Waveform in center
+        // Waveform
         auto centerCol = row.withTrimmedRight(RIGHT_COL_W).reduced(0, 8);
         g.setColour(juce::Colour(AR::BG_DEEP));
         g.fillRect(centerCol);
@@ -216,11 +235,11 @@ private:
             r.thumb->drawChannels(g, centerCol, 0.0, r.thumb->getTotalLength(), 0.8f);
         }
 
-        // Unity tick at center of slider track
-        auto rightCol   = juce::Rectangle<int>(row.getRight() - RIGHT_COL_W, row.getY(), RIGHT_COL_W, row.getHeight());
-        int  sliderLeft  = rightCol.getX() + TOGGLE_SIZE * 2 + TOGGLE_GAP * 3;
-        int  sliderRight = rightCol.getRight() - 8;
-        int  tickX       = sliderLeft + (sliderRight - sliderLeft) / 2;
+        // Unity tick at center of gain slider track (3 buttons: play + mute + solo)
+        auto rightCol  = juce::Rectangle<int>(row.getRight() - RIGHT_COL_W, row.getY(), RIGHT_COL_W, row.getHeight());
+        int sliderLeft  = rightCol.getX() + TOGGLE_SIZE * 3 + TOGGLE_GAP * 4;
+        int sliderRight = rightCol.getRight() - 8;
+        int tickX       = sliderLeft + (sliderRight - sliderLeft) / 2;
         g.setColour(juce::Colour(AR::COMMENT));
         g.fillRect(tickX - 1, row.getCentreY() - 6, 2, 12);
     }
@@ -237,11 +256,13 @@ private:
         r.solo_btn.setBounds(rightCol.removeFromRight(TOGGLE_SIZE).withSizeKeepingCentre(TOGGLE_SIZE, TOGGLE_SIZE));
         rightCol.removeFromRight(TOGGLE_GAP);
         r.mute_btn.setBounds(rightCol.removeFromRight(TOGGLE_SIZE).withSizeKeepingCentre(TOGGLE_SIZE, TOGGLE_SIZE));
+        rightCol.removeFromRight(TOGGLE_GAP);
+        r.play_btn.setBounds(rightCol.removeFromRight(TOGGLE_SIZE).withSizeKeepingCentre(TOGGLE_SIZE, TOGGLE_SIZE));
     }
 
     int stemRowAtY(int y) const
     {
-        int rel = y - 40;  // 40px section header
+        int rel = y - 40;
         if (rel < 0) return -1;
         int idx = rel / ROW_H;
         return (idx >= 0 && idx < 4) ? idx : -1;
@@ -256,6 +277,18 @@ private:
             case 2: return juce::String(ctx_.stems.bass.string());
             case 3: return juce::String(ctx_.stems.other.string());
             default: return {};
+        }
+    }
+
+    void handlePlay(int idx)
+    {
+        if (!ctx_.is_stem_playing || !ctx_.play_stem || !ctx_.stop_stem) return;
+        auto path = stemPath(idx);
+        if (path.isEmpty()) return;
+        if (ctx_.is_stem_playing(idx)) {
+            ctx_.stop_stem(idx);
+        } else {
+            ctx_.play_stem(idx, juce::File(path));
         }
     }
 

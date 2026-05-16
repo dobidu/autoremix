@@ -1,5 +1,18 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 15 — Musical UI Parameters 🔄 IN PROGRESS
+
+Replace raw multiplier sliders with musically meaningful controls. Engine BPM
+detection already exists in base.py; expose it end-to-end to the user.
+
+- **15-01**: `GET /api/v1/analyze` endpoint + `AudioBridge::analyzeFile()` + `FileAnalysis` struct
+- **15-02**: Target BPM slider (40–200 BPM), detected BPM/key labels in UI, chop slider in beats
+
+Deliverable: after loading a file, user sees detected BPM + key; tempo slider shows
+target BPM (not a raw ratio); chop slider shows beats (not raw ms).
+
+---
+
 ## Phase 14 — Musical Chop Intelligence ✅ COMPLETE (2026-05-16)
 
 Replaces fixed-interval chopping with musically-intelligent remixing. Four new chop modes

@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include <thread>
 #include <filesystem>
+#include <algorithm>
 
 //==============================================================================
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
@@ -71,6 +72,22 @@ void AutoRemixAudioProcessorEditor::loadFile()
                 save_btn.setEnabled(false);
                 thumbnail_.setSource(new juce::FileInputSource(f));
                 waveform_display_.sourceChanged();
+
+                std::thread([this, path = file_path_]() {
+                    auto info = audioProcessor.getBridge().analyzeFile(path);
+                    float bpm = info.valid() ? info.bpm : 120.0f;
+                    juce::String key = info.valid() ? juce::String(info.key) : "";
+                    juce::MessageManager::callAsync([this, bpm, key]() {
+                        detected_bpm_ = bpm;
+                        detected_key_ = key;
+                        juce::String txt = juce::String(bpm, 1) + " BPM";
+                        if (key.isNotEmpty()) txt += "  |  " + key;
+                        else txt += "  |  ?";
+                        analysis_lbl_.setText(txt, juce::dontSendNotification);
+                        if (bpm >= 40.0f && bpm <= 200.0f)
+                            tempo_slider_.setValue((double)bpm, juce::dontSendNotification);
+                    });
+                }).detach();
             }
         });
 }
@@ -121,6 +138,13 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     addAndMakeVisible(waveform_display_);
     waveform_display_.setBounds(8, 48, getWidth() - 16, 144);
 
+    addAndMakeVisible(analysis_lbl_);
+    analysis_lbl_.setText("? BPM  |  ?", juce::dontSendNotification);
+    analysis_lbl_.setFont(AR::font(AR::FontRole::value));
+    analysis_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::CYAN));
+    analysis_lbl_.setJustificationType(juce::Justification::centredRight);
+    analysis_lbl_.setBounds(getWidth() - 180, 170, 172, 18);
+
     // ── Controls zone — filename row
     addAndMakeVisible(file_lbl);
     file_lbl.setFont(AR::font(AR::FontRole::value));
@@ -147,7 +171,7 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
         s.setBounds(96, y + 12, 220, 18);
     };
 
-    setupRemixSlider(tempo_slider_,  tempo_lbl_,  "Tempo",   0.3,    2.0,    0.70,  218);
+    setupRemixSlider(tempo_slider_,  tempo_lbl_,  "Target BPM", 40.0, 200.0, 120.0, 218);
     setupRemixSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,  246);
     setupRemixSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,  274);
     // ── Chop mode selector (replaces chop_lbl_)
@@ -169,12 +193,13 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
         chop_slider_.setAlpha(isFixed ? 1.0f : 0.4f);
     };
 
-    // ── Chop ms slider (below combo, enabled only in Fixed mode)
+    // ── Chop beats slider (below combo, enabled only in Fixed mode)
     addAndMakeVisible(chop_slider_);
     chop_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
-    chop_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 16);
-    chop_slider_.setRange(0.0, 4000.0, 0.0);
-    chop_slider_.setValue(2000.0, juce::dontSendNotification);
+    chop_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 54, 16);
+    chop_slider_.setRange(0.25, 16.0, 0.25);
+    chop_slider_.setValue(2.0, juce::dontSendNotification);
+    chop_slider_.setTextValueSuffix(" b");
     chop_slider_.setBounds(96, 323, 220, 14);
 
     auto setupStemSlider = [this](juce::Slider& s, juce::Label& lbl,
@@ -250,10 +275,14 @@ void AutoRemixAudioProcessorEditor::loadEngineDefaults(int idx)
 {
     if (presets_.empty() || idx < 0 || (size_t)idx >= presets_.size()) return;
     auto& p = presets_[(size_t)idx].default_params;
-    tempo_slider_.setValue(p.tempo_factor,     juce::dontSendNotification);
-    pitch_slider_.setValue(p.pitch_shift_semi, juce::dontSendNotification);
-    reverb_slider_.setValue(p.reverb_mix,      juce::dontSendNotification);
-    chop_slider_.setValue(p.chop_interval_ms,  juce::dontSendNotification);
+    double source_bpm = (detected_bpm_ > 0.0f) ? (double)detected_bpm_ : 120.0;
+    double target_bpm = std::clamp(p.tempo_factor * source_bpm, 40.0, 200.0);
+    tempo_slider_.setValue(target_bpm,           juce::dontSendNotification);
+    pitch_slider_.setValue(p.pitch_shift_semi,   juce::dontSendNotification);
+    reverb_slider_.setValue(p.reverb_mix,        juce::dontSendNotification);
+    double beat_ms = 60000.0 / source_bpm;
+    double beats   = std::clamp(p.chop_interval_ms / beat_ms, 0.25, 16.0);
+    chop_slider_.setValue(beats,                 juce::dontSendNotification);
 }
 
 void AutoRemixAudioProcessorEditor::onClick_Play()
@@ -285,11 +314,19 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
     int chopIdx = chop_mode_combo_.getSelectedItemIndex();
     std::string chop_mode_str = (chopIdx >= 0 && chopIdx < 6) ? kChopModes[chopIdx] : "fixed";
 
+    float source_bpm   = (detected_bpm_ > 0.0f) ? detected_bpm_ : 120.0f;
+    float target_bpm   = (float)tempo_slider_.getValue();
+    float tempo_factor = target_bpm / source_bpm;
+
+    float chop_beats = (float)chop_slider_.getValue();
+    float beat_ms    = 60000.0f / source_bpm;
+    float chop_ms    = chop_beats * beat_ms;
+
     autoremix::RemixParams params {
-        (float)tempo_slider_.getValue(),
+        tempo_factor,
         (float)pitch_slider_.getValue(),
         (float)reverb_slider_.getValue(),
-        (float)chop_slider_.getValue(),
+        chop_ms,
         preset.default_params.bass_boost_db,
         preset.default_params.drums_tempo_factor,
         preset.id,
@@ -398,11 +435,15 @@ void AutoRemixAudioProcessorEditor::onClick_SavePreset()
     if (presets_.empty() || idx >= presets_.size()) return;
     auto& preset = presets_[idx];
 
+    float src_bpm_save    = (detected_bpm_ > 0.0f) ? detected_bpm_ : 120.0f;
+    float tempo_factor_save = (float)tempo_slider_.getValue() / src_bpm_save;
+    float chop_ms_save      = (float)chop_slider_.getValue() * (60000.0f / src_bpm_save);
+
     autoremix::RemixParams params {
-        (float)tempo_slider_.getValue(),
+        tempo_factor_save,
         (float)pitch_slider_.getValue(),
         (float)reverb_slider_.getValue(),
-        (float)chop_slider_.getValue(),
+        chop_ms_save,
         preset.default_params.bass_boost_db,
         preset.default_params.drums_tempo_factor,
         preset.id,

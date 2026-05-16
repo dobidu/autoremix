@@ -2,28 +2,38 @@
 
 ## Current Position
 
-Milestone: v7 Musical Chop Intelligence — In Progress
-Phase: 14 (Musical Chop Intelligence) — Planning
-Plan: Phase 14 COMPLETE — all 4 plans done
-Status: Milestone v7 Musical Chop Intelligence COMPLETE
-Last activity: 2026-05-16 — Phase 14 transition complete
+Milestone: v8 — In Progress
+Phase: 15 — COMPLETE
+Status: 15-01 + 15-02 PLAN+APPLY+UNIFY done; Phase 15 complete
+Last activity: 2026-05-16
 
 Progress:
-- Milestone: v7 Musical Chop Intelligence [██████████] 100%
-- Phase 14: [██████████] 100% (4/4 plans complete)
+- Milestone: v8 [████████░░] 80%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 14 complete — milestone done]
+  ✓        ✓        ✓     [15-01 complete]
+  ✓        ✓        ✓     [15-02 complete]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 14 UNIFY + transition complete
-Next action: Plan next feature milestone or merge v2 → main
+Stopped at: Phase 15 complete — Musical UI Parameters delivered
+Next action: Define Phase 16 (Performance + UX polish) or commit + push v8 snapshot
+
+## Untracked work (2026-05-16 hotfix session)
+- fix: waveform display (setBufferedToImage removed, callAsync repaint)
+- fix: MP3 waveform via JUCE_USE_MP3AUDIOFORMAT=1
+- fix: sidecar auto-start used wrong python invocation (direct path → -m module)
+- fix: status bar UTF-8 garbage (…/— → .../-)
+- feat: base.py — normalize_lufs, detect_bpm, beat_aligned_ms, apply_highpass, apply_high_shelf
+- feat: ChoppedAndScrewed — BPM detection, beat-aligned chop, HP after pitch-down
+- feat: SlowedReverb — presence boost scales with slowdown, LUFS out
+- feat: DrumAndBass — auto-targets 170 BPM from source BPM, LUFS out
+- add: pyloudnorm>=0.1.1 to requirements
 
 ## Decisions
 - Python sidecar port: 17432

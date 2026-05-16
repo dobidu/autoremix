@@ -9,6 +9,7 @@ import re
 import logging
 import tempfile
 from pathlib import Path
+import librosa
 from fastapi import FastAPI, HTTPException
 from .models import (
     SeparateRequest, SeparateResponse, StemPaths as StemPathsModel,
@@ -35,6 +36,24 @@ _CHOP_MODE_OPS: dict[str, dict] = {
     "energy":     {"op": "gate_energy",   "stems": "other",  "params": {"threshold_db": -20.0, "hold_ms": 50.0}},
     "structural": {"op": "structural_cut","stems": "vocals",  "params": {"n_segments": 4, "mode": "reverse"}},
 }
+
+
+@app.get("/api/v1/analyze")
+async def analyze(path: str):
+    import soundfile as sf
+    from .remix.base import detect_bpm
+    from .remix.analysis import detect_key
+    file_path = Path(path)
+    if not file_path.exists():
+        raise HTTPException(status_code=400, detail=f"File not found: {path}")
+    try:
+        duration_sec = float(sf.info(str(file_path)).duration)
+        y, sr = librosa.load(str(file_path), sr=None, mono=True, duration=60.0)
+        bpm = detect_bpm(y, sr)
+        key = detect_key(y, sr)
+        return {"bpm": round(float(bpm), 2), "key": key, "duration_sec": round(duration_sec, 3)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Analysis failed: {e}")
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)

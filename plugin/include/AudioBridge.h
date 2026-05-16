@@ -1,5 +1,6 @@
 #pragma once
 #include "PluginTypes.h"
+#include <juce_core/juce_core.h>
 #include <string>
 #include <optional>
 #include <filesystem>
@@ -24,6 +25,9 @@ public:
 
     /** Fetch available remix presets from the sidecar. Returns empty on failure. */
     std::vector<PresetInfo> getPresets();
+
+    /** Analyze a file: detect BPM, key, duration. Returns zeroed struct on failure. */
+    FileAnalysis analyzeFile(const juce::String& path);
 
     /** Fetch available stem separators from the sidecar. Returns empty on failure. */
     std::vector<SeparatorInfo> getAvailableSeparators();

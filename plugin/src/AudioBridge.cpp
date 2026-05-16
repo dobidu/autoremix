@@ -141,6 +141,33 @@ std::vector<PresetInfo> AudioBridge::getPresets() {
     } catch (...) { return {}; }
 }
 
+FileAnalysis AudioBridge::analyzeFile(const juce::String& path) {
+    try {
+        std::string encoded;
+        for (auto c : path.toStdString()) {
+            if (std::isalnum(static_cast<unsigned char>(c))
+                || c == '-' || c == '_' || c == '.' || c == '~' || c == '/')
+                encoded += c;
+            else {
+                char buf[4];
+                std::snprintf(buf, sizeof(buf), "%%%02X", static_cast<unsigned char>(c));
+                encoded += buf;
+            }
+        }
+        auto r = cpr::Get(
+            cpr::Url{makeUrl("/api/v1/analyze?path=" + encoded)},
+            cpr::Timeout{10000}
+        );
+        if (r.status_code != 200) return {};
+        auto j = nlohmann::json::parse(r.text);
+        FileAnalysis fa;
+        fa.bpm          = j.value("bpm",          0.0f);
+        fa.key          = j.value("key",           std::string{});
+        fa.duration_sec = j.value("duration_sec",  0.0f);
+        return fa;
+    } catch (...) { return {}; }
+}
+
 std::vector<SeparatorInfo> AudioBridge::getAvailableSeparators() {
     static const std::unordered_map<std::string, std::string> kDisplayNames {
         {"algorithmic", "Algorithmic FFT"},

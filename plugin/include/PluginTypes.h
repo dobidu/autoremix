@@ -52,4 +52,12 @@ struct SeparatorInfo {
     std::string display_name; // "Algorithmic FFT", "Demucs (ML)"
 };
 
+// --- Audio file analysis result from AudioBridge::analyzeFile() ---
+struct FileAnalysis {
+    float       bpm          = 0.0f;
+    std::string key;
+    float       duration_sec = 0.0f;
+    bool        valid() const { return bpm > 0.0f; }
+};
+
 } // namespace autoremix

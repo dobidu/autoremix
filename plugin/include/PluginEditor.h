@@ -50,6 +50,9 @@ private:
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String file_path_;
     juce::String output_path_;
+    float        detected_bpm_ = 120.0f;
+    juce::String detected_key_;
+    juce::Label  analysis_lbl_;
     std::vector<autoremix::PresetInfo>    presets_;
     std::vector<autoremix::SeparatorInfo> separators_;
 

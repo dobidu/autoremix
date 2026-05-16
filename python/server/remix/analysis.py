@@ -1,6 +1,37 @@
 import numpy as np
 import librosa
 
+_NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+
+# Krumhansl-Schmuckler key profiles
+_MAJOR_PROFILE = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09,
+                             2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
+_MINOR_PROFILE = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53,
+                             2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
+
+
+def detect_key(audio: np.ndarray, sr: int) -> str:
+    """Detect dominant musical key using Krumhansl chroma profiles.
+    Returns note name + "" for major or "m" for minor, e.g. "C", "Am", "F#"."""
+    mono = _to_mono(audio).astype(np.float32)
+    chroma = librosa.feature.chroma_cqt(y=mono, sr=sr)
+    chroma_mean = chroma.mean(axis=1)  # shape (12,)
+
+    best_corr = -np.inf
+    best_key = "C"
+    for root in range(12):
+        shifted_major = np.roll(_MAJOR_PROFILE, root)
+        shifted_minor = np.roll(_MINOR_PROFILE, root)
+        corr_major = float(np.corrcoef(chroma_mean, shifted_major)[0, 1])
+        corr_minor = float(np.corrcoef(chroma_mean, shifted_minor)[0, 1])
+        if corr_major > best_corr:
+            best_corr = corr_major
+            best_key = _NOTE_NAMES[root]
+        if corr_minor > best_corr:
+            best_corr = corr_minor
+            best_key = _NOTE_NAMES[root] + "m"
+    return best_key
+
 
 def _to_mono(audio: np.ndarray) -> np.ndarray:
     if audio.ndim == 1:

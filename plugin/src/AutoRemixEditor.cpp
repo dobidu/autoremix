@@ -98,12 +98,20 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 
     // ── Header: separator combobox (populated from sidecar health on connect)
     addAndMakeVisible(separator_combo_);
-    separator_combo_.setBounds(406, 6, 162, 28);
+    separator_combo_.setBounds(406, 6, 116, 28);
     separator_combo_.addItem("Algorithmic FFT", 1);
     separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
     separator_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
     separator_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
     separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::CYAN));
+
+    // ── Header: save preset button
+    addAndMakeVisible(save_preset_btn);
+    save_preset_btn.setButtonText("Save");
+    save_preset_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::PURPLE));
+    save_preset_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::PURPLE));
+    save_preset_btn.setBounds(526, 6, 44, 28);
+    save_preset_btn.onClick = [this] { onClick_SavePreset(); };
 
     // ── Header: sidecar health dot
     addAndMakeVisible(health_dot_);
@@ -113,50 +121,72 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     addAndMakeVisible(waveform_display_);
     waveform_display_.setBounds(8, 48, getWidth() - 16, 144);
 
-    // ── Params zone: 4 sliders (x=96..584, y=200..336)
-    auto setupSlider = [this](juce::Slider& s, juce::Label& lbl,
-                               const juce::String& name,
-                               double lo, double hi, double val, int y) {
-        addAndMakeVisible(lbl);
-        lbl.setText(name, juce::dontSendNotification);
-        lbl.setFont(AR::font(AR::FontRole::label));
-        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
-        lbl.setBounds(96, y, 488, 11);
-
-        addAndMakeVisible(s);
-        s.setSliderStyle(juce::Slider::LinearHorizontal);
-        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 16);
-        s.setRange(lo, hi, 0.0);
-        s.setValue(val, juce::dontSendNotification);
-        s.setBounds(96, y + 12, 488, 18);
-    };
-
-    setupSlider(tempo_slider_,  tempo_lbl_,  "Tempo",   0.3,    2.0,    0.70,   204);
-    setupSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,   237);
-    setupSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,   270);
-    setupSlider(chop_slider_,   chop_lbl_,   "Chop ms", 0.0, 4000.0, 2000.0,   303);
-
-    // ── Controls zone right: filename label
+    // ── Controls zone — filename row
     addAndMakeVisible(file_lbl);
     file_lbl.setFont(AR::font(AR::FontRole::value));
     file_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
     file_lbl.setJustificationType(juce::Justification::centredLeft);
-    file_lbl.setBounds(100, 204, 492, 22);
+    file_lbl.setBounds(96, 203, 488, 14);
 
-    // ── Transport strip: Load / Play / Save
+    // ── Controls zone — remix params (left col x=96 w=220) + stem mix (right col x=328 w=256)
+    //    rows at y = 218, 246, 274, 302  (spacing 28px)
+    auto setupRemixSlider = [this](juce::Slider& s, juce::Label& lbl,
+                                    const juce::String& name,
+                                    double lo, double hi, double val, int y) {
+        addAndMakeVisible(lbl);
+        lbl.setText(name, juce::dontSendNotification);
+        lbl.setFont(AR::font(AR::FontRole::label));
+        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
+        lbl.setBounds(96, y, 220, 11);
+
+        addAndMakeVisible(s);
+        s.setSliderStyle(juce::Slider::LinearHorizontal);
+        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 16);
+        s.setRange(lo, hi, 0.0);
+        s.setValue(val, juce::dontSendNotification);
+        s.setBounds(96, y + 12, 220, 18);
+    };
+
+    setupRemixSlider(tempo_slider_,  tempo_lbl_,  "Tempo",   0.3,    2.0,    0.70,  218);
+    setupRemixSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,  246);
+    setupRemixSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,  274);
+    setupRemixSlider(chop_slider_,   chop_lbl_,   "Chop ms", 0.0, 4000.0, 2000.0,  302);
+
+    auto setupStemSlider = [this](juce::Slider& s, juce::Label& lbl,
+                                   const juce::String& name, int y) {
+        addAndMakeVisible(lbl);
+        lbl.setText(name, juce::dontSendNotification);
+        lbl.setFont(AR::font(AR::FontRole::label));
+        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::CYAN));
+        lbl.setBounds(328, y, 256, 11);
+
+        addAndMakeVisible(s);
+        s.setSliderStyle(juce::Slider::LinearHorizontal);
+        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 16);
+        s.setRange(0.0, 2.0, 0.0);
+        s.setValue(1.0, juce::dontSendNotification);
+        s.setBounds(328, y + 12, 256, 18);
+    };
+
+    setupStemSlider(vocals_slider_, vocals_lbl_, "Vocals", 218);
+    setupStemSlider(drums_slider_,  drums_lbl_,  "Drums",  246);
+    setupStemSlider(bass_slider_,   bass_lbl_,   "Bass",   274);
+    setupStemSlider(other_slider_,  other_lbl_,  "Other",  302);
+
+    // ── Transport strip: Load / Play / Save (aligned with slider rows)
     addAndMakeVisible(loadfile_btn);
     loadfile_btn.setButtonText("Load");
     loadfile_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
     loadfile_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
     loadfile_btn.onClick = [this] { loadFile(); };
-    loadfile_btn.setBounds(8, 212, 72, 26);
+    loadfile_btn.setBounds(8, 218, 72, 26);
 
     addAndMakeVisible(play_btn);
-    play_btn.setButtonText("Play");
+    play_btn.setButtonText("Remix");
     play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::GREEN));
     play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::GREEN));
     play_btn.onClick = [this] { onClick_Play(); };
-    play_btn.setBounds(8, 246, 72, 26);
+    play_btn.setBounds(8, 250, 72, 26);
 
     addAndMakeVisible(save_btn);
     save_btn.setButtonText("Save");
@@ -164,7 +194,18 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     save_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
     save_btn.setEnabled(false);
     save_btn.onClick = [this] { onClick_Save(); };
-    save_btn.setBounds(8, 280, 72, 26);
+    save_btn.setBounds(8, 284, 72, 26);
+
+    addAndMakeVisible(preview_btn);
+    preview_btn.setButtonText("Preview");
+    preview_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
+    preview_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ELEVATED));
+    preview_btn.setEnabled(false);
+    preview_btn.onClick = [this] {
+        audioProcessor.togglePreview();
+        preview_btn.setButtonText(audioProcessor.isPreviewPlaying() ? "Stop" : "Preview");
+    };
+    preview_btn.setBounds(8, 312, 72, 20);
 
     // ── Status zone
     addAndMakeVisible(status_lbl);
@@ -223,7 +264,11 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
         preset.default_params.bass_boost_db,
         preset.default_params.drums_tempo_factor,
         preset.id,
-        sep_id
+        sep_id,
+        (float)vocals_slider_.getValue(),
+        (float)drums_slider_.getValue(),
+        (float)bass_slider_.getValue(),
+        (float)other_slider_.getValue(),
     };
 
     auto juce_tmp   = juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -272,6 +317,9 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
                 output_path_ = juce::String(result.output_path.string());
                 status_lbl.setText("Done \xe2\x80\x94 click Save to export.", juce::dontSendNotification);
                 save_btn.setEnabled(true);
+                audioProcessor.loadPreviewFile(juce::File(output_path_));
+                preview_btn.setEnabled(true);
+                preview_btn.setButtonText("Preview");
             } else {
                 status_lbl.setText("Error: " + juce::String(result.error_message), juce::dontSendNotification);
             }
@@ -300,6 +348,71 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
                 status_lbl.setText("Saved: " + results[0].getFileName(), juce::dontSendNotification);
             }
         });
+}
+
+void AutoRemixAudioProcessorEditor::onClick_SavePreset()
+{
+    juce::AlertWindow aw("Save Preset",
+                         "Enter a name for this preset:",
+                         juce::MessageBoxIconType::NoIcon);
+    aw.addTextEditor("name", "", "Preset name:");
+    aw.addButton("Save",   1, juce::KeyPress(juce::KeyPress::returnKey));
+    aw.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    if (aw.runModalLoop() != 1) return;
+
+    auto name = aw.getTextEditorContents("name").trim();
+    if (name.isEmpty()) return;
+
+    auto idx = static_cast<std::size_t>(style_combo_.getSelectedItemIndex());
+    if (presets_.empty() || idx >= presets_.size()) return;
+    auto& preset = presets_[idx];
+
+    autoremix::RemixParams params {
+        (float)tempo_slider_.getValue(),
+        (float)pitch_slider_.getValue(),
+        (float)reverb_slider_.getValue(),
+        (float)chop_slider_.getValue(),
+        preset.default_params.bass_boost_db,
+        preset.default_params.drums_tempo_factor,
+        preset.id,
+        "",
+        (float)vocals_slider_.getValue(),
+        (float)drums_slider_.getValue(),
+        (float)bass_slider_.getValue(),
+        (float)other_slider_.getValue(),
+    };
+
+    status_lbl.setText("Saving preset\xe2\x80\xa6", juce::dontSendNotification);
+
+    std::string name_str = name.toStdString();
+    std::thread([this, name_str, params]() mutable {
+        auto& bridge = audioProcessor.getBridge();
+        bool ok = bridge.savePreset(name_str, params);
+        auto newPresets = bridge.getPresets();
+
+        juce::MessageManager::callAsync([this, ok, name_str,
+                                               newPresets = std::move(newPresets)]() mutable {
+            if (ok && !newPresets.empty()) {
+                presets_ = std::move(newPresets);
+                style_combo_.clear(juce::dontSendNotification);
+                for (int i = 0; i < (int)presets_.size(); ++i)
+                    style_combo_.addItem(presets_[(size_t)i].name, i + 1);
+                for (int i = 0; i < (int)presets_.size(); ++i) {
+                    if (presets_[(size_t)i].name == name_str) {
+                        style_combo_.setSelectedItemIndex(i, juce::dontSendNotification);
+                        loadEngineDefaults(i);
+                        break;
+                    }
+                }
+                status_lbl.setText("Preset saved: " + juce::String(name_str),
+                                   juce::dontSendNotification);
+            } else {
+                status_lbl.setText("Error: preset save failed.",
+                                   juce::dontSendNotification);
+            }
+        });
+    }).detach();
 }
 
 //==============================================================================

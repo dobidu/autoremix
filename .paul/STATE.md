@@ -2,28 +2,28 @@
 
 ## Current Position
 
-Milestone: v5 UX Polish ✅ COMPLETE
-Phase: 12 (Separator UI) ✅ COMPLETE
-Plan: 12-01 complete
-Status: Loop closed — ready for next phase
-Last activity: 2026-05-15 — 12-01 PLAN ✓ APPLY ✓ UNIFY ✓
+Milestone: v6 Interactive Mixing — COMPLETE ✅
+Phase: 13 (Interactive Mixing) — ALL 3 PLANS COMPLETE
+Plan: 13-03 complete
+Status: Phase 13 complete — ready to merge v2 → main
+Last activity: 2026-05-16 — Phase 13 transition complete
 
 Progress:
-- Milestone: v5 UX Polish [██████████] 100%
-- Phase 12: [██████████] 100%
+- Milestone: v6 Interactive Mixing [██████████] 100%
+- Phase 13: [██████████] 100% (3/3 plans)
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
+  ✓        ✓        ✓     [Phase 13 complete — milestone done]
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-15
-Stopped at: Phase 12 complete (v2.4.0)
-Next action: merge v2 → main, then /paul:plan for next phase
+Last session: 2026-05-16
+Stopped at: Phase 13 UNIFY + transition complete
+Next action: merge v2 → main (git checkout main && git merge v2 --no-ff)
 
 ## Decisions
 - Python sidecar port: 17432

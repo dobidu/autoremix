@@ -1,5 +1,15 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 13 — Interactive Mixing ✅ COMPLETE (2026-05-16)
+
+Three sub-plans delivering real creative control over remix output:
+
+- **13-01**: Stem mix sliders (Vocals/Drums/Bass/Other 0–2×) — Python pre-weighting + C++ gains + UI two-column layout
+- **13-02**: In-plugin audio preview — AudioTransportSource plays remixed output without export
+- **13-03**: Preset editor UI — "Save" button + AlertWindow dialog + POST /api/v1/presets + style_combo_ refresh
+
+Deliverable: users control stem balance live, preview result instantly, save custom presets ✓
+
 ## Phase 12 — Separator UI + Cross-Platform Temp Dir ✅ COMPLETE (2026-05-15)
 
 - `SeparatorInfo` type + `AudioBridge::getAvailableSeparators()` (parses `/api/v1/health`)

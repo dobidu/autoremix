@@ -30,8 +30,20 @@ and ML backends coexist behind stable interfaces.
 - [ ] Plugin loads in REAPER without crash (VST3) — Deferred: pending manual REAPER smoke test
 - [x] Python sidecar starts/stops cleanly from plugin lifecycle (AudioBridge::startSidecar/stopSidecar, Phase 05-02)
 - [x] IStemSeparator implementors can be swapped via config without recompile (SeparatorRegistry + RemixRegistry, Phase 01)
+- [x] Stem mix sliders (Vocals/Drums/Bass/Other 0–2×) send pre-weighting to sidecar — Phase 13-01
+- [x] In-plugin audio preview via AudioTransportSource plays remixed WAV through plugin output — Phase 13-02
+- [x] Save-as-preset writes custom preset JSON to user dir; style_combo_ refreshes live — Phase 13-03
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)
 - No JUCE_MODAL_LOOPS in audio thread (already defined in CMakeLists)
 - Python sidecar ≤ 500ms startup time after model load
+
+## Phase 13 Key Decisions
+- Stem pre-weighting in Python before engine dispatch (universal; no engine changes needed)
+- AudioTransportSource in processor (not editor); processBlock routes transport audio to output
+- AlertWindow runModalLoop() safe: JUCE_MODAL_LOOPS_PERMITTED=1 in CMakeLists
+- POST /api/v1/presets updates module-level _presets in-place (MVP-safe, no lock needed)
+
+---
+*Last updated: 2026-05-16 after Phase 13 (Interactive Mixing)*

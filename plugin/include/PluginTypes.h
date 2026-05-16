@@ -25,6 +25,10 @@ struct RemixParams {
     float drums_tempo_factor = 1.0f;   // independent drum channel tempo
     std::string engine_id;             // "chopped_screwed" | "slowed_reverb" | "drum_and_bass"
     std::string separator_id;          // "spleeter" | "algorithmic"
+    float vocals_gain = 1.0f;
+    float drums_gain  = 1.0f;
+    float bass_gain   = 1.0f;
+    float other_gain  = 1.0f;
 };
 
 // --- Processing result ---

@@ -28,6 +28,9 @@ public:
     /** Fetch available stem separators from the sidecar. Returns empty on failure. */
     std::vector<SeparatorInfo> getAvailableSeparators();
 
+    /** Save current params as a new user preset. Returns false on error. */
+    bool savePreset(const std::string& name, const RemixParams& params);
+
     /**
      * Ask the sidecar to separate stems.
      * separator_id: "spleeter_4stems", "algorithmic", ...

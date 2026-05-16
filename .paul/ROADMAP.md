@@ -1,5 +1,15 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 19 — Stem Drag-to-DAW ✅ COMPLETE (2026-05-16)
+
+Drag any stem row in ScreenStemsReady to a DAW track or file manager to export the temp WAV.
+
+- **19-01**: mouseDown/mouseDrag on ScreenStemsReady; 8px threshold; performExternalDragDropOfFiles; guards for validity + file existence
+
+Deliverable: stems draggable to DAW when running as VST3; copy semantics (canMoveFiles=false).
+
+---
+
 ## Phase 18 — UX Redesign ✅ COMPLETE (2026-05-16)
 
 Full UI overhaul: 960×600, burnt-orange brutalist theme, screen-based navigation.

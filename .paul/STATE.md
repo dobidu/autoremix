@@ -3,8 +3,8 @@
 ## Current Position
 
 Milestone: v9 — IN PROGRESS
-Phase: 18 — COMPLETE
-Status: Full UX redesign delivered — 960×600, burnt-orange theme, 5-screen flow, all targets link
+Phase: 19 — COMPLETE
+Status: Stem drag-to-DAW delivered; header cleanup complete
 Last activity: 2026-05-16
 
 Progress:

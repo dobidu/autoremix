@@ -67,6 +67,24 @@ public:
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
 
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        drag_stem_idx_ = stemRowAtY(e.y);
+        mouse_down_pos_ = e.getPosition();
+    }
+
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        if (drag_stem_idx_ < 0) return;
+        if (e.getDistanceFromDragStart() < 8) return;
+        auto path = stemPath(drag_stem_idx_);
+        if (path.isEmpty() || !juce::File(path).existsAsFile()) return;
+        int idx = drag_stem_idx_;
+        drag_stem_idx_ = -1;
+        juce::DragAndDropContainer::performExternalDragDropOfFiles({ path }, false);
+        juce::ignoreUnused(idx);
+    }
+
     void paint(juce::Graphics& g) override
     {
         g.fillAll(juce::Colour(AR::BG));
@@ -221,6 +239,26 @@ private:
         r.mute_btn.setBounds(rightCol.removeFromRight(TOGGLE_SIZE).withSizeKeepingCentre(TOGGLE_SIZE, TOGGLE_SIZE));
     }
 
+    int stemRowAtY(int y) const
+    {
+        int rel = y - 40;  // 40px section header
+        if (rel < 0) return -1;
+        int idx = rel / ROW_H;
+        return (idx >= 0 && idx < 4) ? idx : -1;
+    }
+
+    juce::String stemPath(int idx) const
+    {
+        if (!ctx_.stems.valid) return {};
+        switch (idx) {
+            case 0: return juce::String(ctx_.stems.vocals.string());
+            case 1: return juce::String(ctx_.stems.drums.string());
+            case 2: return juce::String(ctx_.stems.bass.string());
+            case 3: return juce::String(ctx_.stems.other.string());
+            default: return {};
+        }
+    }
+
     void handleMute(int idx)
     {
         *rows_[(size_t)idx].ctx_muted = rows_[(size_t)idx].mute_btn.getToggleState();
@@ -260,6 +298,9 @@ private:
     juce::AudioThumbnail      drums_thumb_;
     juce::AudioThumbnail      bass_thumb_;
     juce::AudioThumbnail      other_thumb_;
+
+    int               drag_stem_idx_ = -1;
+    juce::Point<int>  mouse_down_pos_;
 
     juce::TextButton back_btn_;
     juce::TextButton next_btn_;

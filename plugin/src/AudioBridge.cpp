@@ -261,9 +261,11 @@ bool AudioBridge::startSidecar(const std::filesystem::path& server_script_path) 
     if (pid < 0) return false;
 
     if (pid == 0) {
-        std::string script = server_script_path.string();
-        execl("/usr/bin/python3", "python3", script.c_str(), nullptr);
-        execlp("python3", "python3", script.c_str(), nullptr);
+        // server/main.py uses relative imports — must run as module from python/ dir
+        std::string pydir = server_script_path.parent_path().parent_path().string();
+        if (!pydir.empty()) chdir(pydir.c_str());
+        execl("/usr/bin/python3", "python3", "-m", "server.main", nullptr);
+        execlp("python3", "python3", "-m", "server.main", nullptr);
         _exit(127);
     }
 

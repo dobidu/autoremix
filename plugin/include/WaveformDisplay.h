@@ -5,9 +5,7 @@
 
 class WaveformDisplay : public juce::Component {
 public:
-    explicit WaveformDisplay(juce::AudioThumbnail& thumb) : thumb_(thumb) {
-        setBufferedToImage(true);
-    }
+    explicit WaveformDisplay(juce::AudioThumbnail& thumb) : thumb_(thumb) {}
 
     void paint(juce::Graphics& g) override {
         auto area = getLocalBounds();
@@ -17,16 +15,10 @@ public:
 
         if (thumb_.getTotalLength() > 0.0) {
             double len = thumb_.getTotalLength();
-
-            // area fill: 15% alpha under the waveform shape
-            g.setColour(juce::Colour(AR::PURPLE).withAlpha(0.15f));
-            thumb_.drawChannels(g, area, 0.0, len, 1.0f);
-
-            // crisp waveform on top
-            g.setColour(juce::Colour(AR::PURPLE));
+            g.setColour(juce::Colour(AR::PURPLE).withAlpha(0.4f));
             thumb_.drawChannels(g, area, 0.0, len, 1.0f);
         } else {
-            g.setFont(AR::font(AR::FontRole::secondary));
+            g.setFont(AR::font(AR::FontRole::value));
             g.setColour(juce::Colour(AR::COMMENT));
             g.drawFittedText("No file loaded", area, juce::Justification::centred, 1);
         }

@@ -17,7 +17,9 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
-    void changeListenerCallback(juce::ChangeBroadcaster*) override { waveform_display_.sourceChanged(); }
+    void changeListenerCallback(juce::ChangeBroadcaster*) override {
+        juce::MessageManager::callAsync([this] { waveform_display_.repaint(); });
+    }
 
 private:
     AutoRemixAudioProcessor& audioProcessor;

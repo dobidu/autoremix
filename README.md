@@ -1,4 +1,4 @@
-# AutoRemix v2.3.0
+# AutoRemix v2.5.0
 
 JUCE VST3/Standalone plugin + Python FastAPI sidecar for creative audio remixing.
 Load a WAV, choose a remix style, get a processed output file.
@@ -102,7 +102,7 @@ set AUTOREMIX_SERVER_PATH=C:\path\to\autoremix\python\server\main.py
 build\AutoRemix_artefacts\Debug\Standalone\AutoRemix.exe
 ```
 
-Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** → **Play** → **Save**
+Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** → **choose chop mode** → **Remix** → **Save**
 
 ---
 
@@ -111,25 +111,28 @@ Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** →
 600 × 400 px dark-themed interface (Dracula-inspired palette):
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  AutoRemix   [Chop & Screw][Slowed Reverb][Drum & Bass] ●│  ← header + health dot
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░  waveform       │  ← 160px
-│                                                          │
-├────────┬─────────────────────────────────────────────────┤
-│  Load  │  Tempo ──●────── 0.70                           │
-│  Play  │  Pitch ─●─────── -4.0      filename.wav         │  ← controls
-│  Save  │  Reverb ────●─── 0.05                           │
-├────────┴─────────────────────────────────────────────────┤
-│  Ready                                             ●     │  ← status + sidecar dot
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  AutoRemix  [Trap Stutter ▼──────────]  [Algorithmic ▼]  [Save]●│  ← header
+├─────────────────────────────────────────────────────────────────┤
+│  ▓▓▒░▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░                       waveform          │
+├────────┬────────────────────────────┬───────────────────────────┤
+│  Load  │  Tempo ──●──────── 0.70   │  Vocals ────●──── 1.0     │
+│        │  Pitch ─●───────── -4.0   │  Drums  ────●──── 1.0     │
+│ Remix  │  Reverb ────●───── 0.05   │  Bass   ────●──── 1.0     │
+│        │  [Beat-Aligned ▼]          │  Other  ────●──── 1.0     │
+│  Save  │  Chop ms ──────●── 2000   │                            │
+│Preview │                            │                            │
+├────────┴────────────────────────────┴───────────────────────────┤
+│  Ready                                                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- Tab bar populated dynamically from sidecar presets (user presets add new tabs)
-- Slider values update to preset defaults when tab is switched
-- Waveform display updates after loading a file (AudioThumbnail)
-- Sidecar health dot: green = connected, red = sidecar down
+- **Preset combo**: dynamically populated from sidecar (6 built-ins + user presets)
+- **Chop mode combo**: Fixed (ms) / Beat-Aligned / Onset-Triggered / Bar-Locked / Energy Gate / Structural — selects musical chop algorithm applied on top of preset effects
+- **Stem mix sliders**: per-stem gain 0–2× applied as pre-weighting before remix
+- **Chop ms slider**: active only in Fixed (ms) mode; grayed out for musical modes
+- Waveform display updates on file load (AudioThumbnail)
+- Sidecar health dot: green = connected, red = down
 - On **Windows/macOS**: native OS file dialog. On **Linux/WSL2**: JUCE file browser.
 
 ---
@@ -166,7 +169,7 @@ The sidecar discovers presets at startup from two locations:
 
 | Location | Platform |
 |----------|----------|
-| `python/server/presets/*.json` | Built-in (3 presets) |
+| `python/server/presets/*.json` | Built-in (6 presets) |
 | `~/.config/autoremix/modes/*.json` | Linux / macOS user presets |
 | `%APPDATA%\autoremix\modes\*.json` | Windows user presets |
 
@@ -229,9 +232,40 @@ in sequence.
 | `chop` | any | `interval_ms` (100–10000) |
 | `bass_boost` | any | `db` (−24–24) |
 | `eq_highpass` | any | `cutoff_hz` (20–20000) |
+| `chop_beats` | any | `division` (0.25–4.0, fraction of beat), `repeat` (1–8), `offset_beats` (int) |
+| `chop_onsets` | any | `min_gap_ms` (20–500), `threshold` (0–1), `repeat` (1–8) |
+| `chop_bars` | any | `beats_per_bar` (2–8), `repeat` (1–8) |
+| `gate_energy` | any | `threshold_db` (−60–0), `hold_ms` (0–500) |
+| `structural_cut` | any | `n_segments` (2–16), `mode` (`"keep"` or `"reverse"`) |
 
 `stems` can be `"all"` (sum all 4 stems → apply → distribute), a single name
 (`"vocals"`, `"drums"`, `"bass"`, `"other"`), or a list (`["bass", "drums"]`).
+
+---
+
+## Musical Chop Intelligence
+
+The **Chop Mode** combo in the plugin header selects how effect-chain presets chop audio:
+
+| Mode | Description |
+|------|-------------|
+| Fixed (ms) | Fixed-interval chop every N milliseconds (original behavior) |
+| Beat-Aligned | Cuts at beat positions detected by librosa's beat tracker |
+| Onset-Triggered | Cuts at transient onsets (drum hits, note attacks) |
+| Bar-Locked | Cuts every N beats (default 4 = one bar) |
+| Energy Gate | Silences low-energy regions below threshold |
+| Structural | Reorders structural segments (verse/chorus-level form analysis) |
+
+Chop mode applies **only to effect-chain presets** (non-empty `effects` array). Legacy
+engine presets (`chopped_screwed`, `slowed_reverb`, `drum_and_bass`) are unaffected.
+
+**Built-in effect-chain presets** (Phase 14):
+
+| Preset | Style | Key ops |
+|--------|-------|---------|
+| `trap_stutter` | Trap Stutter | chop_beats on vocals (×3), chop_onsets on drums (×2), bass boost |
+| `onset_drill` | Onset Drill | chop_onsets on vocals, energy gate on other, chop_beats on bass |
+| `structural_loop` | Structural Loop | structural_cut vocals+other (reverse), reverb, time stretch |
 
 ---
 
@@ -244,8 +278,9 @@ source .venv/bin/activate          # Linux/macOS
 python -m pytest tests/ -v
 ```
 
-**27 tests** covering: health, algorithmic separation, demucs separation (skipped when
-demucs absent), 3 remix engines, 6 effect ops (unit), 5 chain interpreter tests
+**50 tests** covering: health, algorithmic separation, demucs separation (skipped when
+demucs absent), 3 remix engines, 6 legacy effect ops (unit), 5 musical analysis functions
+(11 tests), 5 new musical chop ops (12 tests), 5 chain interpreter tests
 (including HTTP dispatch), error paths.
 
 CI runs on every push/PR to `v2` and `main` via GitHub Actions (Linux, pytest only —

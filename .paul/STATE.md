@@ -2,29 +2,30 @@
 
 ## Current Position
 
-Milestone: v8 — COMPLETE
-Phase: 17 — COMPLETE
-Status: All three v8 phases (15, 16, 17) delivered; 54 tests green
+Milestone: v9 — IN PROGRESS
+Phase: 18 — COMPLETE
+Status: Full UX redesign delivered — 960×600, burnt-orange theme, 5-screen flow, all targets link
 Last activity: 2026-05-16
 
 Progress:
-- Milestone: v8 [██████████] 100%
+- Milestone: v9 [██████████] 100%
 
 ## Loop Position
 
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [15-01 complete]
-  ✓        ✓        ✓     [15-02 complete]
-  ✓        ✓        ✓     [16-01 complete]
-  ✓        ✓        ✓     [16-02 complete]
+  ✓        ✓        ✓     [18-01 complete] Font + theme foundation
+  ✓        ✓        ✓     [18-02 complete] ScreenContext + ScreenBase + ScreenEmpty
+  ✓        ✓        ✓     [18-03 complete] ScreenSeparating + ScreenStemsReady
+  ✓        ✓        ✓     [18-04 complete] ScreenModeParams
+  ✓        ✓        ✓     [18-05 complete] ScreenRender + editor migration
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 17 plans written
-Next action: /paul:apply 17-01 → /paul:unify → /paul:apply 17-02 → /paul:unify → commit+push
+Stopped at: Phase 18 complete; build clean
+Next action: git commit + push Phase 18; then plan Phase 19 if desired
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

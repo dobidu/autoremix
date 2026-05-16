@@ -2,6 +2,10 @@ juce_add_binary_data(AutoRemixFonts SOURCES
     ../assets/fonts/Inter-Regular.otf
     ../assets/fonts/Inter-SemiBold.otf
     ../assets/fonts/Inter-Bold.otf
+    ../assets/fonts/SpaceGrotesk-Regular.ttf
+    ../assets/fonts/SpaceGrotesk-Medium.ttf
+    ../assets/fonts/JetBrainsMono-Regular.ttf
+    ../assets/fonts/JetBrainsMono-Medium.ttf
 )
 set_target_properties(AutoRemixFonts PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

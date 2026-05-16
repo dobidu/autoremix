@@ -21,9 +21,9 @@ public:
     void paint(juce::Graphics& g) override {
         auto bounds = getLocalBounds().toFloat().reduced(1.0f);
         switch (state_) {
-            case State::connected:    g.setColour(juce::Colour(AR::GREEN));  break;
-            case State::disconnected: g.setColour(juce::Colour(AR::RED));    break;
-            case State::checking:     g.setColour(juce::Colour(AR::ORANGE)); break;
+            case State::connected:    g.setColour(juce::Colour(AR::SUCCESS)); break;
+            case State::disconnected: g.setColour(juce::Colour(AR::ERROR));   break;
+            case State::checking:     g.setColour(juce::Colour(AR::WARNING)); break;
         }
         g.fillEllipse(bounds);
     }

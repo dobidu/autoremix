@@ -3,115 +3,191 @@
 #include <BinaryData.h>
 
 namespace AR {
-    // Background layers
-    constexpr uint32_t BG_DEEP  = 0xFF1E1F29;
-    constexpr uint32_t BG       = 0xFF282A36;
-    constexpr uint32_t ELEVATED = 0xFF343746;
-    constexpr uint32_t SURFACE  = 0xFF44475A;
+    // ── Background layers ─────────────────────────────────────────────────────
+    constexpr uint32_t BG_DEEP       = 0xFF0A0A0B;   // recessed wells
+    constexpr uint32_t BG            = 0xFF0F0F10;   // base background
+    constexpr uint32_t ELEVATED      = 0xFF1A1A1C;   // cards, panels
+    constexpr uint32_t SURFACE       = 0xFF2A2A2D;   // border normal
+    constexpr uint32_t BORDER_STRONG = 0xFF3D3D40;   // emphasized border
 
-    // Foreground
-    constexpr uint32_t FG      = 0xFFF8F8F2;
-    constexpr uint32_t COMMENT = 0xFF6272A4;
+    // ── Foreground ────────────────────────────────────────────────────────────
+    constexpr uint32_t FG      = 0xFFE8E5E0;   // warm cream
+    constexpr uint32_t COMMENT = 0xFF5A5A60;   // de-emphasized text
 
-    // Accents
-    constexpr uint32_t GREEN  = 0xFF50FA7B;
-    constexpr uint32_t CYAN   = 0xFF8BE9FD;
-    constexpr uint32_t PURPLE = 0xFFBD93F9;
-    constexpr uint32_t RED    = 0xFFFF5555;
-    constexpr uint32_t ORANGE = 0xFFFFB86C;
+    // ── Accent + semantic ─────────────────────────────────────────────────────
+    constexpr uint32_t ACCENT  = 0xFFD4652A;   // burnt orange — primary CTA
+    constexpr uint32_t SUCCESS = 0xFF6B8E23;   // olive green
+    constexpr uint32_t WARNING = 0xFFC89B3C;   // amber
+    constexpr uint32_t ERROR   = 0xFFA0392C;   // muted red
 
-    constexpr float RADIUS = 6.0f;
+    // ── Stem colors ───────────────────────────────────────────────────────────
+    constexpr uint32_t STEM_VOCALS = 0xFFB5C29A;   // sage green
+    constexpr uint32_t STEM_DRUMS  = 0xFFC89B3C;   // amber
+    constexpr uint32_t STEM_BASS   = 0xFF8E4F2C;   // dark orange-brown
+    constexpr uint32_t STEM_OTHER  = 0xFF6E8B8C;   // slate teal
 
-    enum class FontRole { header, section, label, value, secondary, status, button };
+    // ── Geometry ──────────────────────────────────────────────────────────────
+    constexpr float RADIUS = 0.0f;   // brutalist: no rounded corners
+
+    // ── Font roles ────────────────────────────────────────────────────────────
+    enum class FontRole {
+        header,        // Space Grotesk Medium 16px
+        section,       // Space Grotesk Medium 11px bold
+        label,         // Space Grotesk Regular 11px
+        value,         // Space Grotesk Regular 13px
+        secondary,     // Space Grotesk Regular 10px
+        status,        // Space Grotesk Regular 12px
+        button,        // Space Grotesk Medium 12px uppercase
+        display_mega,  // Space Grotesk Regular 28px — drag-drop hero
+        section_label, // Space Grotesk Medium 10px uppercase
+        mono_value,    // JetBrains Mono Regular 13px — numeric readouts
+        mono_label,    // JetBrains Mono Medium 11px — units/keys
+    };
 
     inline juce::Font font(FontRole role) {
         switch (role) {
-            case FontRole::header:    return juce::Font(16.0f, juce::Font::bold);
-            case FontRole::section:   return juce::Font(11.0f, juce::Font::bold);
-            case FontRole::label:     return juce::Font(11.0f, juce::Font::plain);
-            case FontRole::value:     return juce::Font(13.0f, juce::Font::plain);
-            case FontRole::secondary: return juce::Font(10.0f, juce::Font::plain);
-            case FontRole::status:    return juce::Font(12.0f, juce::Font::plain);
-            case FontRole::button:    return juce::Font(12.0f, juce::Font::bold);
-            default:                  return juce::Font(13.0f, juce::Font::plain);
+            case FontRole::header:        return juce::Font(16.0f, juce::Font::bold);
+            case FontRole::section:       return juce::Font(11.0f, juce::Font::bold);
+            case FontRole::label:         return juce::Font(11.0f, juce::Font::plain);
+            case FontRole::value:         return juce::Font(13.0f, juce::Font::plain);
+            case FontRole::secondary:     return juce::Font(10.0f, juce::Font::plain);
+            case FontRole::status:        return juce::Font(12.0f, juce::Font::plain);
+            case FontRole::button:        return juce::Font(12.0f, juce::Font::bold);
+            case FontRole::display_mega:  return juce::Font(28.0f, juce::Font::plain);
+            case FontRole::section_label: return juce::Font(10.0f, juce::Font::bold);
+            case FontRole::mono_value:    return juce::Font("JetBrainsMono", 13.0f, juce::Font::plain);
+            case FontRole::mono_label:    return juce::Font("JetBrainsMono", 11.0f, juce::Font::bold);
+            default:                      return juce::Font(13.0f, juce::Font::plain);
         }
     }
 }
 
 class AutoRemixLookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    AutoRemixLookAndFeel() {
-        inter_regular_  = juce::Typeface::createSystemTypefaceFor(
-            BinaryData::InterRegular_otf,  BinaryData::InterRegular_otfSize);
-        inter_semibold_ = juce::Typeface::createSystemTypefaceFor(
-            BinaryData::InterSemiBold_otf, BinaryData::InterSemiBold_otfSize);
+    AutoRemixLookAndFeel()
+    {
+        // ── Load typefaces from embedded binary data ───────────────────────────
+        sg_regular_  = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::SpaceGroteskRegular_ttf,  BinaryData::SpaceGroteskRegular_ttfSize);
+        sg_medium_   = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::SpaceGroteskMedium_ttf,   BinaryData::SpaceGroteskMedium_ttfSize);
+        jbm_regular_ = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::JetBrainsMonoRegular_ttf, BinaryData::JetBrainsMonoRegular_ttfSize);
+        jbm_medium_  = juce::Typeface::createSystemTypefaceFor(
+            BinaryData::JetBrainsMonoMedium_ttf,  BinaryData::JetBrainsMonoMedium_ttfSize);
 
-        setColour(juce::ResizableWindow::backgroundColourId,          juce::Colour(AR::BG));
+        // ── Window background ─────────────────────────────────────────────────
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(AR::BG));
 
-        setColour(juce::Label::textColourId,                          juce::Colour(AR::FG));
-        setColour(juce::Label::backgroundColourId,                    juce::Colours::transparentBlack);
+        // ── Labels ────────────────────────────────────────────────────────────
+        setColour(juce::Label::textColourId,       juce::Colour(AR::FG));
+        setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
 
-        setColour(juce::ComboBox::backgroundColourId,                 juce::Colour(AR::SURFACE));
-        setColour(juce::ComboBox::textColourId,                       juce::Colour(AR::FG));
-        setColour(juce::ComboBox::arrowColourId,                      juce::Colour(AR::FG));
-        setColour(juce::ComboBox::outlineColourId,                    juce::Colour(AR::COMMENT));
+        // ── ComboBox ──────────────────────────────────────────────────────────
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
+        setColour(juce::ComboBox::textColourId,       juce::Colour(AR::FG));
+        setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::ACCENT));
+        setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
 
-        setColour(juce::PopupMenu::backgroundColourId,                juce::Colour(AR::SURFACE));
-        setColour(juce::PopupMenu::textColourId,                      juce::Colour(AR::FG));
-        setColour(juce::PopupMenu::highlightedBackgroundColourId,     juce::Colour(AR::PURPLE));
-        setColour(juce::PopupMenu::highlightedTextColourId,           juce::Colour(AR::BG));
+        // ── PopupMenu ─────────────────────────────────────────────────────────
+        setColour(juce::PopupMenu::backgroundColourId,            juce::Colour(AR::ELEVATED));
+        setColour(juce::PopupMenu::textColourId,                  juce::Colour(AR::FG));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(AR::ACCENT));
+        setColour(juce::PopupMenu::highlightedTextColourId,       juce::Colour(AR::BG));
 
-        setColour(juce::ProgressBar::backgroundColourId,              juce::Colour(AR::SURFACE));
-        setColour(juce::ProgressBar::foregroundColourId,              juce::Colour(AR::PURPLE));
+        // ── ProgressBar ───────────────────────────────────────────────────────
+        setColour(juce::ProgressBar::backgroundColourId, juce::Colour(AR::SURFACE));
+        setColour(juce::ProgressBar::foregroundColourId, juce::Colour(AR::ACCENT));
 
-        setColour(juce::Slider::backgroundColourId,                   juce::Colour(AR::SURFACE));
-        setColour(juce::Slider::thumbColourId,                        juce::Colour(AR::FG));
-        setColour(juce::Slider::trackColourId,                        juce::Colour(AR::PURPLE));
-        setColour(juce::Slider::textBoxTextColourId,                  juce::Colour(AR::FG));
-        setColour(juce::Slider::textBoxBackgroundColourId,            juce::Colour(AR::ELEVATED));
-        setColour(juce::Slider::textBoxOutlineColourId,               juce::Colours::transparentBlack);
+        // ── Slider ────────────────────────────────────────────────────────────
+        setColour(juce::Slider::backgroundColourId,        juce::Colour(AR::SURFACE));
+        setColour(juce::Slider::thumbColourId,             juce::Colour(AR::ACCENT));
+        setColour(juce::Slider::trackColourId,             juce::Colour(AR::ACCENT));
+        setColour(juce::Slider::textBoxTextColourId,       juce::Colour(AR::FG));
+        setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(AR::ELEVATED));
+        setColour(juce::Slider::textBoxOutlineColourId,    juce::Colours::transparentBlack);
 
-        setColour(juce::TextButton::textColourOffId,                  juce::Colour(AR::FG));
-        setColour(juce::TextButton::textColourOnId,                   juce::Colour(AR::BG));
+        // ── TextButton ────────────────────────────────────────────────────────
+        setColour(juce::TextButton::textColourOffId, juce::Colour(AR::FG));
+        setColour(juce::TextButton::textColourOnId,  juce::Colour(AR::BG));
+        setColour(juce::TextButton::buttonColourId,  juce::Colour(AR::ELEVATED));
     }
 
-    juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override {
-        return (f.getStyleFlags() & juce::Font::bold) ? inter_semibold_ : inter_regular_;
+    juce::Typeface::Ptr getTypefaceForFont(const juce::Font& f) override
+    {
+        if (f.getTypefaceName().startsWith("JetBrainsMono"))
+            return (f.getStyleFlags() & juce::Font::bold) ? jbm_medium_ : jbm_regular_;
+        return (f.getStyleFlags() & juce::Font::bold) ? sg_medium_ : sg_regular_;
     }
 
     void drawButtonBackground(juce::Graphics& g,
-                              juce::Button& button,
-                              const juce::Colour& backgroundColour,
+                              juce::Button&   button,
+                              const juce::Colour& /*backgroundColour*/,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown) override
     {
-        auto bounds = button.getLocalBounds().toFloat().reduced(0.5f);
-        auto base = backgroundColour
-            .withMultipliedSaturation(button.hasKeyboardFocus(true) ? 1.3f : 0.9f)
-            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.4f);
+        auto bounds = button.getLocalBounds().toFloat();
+        bool isPrimary = (button.getComponentID() == "primary");
+        float alpha = button.isEnabled() ? 1.0f : 0.4f;
 
-        if (shouldDrawButtonAsDown)        base = base.darker(0.2f);
-        if (shouldDrawButtonAsHighlighted) base = base.brighter(0.1f);
-
-        g.setColour(base);
-        g.fillRoundedRectangle(bounds, AR::RADIUS);
-
-        g.setColour(base.brighter(0.3f));
-        g.drawRoundedRectangle(bounds, AR::RADIUS, 1.0f);
+        if (isPrimary) {
+            auto fill = juce::Colour(AR::ACCENT).withAlpha(alpha);
+            if (shouldDrawButtonAsDown)        fill = fill.darker(0.25f);
+            if (shouldDrawButtonAsHighlighted) fill = fill.brighter(0.15f);
+            g.setColour(fill);
+            g.fillRect(bounds);
+            // 2px left accent border
+            g.setColour(juce::Colour(AR::FG).withAlpha(alpha * 0.6f));
+            g.fillRect(bounds.removeFromLeft(2.0f));
+        } else {
+            auto outline = juce::Colour(AR::SURFACE).withAlpha(alpha);
+            if (shouldDrawButtonAsHighlighted) outline = juce::Colour(AR::BORDER_STRONG).withAlpha(alpha);
+            if (shouldDrawButtonAsDown) {
+                g.setColour(juce::Colour(AR::ELEVATED).withAlpha(alpha));
+                g.fillRect(bounds);
+            }
+            g.setColour(outline);
+            g.drawRect(bounds, 1.0f);
+        }
     }
 
     void drawButtonText(juce::Graphics& g, juce::TextButton& button,
-                        bool, bool) override
+                        bool /*highlighted*/, bool /*down*/) override
     {
         g.setFont(AR::font(AR::FontRole::button));
-        g.setColour(button.isEnabled() ? juce::Colour(AR::FG)
-                                       : juce::Colour(AR::FG).withAlpha(0.4f));
-        g.drawFittedText(button.getButtonText(),
-                         button.getLocalBounds(), juce::Justification::centred, 1);
+        float alpha = button.isEnabled() ? 1.0f : 0.4f;
+        bool isPrimary = (button.getComponentID() == "primary");
+        g.setColour(isPrimary ? juce::Colour(AR::FG).withAlpha(alpha)
+                              : juce::Colour(AR::FG).withAlpha(alpha * 0.85f));
+        g.drawFittedText(button.getButtonText().toUpperCase(),
+                         button.getLocalBounds().reduced(8, 0),
+                         juce::Justification::centred, 1);
     }
 
-    juce::Typeface::Ptr inter_regular_;
-    juce::Typeface::Ptr inter_semibold_;
+    void drawLinearSliderThumb(juce::Graphics& g, int x, int y, int width, int height,
+                               float sliderPos, float, float,
+                               juce::Slider::SliderStyle, juce::Slider& slider) override
+    {
+        auto thumbW = 4.0f;
+        auto thumbH = (float)height;
+        auto thumbX = sliderPos - thumbW * 0.5f;
+        g.setColour(juce::Colour(AR::ACCENT).withAlpha(slider.isEnabled() ? 1.0f : 0.4f));
+        g.fillRect(thumbX, (float)y, thumbW, thumbH);
+    }
+
+    void drawLinearSliderBackground(juce::Graphics& g, int x, int y, int width, int height,
+                                    float, float, float,
+                                    juce::Slider::SliderStyle, juce::Slider&) override
+    {
+        auto track = juce::Rectangle<float>((float)x, (float)y + height * 0.5f - 1.0f, (float)width, 2.0f);
+        g.setColour(juce::Colour(AR::SURFACE));
+        g.fillRect(track);
+    }
+
+    juce::Typeface::Ptr sg_regular_;
+    juce::Typeface::Ptr sg_medium_;
+    juce::Typeface::Ptr jbm_regular_;
+    juce::Typeface::Ptr jbm_medium_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixLookAndFeel)
 };

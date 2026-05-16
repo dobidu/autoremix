@@ -1,5 +1,19 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 18 — UX Redesign ✅ COMPLETE (2026-05-16)
+
+Full UI overhaul: 960×600, burnt-orange brutalist theme, screen-based navigation.
+
+- **18-01**: Fonts (Space Grotesk + JetBrains Mono) + new LookAndFeel palette (ACCENT=#D4652A, RADIUS=0)
+- **18-02**: ScreenContext shared state + ScreenBase + ScreenEmpty (drag-drop, waveform, analysis)
+- **18-03**: ScreenSeparating (4-stem status + timer) + ScreenStemsReady (per-stem M/S/gain/waveform)
+- **18-04**: ScreenModeParams (preset combo, BPM/pitch/reverb/chop sliders)
+- **18-05**: ScreenRender (Rendering/Done/Error state machine) + editor legacy migration
+
+Deliverable: 5-screen flow (Empty→Separating→StemsReady→ModeParams→Render) fully wired; 4/4 build targets link.
+
+---
+
 ## Phase 17 — More Remix Styles ✅ COMPLETE (2026-05-16)
 
 Three new built-in effect-chain presets expanding creative options.

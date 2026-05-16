@@ -1,5 +1,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "ScreenContext.h"
+#include "ScreenBase.h"
+#include "ScreenEmpty.h"
+#include "ScreenSeparating.h"
+#include "ScreenStemsReady.h"
+#include "ScreenModeParams.h"
+#include "ScreenRender.h"
 #include <thread>
 #include <filesystem>
 #include <algorithm>
@@ -14,21 +21,28 @@ static const juce::StringArray kAudioExts {
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    format_manager_.registerBasicFormats();
-    thumbnail_.addChangeListener(this);
     setLookAndFeel(&laf_);
-    juce::Component::setSize(600, 400);
+    juce::Component::setSize(960, 600);
     drawAndConfigComponents();
 
+    ctx_.navigate = [this](ScreenId id) { navigateTo(id); };
+    ctx_.set_status = [this](const juce::String& msg) {
+        juce::MessageManager::callAsync([this, msg] {
+            status_lbl.setText(msg, juce::dontSendNotification);
+        });
+    };
+    navigateTo(ScreenId::Empty, false);
+
     std::thread([this]() {
-        auto& bridge   = audioProcessor.getBridge();
-        auto presets   = bridge.getPresets();
-        auto seps      = bridge.getAvailableSeparators();
+        auto& bridge = audioProcessor.getBridge();
+        auto presets = bridge.getPresets();
+        auto seps    = bridge.getAvailableSeparators();
         if (presets.empty() && seps.empty()) return;
         juce::MessageManager::callAsync([this, presets = std::move(presets),
                                                seps    = std::move(seps)]() mutable {
             if (!presets.empty()) {
-                presets_ = std::move(presets);
+                presets_      = std::move(presets);
+                ctx_.presets  = presets_;
                 style_combo_.clear(juce::dontSendNotification);
                 for (int i = 0; i < (int)presets_.size(); ++i)
                     style_combo_.addItem(presets_[(size_t)i].name, i + 1);
@@ -36,7 +50,8 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
                 loadEngineDefaults(0);
             }
             if (!seps.empty()) {
-                separators_ = std::move(seps);
+                separators_      = std::move(seps);
+                ctx_.separators  = separators_;
                 separator_combo_.clear(juce::dontSendNotification);
                 for (int i = 0; i < (int)separators_.size(); ++i)
                     separator_combo_.addItem(separators_[(size_t)i].display_name, i + 1);
@@ -48,8 +63,6 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
 
 AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
 {
-    if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
-    thumbnail_.removeChangeListener(this);
     setLookAndFeel(nullptr);
 }
 
@@ -59,7 +72,7 @@ void AutoRemixAudioProcessorEditor::loadFile()
 #if defined(_WIN32) || defined(__APPLE__)
     constexpr bool useNativeDialog = true;
 #else
-    constexpr bool useNativeDialog = false;  // WSL2/Linux: native dialog fails silently
+    constexpr bool useNativeDialog = false;
 #endif
     chooser_ = std::make_unique<juce::FileChooser>(
         "Load audio file...",
@@ -73,28 +86,9 @@ void AutoRemixAudioProcessorEditor::loadFile()
             auto results = fc.getResults();
             if (!results.isEmpty()) {
                 auto f = results[0];
-                file_path_ = f.getFullPathName();
-                file_lbl.setText(f.getFileName(), juce::dontSendNotification);
-                output_path_ = {};
-                save_btn.setEnabled(false);
-                thumbnail_.setSource(new juce::FileInputSource(f));
-                waveform_display_.sourceChanged();
-
-                std::thread([this, path = file_path_]() {
-                    auto info = audioProcessor.getBridge().analyzeFile(path);
-                    float bpm = info.valid() ? info.bpm : 120.0f;
-                    juce::String key = info.valid() ? juce::String(info.key) : "";
-                    juce::MessageManager::callAsync([this, bpm, key]() {
-                        detected_bpm_ = bpm;
-                        detected_key_ = key;
-                        juce::String txt = juce::String(bpm, 1) + " BPM";
-                        if (key.isNotEmpty()) txt += "  |  " + key;
-                        else txt += "  |  ?";
-                        analysis_lbl_.setText(txt, juce::dontSendNotification);
-                        if (bpm >= 40.0f && bpm <= 200.0f)
-                            tempo_slider_.setValue((double)bpm, juce::dontSendNotification);
-                    });
-                }).detach();
+                ctx_.file_path = f.getFullPathName();
+                if (auto* se = dynamic_cast<ScreenEmpty*>(screen_.get()))
+                    se->fileWasSelected(f);
             }
         });
 }
@@ -112,27 +106,9 @@ void AutoRemixAudioProcessorEditor::filesDropped(const juce::StringArray& files,
     if (!f.existsAsFile()) return;
     if (!kAudioExts.contains(f.getFileExtension().toLowerCase())) return;
 
-    file_path_ = f.getFullPathName();
-    file_lbl.setText(f.getFileName(), juce::dontSendNotification);
-    output_path_ = {};
-    save_btn.setEnabled(false);
-    thumbnail_.setSource(new juce::FileInputSource(f));
-    waveform_display_.sourceChanged();
-
-    std::thread([this, path = file_path_]() {
-        auto info = audioProcessor.getBridge().analyzeFile(path);
-        float bpm = info.valid() ? info.bpm : 120.0f;
-        juce::String key = info.valid() ? juce::String(info.key) : "";
-        juce::MessageManager::callAsync([this, bpm, key]() {
-            detected_bpm_ = bpm;
-            detected_key_ = key;
-            juce::String txt = juce::String(bpm, 1) + " BPM";
-            txt += key.isNotEmpty() ? ("  |  " + key) : "  |  ?";
-            analysis_lbl_.setText(txt, juce::dontSendNotification);
-            if (bpm >= 40.0f && bpm <= 200.0f)
-                tempo_slider_.setValue((double)bpm, juce::dontSendNotification);
-        });
-    }).detach();
+    ctx_.file_path = f.getFullPathName();
+    if (auto* se = dynamic_cast<ScreenEmpty*>(screen_.get()))
+        se->fileWasSelected(f);
 }
 
 void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
@@ -142,355 +118,106 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     title_lbl.setText("AutoRemix", juce::dontSendNotification);
     title_lbl.setFont(AR::font(AR::FontRole::header));
     title_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
-    title_lbl.setBounds(16, 0, 120, 40);
+    title_lbl.setBounds(16, 4, 150, 40);
 
     // ── Header: remix style combobox
     addAndMakeVisible(style_combo_);
-    style_combo_.setBounds(148, 6, 250, 28);
+    style_combo_.setBounds(176, 10, 200, 28);
     style_combo_.addItem("Chop & Screw",    1);
     style_combo_.addItem("Slowed + Reverb", 2);
     style_combo_.addItem("Drum & Bass",     3);
     style_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
     style_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
     style_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
-    style_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::PURPLE));
+    style_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::ACCENT));
     style_combo_.onChange = [this] { loadEngineDefaults(style_combo_.getSelectedItemIndex()); };
 
-    // ── Header: separator combobox (populated from sidecar health on connect)
+    // ── Header: separator combobox
     addAndMakeVisible(separator_combo_);
-    separator_combo_.setBounds(406, 6, 116, 28);
+    separator_combo_.setBounds(384, 10, 140, 28);
     separator_combo_.addItem("Algorithmic FFT", 1);
     separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
     separator_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
     separator_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
-    separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::CYAN));
+    separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::FG));
+
+    // ── Header: load file button
+    addAndMakeVisible(loadfile_btn);
+    loadfile_btn.setButtonText("Load");
+    loadfile_btn.setComponentID("ghost");
+    loadfile_btn.onClick = [this] { loadFile(); };
+    loadfile_btn.setBounds(532, 10, 60, 28);
 
     // ── Header: save preset button
     addAndMakeVisible(save_preset_btn);
-    save_preset_btn.setButtonText("Save");
-    save_preset_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::PURPLE));
-    save_preset_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::PURPLE));
-    save_preset_btn.setBounds(526, 6, 44, 28);
+    save_preset_btn.setButtonText("Save Preset");
+    save_preset_btn.setComponentID("ghost");
     save_preset_btn.onClick = [this] { onClick_SavePreset(); };
+    save_preset_btn.setBounds(600, 10, 96, 28);
+
+    // ── Header: save output button
+    addAndMakeVisible(save_btn);
+    save_btn.setButtonText("Save");
+    save_btn.setComponentID("ghost");
+    save_btn.setEnabled(false);
+    save_btn.onClick = [this] { onClick_Save(); };
+    save_btn.setBounds(704, 10, 60, 28);
 
     // ── Header: sidecar health dot
     addAndMakeVisible(health_dot_);
-    health_dot_.setBounds(getWidth() - 24, 16, 8, 8);
+    health_dot_.setBounds(getWidth() - 24, 20, 8, 8);
 
-    // ── Waveform zone
-    addAndMakeVisible(waveform_display_);
-    waveform_display_.setBounds(8, 48, getWidth() - 16, 144);
-
-    addAndMakeVisible(analysis_lbl_);
-    analysis_lbl_.setText("? BPM  |  ?", juce::dontSendNotification);
-    analysis_lbl_.setFont(AR::font(AR::FontRole::value));
-    analysis_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::CYAN));
-    analysis_lbl_.setJustificationType(juce::Justification::centredRight);
-    analysis_lbl_.setBounds(getWidth() - 180, 170, 172, 18);
-
-    // ── Controls zone — filename row
-    addAndMakeVisible(file_lbl);
-    file_lbl.setFont(AR::font(AR::FontRole::value));
-    file_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
-    file_lbl.setJustificationType(juce::Justification::centredLeft);
-    file_lbl.setBounds(96, 203, 488, 14);
-
-    // ── Controls zone — remix params (left col x=96 w=220) + stem mix (right col x=328 w=256)
-    //    rows at y = 218, 246, 274, 302  (spacing 28px)
-    auto setupRemixSlider = [this](juce::Slider& s, juce::Label& lbl,
-                                    const juce::String& name,
-                                    double lo, double hi, double val, int y) {
-        addAndMakeVisible(lbl);
-        lbl.setText(name, juce::dontSendNotification);
-        lbl.setFont(AR::font(AR::FontRole::label));
-        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
-        lbl.setBounds(96, y, 220, 11);
-
-        addAndMakeVisible(s);
-        s.setSliderStyle(juce::Slider::LinearHorizontal);
-        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 16);
-        s.setRange(lo, hi, 0.0);
-        s.setValue(val, juce::dontSendNotification);
-        s.setBounds(96, y + 12, 220, 18);
-    };
-
-    setupRemixSlider(tempo_slider_,  tempo_lbl_,  "Target BPM", 40.0, 200.0, 120.0, 218);
-    setupRemixSlider(pitch_slider_,  pitch_lbl_,  "Pitch",  -12.0,  12.0,   -4.0,  246);
-    setupRemixSlider(reverb_slider_, reverb_lbl_, "Reverb",  0.0,    1.0,    0.05,  274);
-    // ── Chop mode selector (replaces chop_lbl_)
-    addAndMakeVisible(chop_mode_combo_);
-    chop_mode_combo_.setBounds(96, 302, 220, 20);
-    chop_mode_combo_.addItem("Fixed (ms)",      1);
-    chop_mode_combo_.addItem("Beat-Aligned",    2);
-    chop_mode_combo_.addItem("Onset-Triggered", 3);
-    chop_mode_combo_.addItem("Bar-Locked",      4);
-    chop_mode_combo_.addItem("Energy Gate",     5);
-    chop_mode_combo_.addItem("Structural",      6);
-    chop_mode_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
-    chop_mode_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
-    chop_mode_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
-    chop_mode_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::PURPLE));
-    chop_mode_combo_.onChange = [this] {
-        bool isFixed = (chop_mode_combo_.getSelectedItemIndex() == 0);
-        chop_slider_.setEnabled(isFixed);
-        chop_slider_.setAlpha(isFixed ? 1.0f : 0.4f);
-    };
-
-    // ── Chop beats slider (below combo, enabled only in Fixed mode)
-    addAndMakeVisible(chop_slider_);
-    chop_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
-    chop_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 54, 16);
-    chop_slider_.setRange(0.25, 16.0, 0.25);
-    chop_slider_.setValue(2.0, juce::dontSendNotification);
-    chop_slider_.setTextValueSuffix(" b");
-    chop_slider_.setBounds(96, 323, 220, 14);
-
-    auto setupStemSlider = [this](juce::Slider& s, juce::Label& lbl,
-                                   const juce::String& name, int y) {
-        addAndMakeVisible(lbl);
-        lbl.setText(name, juce::dontSendNotification);
-        lbl.setFont(AR::font(AR::FontRole::label));
-        lbl.setColour(juce::Label::textColourId, juce::Colour(AR::CYAN));
-        lbl.setBounds(328, y, 256, 11);
-
-        addAndMakeVisible(s);
-        s.setSliderStyle(juce::Slider::LinearHorizontal);
-        s.setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 16);
-        s.setRange(0.0, 2.0, 0.0);
-        s.setValue(1.0, juce::dontSendNotification);
-        s.setBounds(328, y + 12, 256, 18);
-    };
-
-    setupStemSlider(vocals_slider_, vocals_lbl_, "Vocals", 218);
-    setupStemSlider(drums_slider_,  drums_lbl_,  "Drums",  246);
-    setupStemSlider(bass_slider_,   bass_lbl_,   "Bass",   274);
-    setupStemSlider(other_slider_,  other_lbl_,  "Other",  302);
-
-    // ── Transport strip: Load / Play / Save (aligned with slider rows)
-    addAndMakeVisible(loadfile_btn);
-    loadfile_btn.setButtonText("Load");
-    loadfile_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
-    loadfile_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
-    loadfile_btn.onClick = [this] { loadFile(); };
-    loadfile_btn.setBounds(8, 218, 72, 26);
-
-    addAndMakeVisible(play_btn);
-    play_btn.setButtonText("Remix");
-    play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::GREEN));
-    play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::GREEN));
-    play_btn.onClick = [this] { onClick_Play(); };
-    play_btn.setBounds(8, 250, 72, 26);
-
-    addAndMakeVisible(cancel_btn);
-    cancel_btn.setButtonText("Cancel");
-    cancel_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::RED));
-    cancel_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::RED));
-    cancel_btn.setBounds(8, 250, 72, 26);
-    cancel_btn.setVisible(false);
-    cancel_btn.onClick = [this] { cancel_requested_.store(true); };
-
-    addAndMakeVisible(save_btn);
-    save_btn.setButtonText("Save");
-    save_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
-    save_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::SURFACE));
-    save_btn.setEnabled(false);
-    save_btn.onClick = [this] { onClick_Save(); };
-    save_btn.setBounds(8, 284, 72, 26);
-
-    addAndMakeVisible(preview_btn);
-    preview_btn.setButtonText("Preview");
-    preview_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
-    preview_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ELEVATED));
-    preview_btn.setEnabled(false);
-    preview_btn.onClick = [this] {
-        audioProcessor.togglePreview();
-        preview_btn.setButtonText(audioProcessor.isPreviewPlaying() ? "Stop" : "Preview");
-    };
-    preview_btn.setBounds(8, 312, 72, 20);
-
-    // ── Status zone
+    // ── Footer: status label
     addAndMakeVisible(status_lbl);
     status_lbl.setText("Ready", juce::dontSendNotification);
     status_lbl.setFont(AR::font(AR::FontRole::status));
     status_lbl.setJustificationType(juce::Justification::centredLeft);
     status_lbl.setColour(juce::Label::textColourId, juce::Colour(AR::FG));
-    status_lbl.setBounds(16, 344, getWidth() - 32, 20);
-
-    addAndMakeVisible(progress_bar_);
-    progress_bar_.setVisible(false);
-    progress_bar_.setBounds(16, 368, getWidth() - 32, 12);
+    status_lbl.setBounds(16, getHeight() - 28, getWidth() - 32, 24);
 }
 
 //==============================================================================
 void AutoRemixAudioProcessorEditor::loadEngineDefaults(int idx)
 {
     if (presets_.empty() || idx < 0 || (size_t)idx >= presets_.size()) return;
+    ctx_.selected_preset_idx = idx;
     auto& p = presets_[(size_t)idx].default_params;
-    double source_bpm = (detected_bpm_ > 0.0f) ? (double)detected_bpm_ : 120.0;
+    double source_bpm = (ctx_.detected_bpm > 0.0f) ? (double)ctx_.detected_bpm : 120.0;
     double target_bpm = std::clamp(p.tempo_factor * source_bpm, 40.0, 200.0);
-    tempo_slider_.setValue(target_bpm,           juce::dontSendNotification);
-    pitch_slider_.setValue(p.pitch_shift_semi,   juce::dontSendNotification);
-    reverb_slider_.setValue(p.reverb_mix,        juce::dontSendNotification);
-    double beat_ms = 60000.0 / source_bpm;
-    double beats   = std::clamp(p.chop_interval_ms / beat_ms, 0.25, 16.0);
-    chop_slider_.setValue(beats,                 juce::dontSendNotification);
+    ctx_.target_bpm  = (float)target_bpm;
+    ctx_.pitch_semi  = p.pitch_shift_semi;
+    ctx_.reverb_mix  = p.reverb_mix;
+    double beat_ms   = 60000.0 / source_bpm;
+    double beats     = std::clamp(p.chop_interval_ms / beat_ms, 0.25, 16.0);
+    ctx_.chop_beats  = (float)beats;
 }
 
 void AutoRemixAudioProcessorEditor::onClick_Play()
 {
-    if (file_path_.isEmpty()) {
+    if (ctx_.file_path.isEmpty()) {
         status_lbl.setText("No file loaded.", juce::dontSendNotification);
         return;
     }
-
-    auto& bridge = audioProcessor.getBridge();
-    if (!bridge.isServerAlive()) {
-        status_lbl.setText("Sidecar not running on port 17432.", juce::dontSendNotification);
-        return;
-    }
-
-    auto idx = static_cast<std::size_t>(style_combo_.getSelectedItemIndex());
-    if (presets_.empty() || idx >= presets_.size()) {
-        status_lbl.setText("Presets not loaded - start sidecar first.", juce::dontSendNotification);
-        return;
-    }
-    auto& preset = presets_[idx];
-
-    auto sep_idx = separator_combo_.getSelectedItemIndex();
-    std::string sep_id = (separators_.empty() || sep_idx < 0)
-        ? "algorithmic"
-        : separators_[(size_t)sep_idx].id;
-
-    static const char* kChopModes[] = {"fixed","beat","onset","bar","energy","structural"};
-    int chopIdx = chop_mode_combo_.getSelectedItemIndex();
-    std::string chop_mode_str = (chopIdx >= 0 && chopIdx < 6) ? kChopModes[chopIdx] : "fixed";
-
-    float source_bpm   = (detected_bpm_ > 0.0f) ? detected_bpm_ : 120.0f;
-    float target_bpm   = (float)tempo_slider_.getValue();
-    float tempo_factor = target_bpm / source_bpm;
-
-    float chop_beats = (float)chop_slider_.getValue();
-    float beat_ms    = 60000.0f / source_bpm;
-    float chop_ms    = chop_beats * beat_ms;
-
-    autoremix::RemixParams params {
-        tempo_factor,
-        (float)pitch_slider_.getValue(),
-        (float)reverb_slider_.getValue(),
-        chop_ms,
-        preset.default_params.bass_boost_db,
-        preset.default_params.drums_tempo_factor,
-        preset.id,
-        sep_id,
-        (float)vocals_slider_.getValue(),
-        (float)drums_slider_.getValue(),
-        (float)bass_slider_.getValue(),
-        (float)other_slider_.getValue(),
-    };
-    params.chop_mode = chop_mode_str;
-
-    auto juce_tmp   = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                          .getChildFile("autoremix");
-    auto input_file = juce::File(file_path_);
-    std::filesystem::path stems_dir  = juce_tmp.getChildFile("stems")
-                                           .getFullPathName().toStdString();
-    std::filesystem::path output_path = juce_tmp.getChildFile("remix")
-                                            .getFullPathName().toStdString();
-    output_path /= input_file.getFileNameWithoutExtension().toStdString()
-                   + "_" + preset.id + ".wav";
-
-    cancel_requested_.store(false);
-    play_btn.setVisible(false);
-    cancel_btn.setVisible(true);
-    progress_ = -1.0;
-    progress_bar_.setVisible(true);
-    status_lbl.setText("Separating stems... 0s", juce::dontSendNotification);
-
-    elapsed_secs_.store(0);
-    in_remix_phase_.store(false);
-    if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; }
-    elapsed_timer_ = new ElapsedTimer(*this);
-    elapsed_timer_->startTimer(1000);
-
-    std::string input_str = file_path_.toStdString();
-
-    std::thread([this, params, stems_dir, output_path, input_str, sep_id]() mutable {
-        auto& bridge = audioProcessor.getBridge();
-
-        auto stems = bridge.separateStems(
-            std::filesystem::path(input_str),
-            stems_dir,
-            sep_id);
-
-        if (!stems.valid) {
-            juce::MessageManager::callAsync([this] {
-                if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
-                status_lbl.setText("Error: separation failed.", juce::dontSendNotification);
-                progress_bar_.setVisible(false);
-                cancel_btn.setVisible(false);
-                play_btn.setVisible(true);
-                play_btn.setEnabled(true);
-            });
-            return;
-        }
-
-        // phase-boundary cancel check (cannot abort mid-HTTP but catches between phases)
-        if (cancel_requested_.load()) {
-            juce::MessageManager::callAsync([this] {
-                if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
-                status_lbl.setText("Cancelled.", juce::dontSendNotification);
-                progress_bar_.setVisible(false);
-                cancel_btn.setVisible(false);
-                play_btn.setVisible(true);
-                play_btn.setEnabled(true);
-            });
-            return;
-        }
-
-        juce::MessageManager::callAsync([this] {
-            elapsed_secs_.store(0);
-            in_remix_phase_.store(true);
-        });
-
-        auto result = bridge.applyRemix(stems, params, output_path);
-
-        juce::MessageManager::callAsync([this, result]() mutable {
-            if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
-            progress_bar_.setVisible(false);
-            cancel_btn.setVisible(false);
-            play_btn.setVisible(true);
-            if (result.success) {
-                output_path_ = juce::String(result.output_path.string());
-                status_lbl.setText("Done - click Save to export.", juce::dontSendNotification);
-                save_btn.setEnabled(true);
-                audioProcessor.loadPreviewFile(juce::File(output_path_));
-                preview_btn.setEnabled(true);
-                preview_btn.setButtonText("Preview");
-            } else {
-                status_lbl.setText("Error: " + juce::String(result.error_message), juce::dontSendNotification);
-            }
-            play_btn.setEnabled(true);
-        });
-    }).detach();
+    navigateTo(ScreenId::Separating);
 }
 
 void AutoRemixAudioProcessorEditor::onClick_Save()
 {
-    if (output_path_.isEmpty()) return;
+    if (ctx_.output_path.isEmpty()) return;
 
     chooser_ = std::make_unique<juce::FileChooser>(
         "Save remixed file...",
         juce::File::getSpecialLocation(juce::File::userHomeDirectory)
-            .getChildFile(juce::File(output_path_).getFileName()),
+            .getChildFile(juce::File(ctx_.output_path).getFileName()),
         "*.wav",
-        false);  // native dialog fails silently on WSL2
+        false);
 
     chooser_->launchAsync(
         juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
         [this](const juce::FileChooser& fc) {
             auto results = fc.getResults();
             if (!results.isEmpty()) {
-                juce::File(output_path_).copyFileTo(results[0]);
+                juce::File(ctx_.output_path).copyFileTo(results[0]);
                 status_lbl.setText("Saved: " + results[0].getFileName(), juce::dontSendNotification);
             }
         });
@@ -514,37 +241,35 @@ void AutoRemixAudioProcessorEditor::onClick_SavePreset()
     if (presets_.empty() || idx >= presets_.size()) return;
     auto& preset = presets_[idx];
 
-    float src_bpm_save    = (detected_bpm_ > 0.0f) ? detected_bpm_ : 120.0f;
-    float tempo_factor_save = (float)tempo_slider_.getValue() / src_bpm_save;
-    float chop_ms_save      = (float)chop_slider_.getValue() * (60000.0f / src_bpm_save);
+    float src_bpm      = (ctx_.detected_bpm > 0.0f) ? ctx_.detected_bpm : 120.0f;
+    float tempo_factor = ctx_.target_bpm / src_bpm;
+    float chop_ms      = ctx_.chop_beats * (60000.0f / src_bpm);
 
-    autoremix::RemixParams params {
-        tempo_factor_save,
-        (float)pitch_slider_.getValue(),
-        (float)reverb_slider_.getValue(),
-        chop_ms_save,
-        preset.default_params.bass_boost_db,
-        preset.default_params.drums_tempo_factor,
-        preset.id,
-        "",
-        (float)vocals_slider_.getValue(),
-        (float)drums_slider_.getValue(),
-        (float)bass_slider_.getValue(),
-        (float)other_slider_.getValue(),
-    };
+    autoremix::RemixParams params;
+    params.tempo_factor     = tempo_factor;
+    params.pitch_shift_semi = ctx_.pitch_semi;
+    params.reverb_mix       = ctx_.reverb_mix;
+    params.chop_interval_ms = chop_ms;
+    params.engine_id        = preset.id;
+    params.separator_id     = "";
+    params.vocals_gain      = ctx_.vocals_gain;
+    params.drums_gain       = ctx_.drums_gain;
+    params.bass_gain        = ctx_.bass_gain;
+    params.other_gain       = ctx_.other_gain;
 
     status_lbl.setText("Saving preset...", juce::dontSendNotification);
 
     std::string name_str = name.toStdString();
     std::thread([this, name_str, params]() mutable {
-        auto& bridge = audioProcessor.getBridge();
-        bool ok = bridge.savePreset(name_str, params);
+        auto& bridge    = audioProcessor.getBridge();
+        bool ok         = bridge.savePreset(name_str, params);
         auto newPresets = bridge.getPresets();
 
         juce::MessageManager::callAsync([this, ok, name_str,
                                                newPresets = std::move(newPresets)]() mutable {
             if (ok && !newPresets.empty()) {
-                presets_ = std::move(newPresets);
+                presets_      = std::move(newPresets);
+                ctx_.presets  = presets_;
                 style_combo_.clear(juce::dontSendNotification);
                 for (int i = 0; i < (int)presets_.size(); ++i)
                     style_combo_.addItem(presets_[(size_t)i].name, i + 1);
@@ -566,24 +291,109 @@ void AutoRemixAudioProcessorEditor::onClick_SavePreset()
 }
 
 //==============================================================================
+void AutoRemixAudioProcessorEditor::navigateTo(ScreenId id, bool animate)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (screen_) {
+        screen_->onExit();
+        removeChildComponent(screen_.get());
+        screen_.reset();
+    }
+    installScreen(id, animate);
+}
+
+void AutoRemixAudioProcessorEditor::installScreen(ScreenId id, bool animate)
+{
+    std::unique_ptr<ScreenBase> newScreen;
+    switch (id) {
+        case ScreenId::Empty: {
+            auto* s = new ScreenEmpty(
+                ctx_,
+                [this](const juce::String& path) {
+                    return audioProcessor.getBridge().analyzeFile(path);
+                },
+                [this](const std::filesystem::path& in,
+                       const std::filesystem::path& out,
+                       const std::string& sep_id) {
+                    return audioProcessor.getBridge().separateStems(in, out, sep_id);
+                },
+                [this] { loadFile(); }
+            );
+            newScreen.reset(s);
+            break;
+        }
+        case ScreenId::Separating: {
+            auto* s = new ScreenSeparating(
+                ctx_,
+                [this](const std::filesystem::path& in,
+                       const std::filesystem::path& out,
+                       const std::string& sep_id) {
+                    return audioProcessor.getBridge().separateStems(in, out, sep_id);
+                }
+            );
+            newScreen.reset(s);
+            break;
+        }
+        case ScreenId::StemsReady:
+            newScreen = std::make_unique<ScreenStemsReady>(ctx_);
+            break;
+
+        case ScreenId::ModeParams:
+            newScreen = std::make_unique<ScreenModeParams>(ctx_);
+            break;
+
+        case ScreenId::Render: {
+            auto* s = new ScreenRender(
+                ctx_,
+                [this](const autoremix::StemPaths&   stems,
+                       const autoremix::RemixParams& params,
+                       const std::filesystem::path&  out) {
+                    return audioProcessor.getBridge().applyRemix(stems, params, out);
+                }
+            );
+            newScreen.reset(s);
+            break;
+        }
+        default:
+            jassertfalse;
+            return;
+    }
+
+    // content area: 960 wide, below 48px header, above 32px footer
+    auto contentBounds = juce::Rectangle<int>(0, 48, 960, 520);
+    newScreen->setBounds(contentBounds);
+    screen_ = std::move(newScreen);
+    addAndMakeVisible(*screen_);
+
+    if (animate) {
+        screen_->setAlpha(0.0f);
+        screen_animator_.animateComponent(screen_.get(), contentBounds, 1.0f, 150, false, 1.0, 1.0);
+    } else {
+        screen_->setAlpha(1.0f);
+    }
+    screen_->onEnter();
+}
+
+//==============================================================================
 void AutoRemixAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(AR::BG));
 
     // header zone
     g.setColour(juce::Colour(AR::ELEVATED));
-    g.fillRect(0, 0, getWidth(), 40);
+    g.fillRect(0, 0, getWidth(), 48);
 
-    // transport strip bg
-    g.setColour(juce::Colour(AR::ELEVATED));
-    g.fillRect(0, 200, 88, 136);
-
-    // separators
+    // header separator
     g.setColour(juce::Colour(AR::SURFACE));
-    g.fillRect(0, 40,  getWidth(), 1);   // header / waveform
-    g.fillRect(0, 200, getWidth(), 1);   // waveform / controls
-    g.fillRect(88, 200, 1, 136);         // transport / params vertical
-    g.fillRect(0, 336, getWidth(), 1);   // controls / status
+    g.fillRect(0, 47, getWidth(), 1);
+
+    // footer zone
+    g.setColour(juce::Colour(AR::ELEVATED));
+    g.fillRect(0, getHeight() - 32, getWidth(), 32);
+
+    // footer separator
+    g.setColour(juce::Colour(AR::SURFACE));
+    g.fillRect(0, getHeight() - 33, getWidth(), 1);
 }
 
 void AutoRemixAudioProcessorEditor::resized() {}

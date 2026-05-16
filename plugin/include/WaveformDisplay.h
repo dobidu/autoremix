@@ -15,7 +15,7 @@ public:
 
         if (thumb_.getTotalLength() > 0.0) {
             double len = thumb_.getTotalLength();
-            g.setColour(juce::Colour(AR::PURPLE).withAlpha(0.4f));
+            g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.4f));
             thumb_.drawChannels(g, area, 0.0, len, 1.0f);
         } else {
             g.setFont(AR::font(AR::FontRole::value));

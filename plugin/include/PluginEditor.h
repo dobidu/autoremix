@@ -4,14 +4,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
-#include <atomic>
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
 #include "SidecarHealthDot.h"
-#include "WaveformDisplay.h"
+#include "ScreenContext.h"
+#include "ScreenBase.h"
 
 class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                       public juce::ChangeListener,
                                        public juce::FileDragAndDropTarget {
 public:
     explicit AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor&);
@@ -19,9 +18,6 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
-    void changeListenerCallback(juce::ChangeBroadcaster*) override {
-        juce::MessageManager::callAsync([this] { waveform_display_.repaint(); });
-    }
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
@@ -31,53 +27,29 @@ private:
 
     AutoRemixLookAndFeel laf_;
 
-    juce::Label    title_lbl;
-    juce::ComboBox style_combo_;
-    juce::ComboBox separator_combo_;
-    juce::ComboBox chop_mode_combo_;
+    // ── Header widgets (always visible, owned by editor) ──────────────────────
+    juce::Label      title_lbl;
+    juce::ComboBox   style_combo_;
+    juce::ComboBox   separator_combo_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
+    juce::TextButton save_preset_btn;
+    juce::TextButton loadfile_btn;
+    juce::TextButton save_btn;
 
-    juce::AudioFormatManager  format_manager_;
-    juce::AudioThumbnailCache thumbnail_cache_{5};
-    juce::AudioThumbnail      thumbnail_{512, format_manager_, thumbnail_cache_};
-    WaveformDisplay           waveform_display_{thumbnail_};
+    // ── Footer ────────────────────────────────────────────────────────────────
+    juce::Label status_lbl;
 
-    juce::TextButton  loadfile_btn, play_btn, cancel_btn, save_btn, preview_btn, save_preset_btn;
-    juce::Label       file_lbl, status_lbl;
-    double            progress_   = 0.0;
-    juce::ProgressBar progress_bar_{progress_};
-
-    juce::Slider tempo_slider_,  pitch_slider_,  reverb_slider_,  chop_slider_;
-    juce::Label  tempo_lbl_,    pitch_lbl_,     reverb_lbl_,     chop_lbl_;
-    juce::Slider vocals_slider_, drums_slider_,  bass_slider_,    other_slider_;
-    juce::Label  vocals_lbl_,   drums_lbl_,     bass_lbl_,       other_lbl_;
-
+    // ── File dialog ───────────────────────────────────────────────────────────
     std::unique_ptr<juce::FileChooser> chooser_;
-    juce::String file_path_;
-    juce::String output_path_;
-    float        detected_bpm_ = 120.0f;
-    juce::String detected_key_;
-    juce::Label  analysis_lbl_;
 
-    struct ElapsedTimer : juce::Timer {
-        AutoRemixAudioProcessorEditor& ed;
-        explicit ElapsedTimer(AutoRemixAudioProcessorEditor& e) : ed(e) {}
-        void timerCallback() override {
-            int s = ed.elapsed_secs_.fetch_add(1) + 1;
-            bool remix = ed.in_remix_phase_.load();
-            juce::String phase = remix ? "Remixing... " : "Separating stems... ";
-            ed.status_lbl.setText(phase + juce::String(s) + "s",
-                                  juce::dontSendNotification);
-        }
-    };
-
-    ElapsedTimer*     elapsed_timer_    = nullptr;
-    std::atomic<int>  elapsed_secs_{0};
-    std::atomic<bool> in_remix_phase_{false};
-    std::atomic<bool> cancel_requested_{false};
-
+    // ── Sidecar registry data ─────────────────────────────────────────────────
     std::vector<autoremix::PresetInfo>    presets_;
     std::vector<autoremix::SeparatorInfo> separators_;
+
+    // ── Screen infrastructure ─────────────────────────────────────────────────
+    ScreenContext                ctx_;
+    std::unique_ptr<ScreenBase>  screen_;
+    juce::ComponentAnimator      screen_animator_;
 
     void loadFile();
     void loadEngineDefaults(int idx);
@@ -85,6 +57,8 @@ private:
     void onClick_Play();
     void onClick_Save();
     void onClick_SavePreset();
+    void navigateTo(ScreenId id, bool animate = true);
+    void installScreen(ScreenId id, bool animate);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessorEditor)
 };

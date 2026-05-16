@@ -2,13 +2,13 @@
 
 ## Current Position
 
-Milestone: v8 — In Progress
-Phase: 16 — Plans written, awaiting APPLY
-Status: Phase 15 complete + pushed; 16-01 + 16-02 plans written
+Milestone: v8 — COMPLETE
+Phase: 17 — COMPLETE
+Status: All three v8 phases (15, 16, 17) delivered; 54 tests green
 Last activity: 2026-05-16
 
 Progress:
-- Milestone: v8 [████████░░] 80%
+- Milestone: v8 [██████████] 100%
 
 ## Loop Position
 
@@ -23,8 +23,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 16 complete — Performance + UX Polish delivered
-Next action: commit + push Phase 16, then define Phase 17 (More remix styles)
+Stopped at: Phase 17 plans written
+Next action: /paul:apply 17-01 → /paul:unify → /paul:apply 17-02 → /paul:unify → commit+push
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

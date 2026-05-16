@@ -116,8 +116,10 @@ class RemixPreset(BaseModel):
 class PresetSummary(BaseModel):
     id: str
     name: str
+    engine: str = "chopped_screwed"
     params: PresetParams
     stem_mix: StemMix
+    effects: list = []
 
 
 class CreatePresetRequest(BaseModel):

@@ -23,7 +23,7 @@ from .presets.loader import PresetLoader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AutoRemix Sidecar", version="0.3.0")
+app = FastAPI(title="AutoRemix Sidecar", version="0.4.0")
 
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR",
     str(Path(tempfile.gettempdir()) / "autoremix")))
@@ -68,7 +68,9 @@ async def health():
 @app.get("/api/v1/presets", response_model=list[PresetSummary])
 async def list_presets():
     return [
-        PresetSummary(id=p.id, name=p.name, params=p.params, stem_mix=p.stem_mix)
+        PresetSummary(id=p.id, name=p.name, engine=p.engine,
+                      params=p.params, stem_mix=p.stem_mix,
+                      effects=p.effects)
         for p in _presets.values()
     ]
 

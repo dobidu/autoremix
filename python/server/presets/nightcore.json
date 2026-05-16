@@ -1,0 +1,22 @@
+{
+  "id": "nightcore",
+  "version": "1.0",
+  "name": "Nightcore",
+  "description": "Nightcore: sped up and pitch-shifted for that anime/rave hyperactive sound.",
+  "author": "AutoRemix",
+  "tags": ["nightcore", "anime", "rave", "fast", "bright"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 1.30,
+    "pitch_shift_semi": 4.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.2, "drums": 1.0, "bass": 0.9, "other": 1.0 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["vocals","drums","bass","other"], "params": { "factor": 1.30 } },
+    { "op": "pitch_shift",  "stems": ["vocals","other"],               "params": { "semitones": 4.0 } }
+  ]
+}

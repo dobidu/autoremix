@@ -1,0 +1,26 @@
+{
+  "id": "phonk",
+  "version": "1.0",
+  "name": "Phonk",
+  "description": "Memphis phonk: slowed and dark with woozy bass, dusty reverb, and half-beat vocal stutter.",
+  "author": "AutoRemix",
+  "tags": ["phonk", "memphis", "trap", "dark", "slow"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.88,
+    "pitch_shift_semi": -3.0,
+    "reverb_mix": 0.25,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.1, "bass": 1.2, "other": 0.7 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["vocals","drums","bass","other"], "params": { "factor": 0.88 } },
+    { "op": "pitch_shift",  "stems": ["vocals","bass","other"],         "params": { "semitones": -3.0 } },
+    { "op": "bass_boost",   "stems": "bass",                           "params": { "db": 8.0 } },
+    { "op": "bass_boost",   "stems": "drums",                          "params": { "db": 4.0 } },
+    { "op": "reverb",       "stems": "vocals",                         "params": { "mix": 0.25, "room_size": 0.85 } },
+    { "op": "chop_beats",   "stems": "vocals",                         "params": { "division": 0.5, "repeat": 2, "offset_beats": 0 } }
+  ]
+}

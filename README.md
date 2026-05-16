@@ -1,4 +1,4 @@
-# AutoRemix v2.5.0
+# AutoRemix v2.6.0
 
 JUCE VST3/Standalone plugin + Python FastAPI sidecar for creative audio remixing.
 Load a WAV, choose a remix style, get a processed output file.
@@ -127,7 +127,7 @@ Workflow: **Load** → select a WAV/AIFF/FLAC/MP3 → **choose remix style** →
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Preset combo**: dynamically populated from sidecar (6 built-ins + user presets)
+- **Preset combo**: dynamically populated from sidecar (9 built-ins + user presets)
 - **Chop mode combo**: Fixed (ms) / Beat-Aligned / Onset-Triggered / Bar-Locked / Energy Gate / Structural — selects musical chop algorithm applied on top of preset effects
 - **Stem mix sliders**: per-stem gain 0–2× applied as pre-weighting before remix
 - **Chop ms slider**: active only in Fixed (ms) mode; grayed out for musical modes
@@ -169,7 +169,7 @@ The sidecar discovers presets at startup from two locations:
 
 | Location | Platform |
 |----------|----------|
-| `python/server/presets/*.json` | Built-in (6 presets) |
+| `python/server/presets/*.json` | Built-in (9 presets) |
 | `~/.config/autoremix/modes/*.json` | Linux / macOS user presets |
 | `%APPDATA%\autoremix\modes\*.json` | Windows user presets |
 
@@ -259,13 +259,16 @@ The **Chop Mode** combo in the plugin header selects how effect-chain presets ch
 Chop mode applies **only to effect-chain presets** (non-empty `effects` array). Legacy
 engine presets (`chopped_screwed`, `slowed_reverb`, `drum_and_bass`) are unaffected.
 
-**Built-in effect-chain presets** (Phase 14):
+**Built-in effect-chain presets:**
 
 | Preset | Style | Key ops |
 |--------|-------|---------|
 | `trap_stutter` | Trap Stutter | chop_beats on vocals (×3), chop_onsets on drums (×2), bass boost |
 | `onset_drill` | Onset Drill | chop_onsets on vocals, energy gate on other, chop_beats on bass |
 | `structural_loop` | Structural Loop | structural_cut vocals+other (reverse), reverb, time stretch |
+| `phonk` | Phonk | 0.88× stretch, −3 semi, +8 dB bass, dark reverb, half-beat stutter |
+| `jersey_club` | Jersey Club | 1.25× drums/bass, tight onset vocal chop (×3), +6 dB bass |
+| `nightcore` | Nightcore | 1.30× all, +4 semi vocals+other only |
 
 ---
 
@@ -278,10 +281,10 @@ source .venv/bin/activate          # Linux/macOS
 python -m pytest tests/ -v
 ```
 
-**50 tests** covering: health, algorithmic separation, demucs separation (skipped when
+**54 tests** covering: health, algorithmic separation, demucs separation (skipped when
 demucs absent), 3 remix engines, 6 legacy effect ops (unit), 5 musical analysis functions
 (11 tests), 5 new musical chop ops (12 tests), 5 chain interpreter tests
-(including HTTP dispatch), error paths.
+(including HTTP dispatch), preset structure + 3 new styles, error paths.
 
 CI runs on every push/PR to `v2` and `main` via GitHub Actions (Linux, pytest only —
 demucs excluded from CI to avoid 2 GB download).

@@ -1,5 +1,16 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 17 — More Remix Styles ✅ COMPLETE (2026-05-16)
+
+Three new built-in effect-chain presets expanding creative options.
+
+- **17-01**: `phonk.json`, `jersey_club.json`, `nightcore.json` — JSON only, zero new Python
+- **17-02**: 4 new pytest tests + version bump v2.6.0 + README update
+
+Deliverable: 9 total presets; Phonk/Jersey Club/Nightcore selectable in UI after sidecar restart; 54 tests green.
+
+---
+
 ## Phase 16 — Performance + UX Polish ✅ COMPLETE (2026-05-16)
 
 Reduce friction in the core load→remix workflow.

@@ -1,0 +1,24 @@
+{
+  "id": "jersey_club",
+  "version": "1.0",
+  "name": "Jersey Club",
+  "description": "Jersey Club: sped-up rhythm section with rapid onset vocal chop and 808 bass forward.",
+  "author": "AutoRemix",
+  "tags": ["jersey", "club", "dance", "chop", "bass"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 1.25,
+    "pitch_shift_semi": 0.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.3, "bass": 1.2, "other": 0.6 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["drums","bass","other"], "params": { "factor": 1.25 } },
+    { "op": "chop_onsets",  "stems": "vocals",                "params": { "min_gap_ms": 50, "threshold": 0.20, "repeat": 3 } },
+    { "op": "bass_boost",   "stems": "bass",                  "params": { "db": 6.0 } },
+    { "op": "bass_boost",   "stems": "drums",                 "params": { "db": 3.0 } }
+  ]
+}

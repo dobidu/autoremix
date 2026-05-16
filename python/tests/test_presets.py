@@ -39,4 +39,4 @@ async def test_chopped_screwed_default_params(client):
     cs = next(p for p in r.json() if p["id"] == "chopped_screwed")
     assert cs["params"]["tempo_factor"] == pytest.approx(0.70)
     assert cs["params"]["pitch_shift_semi"] == pytest.approx(-4.0)
-    assert cs["params"]["chop_interval_ms"] == pytest.approx(2000.0)
+    assert cs["params"]["chop_interval_ms"] == pytest.approx(500.0)

@@ -13,12 +13,10 @@ def make_stereo(seconds=1.0):
     return (rng.standard_normal((2, int(SR * seconds))) * 0.05).astype(np.float32)
 
 
-def test_registry_has_six_ops():
-    assert len(OP_REGISTRY) == 6
-    assert set(OP_REGISTRY) == {
-        "time_stretch", "pitch_shift", "reverb",
-        "chop", "bass_boost", "eq_highpass",
-    }
+def test_registry_has_legacy_ops():
+    legacy = {"time_stretch", "pitch_shift", "reverb", "chop", "bass_boost", "eq_highpass"}
+    assert legacy.issubset(set(OP_REGISTRY))
+    assert len(OP_REGISTRY) == 11
 
 
 def test_time_stretch_slows_down():

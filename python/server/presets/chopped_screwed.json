@@ -9,8 +9,8 @@
   "params": {
     "tempo_factor": 0.70,
     "pitch_shift_semi": -4.0,
-    "reverb_mix": 0.05,
-    "chop_interval_ms": 2000.0,
+    "reverb_mix": 0.10,
+    "chop_interval_ms": 500.0,
     "bass_boost_db": 0.0,
     "drums_tempo_factor": 1.0
   },

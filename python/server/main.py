@@ -5,6 +5,7 @@ Default port: 17432
 """
 
 import os
+import re
 import logging
 import tempfile
 from pathlib import Path
@@ -12,7 +13,8 @@ from fastapi import FastAPI, HTTPException
 from .models import (
     SeparateRequest, SeparateResponse, StemPaths as StemPathsModel,
     RemixRequest, RemixResponse, HealthResponse,
-    PresetSummary,
+    PresetSummary, CreatePresetRequest,
+    RemixPreset, PresetParams, StemMix,
 )
 from .registry import get_separator, get_engine, list_separators, list_engines
 from .presets.loader import PresetLoader
@@ -42,6 +44,36 @@ async def list_presets():
         PresetSummary(id=p.id, name=p.name, params=p.params, stem_mix=p.stem_mix)
         for p in _presets.values()
     ]
+
+
+@app.post("/api/v1/presets")
+async def create_preset(req: CreatePresetRequest):
+    preset_id = re.sub(r"[^a-z0-9]+", "_", req.name.lower().strip()).strip("_")
+    preset = RemixPreset(
+        id=preset_id,
+        version="1.0",
+        name=req.name,
+        engine=req.engine_id,
+        params=PresetParams(
+            tempo_factor=req.tempo_factor,
+            pitch_shift_semi=req.pitch_shift_semi,
+            reverb_mix=req.reverb_mix,
+            chop_interval_ms=req.chop_interval_ms,
+            bass_boost_db=req.bass_boost_db,
+            drums_tempo_factor=req.drums_tempo_factor,
+        ),
+        stem_mix=StemMix(
+            vocals=req.vocals_gain,
+            drums=req.drums_gain,
+            bass=req.bass_gain,
+            other=req.other_gain,
+        ),
+    )
+    user_dir = PresetLoader.USER_DIR
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / f"{preset_id}.json").write_text(preset.model_dump_json(indent=2))
+    _presets[preset_id] = preset
+    return {"success": True, "id": preset_id}
 
 
 @app.post("/api/v1/separate", response_model=SeparateResponse)

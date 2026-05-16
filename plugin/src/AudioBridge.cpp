@@ -165,6 +165,34 @@ std::vector<SeparatorInfo> AudioBridge::getAvailableSeparators() {
     } catch (...) { return {}; }
 }
 
+bool AudioBridge::savePreset(const std::string& name, const RemixParams& params) {
+    try {
+        nlohmann::json body = {
+            {"name",               name},
+            {"engine_id",          params.engine_id},
+            {"tempo_factor",       params.tempo_factor},
+            {"pitch_shift_semi",   params.pitch_shift_semi},
+            {"reverb_mix",         params.reverb_mix},
+            {"chop_interval_ms",   params.chop_interval_ms},
+            {"bass_boost_db",      params.bass_boost_db},
+            {"drums_tempo_factor", params.drums_tempo_factor},
+            {"vocals_gain",        params.vocals_gain},
+            {"drums_gain",         params.drums_gain},
+            {"bass_gain",          params.bass_gain},
+            {"other_gain",         params.other_gain},
+        };
+        auto r = cpr::Post(
+            cpr::Url{makeUrl("/api/v1/presets")},
+            cpr::Header{{"Content-Type", "application/json"}},
+            cpr::Body{body.dump()},
+            cpr::Timeout{3000}
+        );
+        if (r.status_code != 200) return false;
+        auto resp = nlohmann::json::parse(r.text);
+        return resp.value("success", false);
+    } catch (...) { return false; }
+}
+
 // ---------------------------------------------------------------------------
 // Sidecar lifecycle — platform-specific
 // ---------------------------------------------------------------------------

@@ -98,12 +98,20 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
 
     // ── Header: separator combobox (populated from sidecar health on connect)
     addAndMakeVisible(separator_combo_);
-    separator_combo_.setBounds(406, 6, 162, 28);
+    separator_combo_.setBounds(406, 6, 116, 28);
     separator_combo_.addItem("Algorithmic FFT", 1);
     separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
     separator_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
     separator_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
     separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::CYAN));
+
+    // ── Header: save preset button
+    addAndMakeVisible(save_preset_btn);
+    save_preset_btn.setButtonText("Save");
+    save_preset_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::PURPLE));
+    save_preset_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::PURPLE));
+    save_preset_btn.setBounds(526, 6, 44, 28);
+    save_preset_btn.onClick = [this] { onClick_SavePreset(); };
 
     // ── Header: sidecar health dot
     addAndMakeVisible(health_dot_);
@@ -340,6 +348,71 @@ void AutoRemixAudioProcessorEditor::onClick_Save()
                 status_lbl.setText("Saved: " + results[0].getFileName(), juce::dontSendNotification);
             }
         });
+}
+
+void AutoRemixAudioProcessorEditor::onClick_SavePreset()
+{
+    juce::AlertWindow aw("Save Preset",
+                         "Enter a name for this preset:",
+                         juce::MessageBoxIconType::NoIcon);
+    aw.addTextEditor("name", "", "Preset name:");
+    aw.addButton("Save",   1, juce::KeyPress(juce::KeyPress::returnKey));
+    aw.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    if (aw.runModalLoop() != 1) return;
+
+    auto name = aw.getTextEditorContents("name").trim();
+    if (name.isEmpty()) return;
+
+    auto idx = static_cast<std::size_t>(style_combo_.getSelectedItemIndex());
+    if (presets_.empty() || idx >= presets_.size()) return;
+    auto& preset = presets_[idx];
+
+    autoremix::RemixParams params {
+        (float)tempo_slider_.getValue(),
+        (float)pitch_slider_.getValue(),
+        (float)reverb_slider_.getValue(),
+        (float)chop_slider_.getValue(),
+        preset.default_params.bass_boost_db,
+        preset.default_params.drums_tempo_factor,
+        preset.id,
+        "",
+        (float)vocals_slider_.getValue(),
+        (float)drums_slider_.getValue(),
+        (float)bass_slider_.getValue(),
+        (float)other_slider_.getValue(),
+    };
+
+    status_lbl.setText("Saving preset\xe2\x80\xa6", juce::dontSendNotification);
+
+    std::string name_str = name.toStdString();
+    std::thread([this, name_str, params]() mutable {
+        auto& bridge = audioProcessor.getBridge();
+        bool ok = bridge.savePreset(name_str, params);
+        auto newPresets = bridge.getPresets();
+
+        juce::MessageManager::callAsync([this, ok, name_str,
+                                               newPresets = std::move(newPresets)]() mutable {
+            if (ok && !newPresets.empty()) {
+                presets_ = std::move(newPresets);
+                style_combo_.clear(juce::dontSendNotification);
+                for (int i = 0; i < (int)presets_.size(); ++i)
+                    style_combo_.addItem(presets_[(size_t)i].name, i + 1);
+                for (int i = 0; i < (int)presets_.size(); ++i) {
+                    if (presets_[(size_t)i].name == name_str) {
+                        style_combo_.setSelectedItemIndex(i, juce::dontSendNotification);
+                        loadEngineDefaults(i);
+                        break;
+                    }
+                }
+                status_lbl.setText("Preset saved: " + juce::String(name_str),
+                                   juce::dontSendNotification);
+            } else {
+                status_lbl.setText("Error: preset save failed.",
+                                   juce::dontSendNotification);
+            }
+        });
+    }).detach();
 }
 
 //==============================================================================

@@ -117,3 +117,18 @@ class PresetSummary(BaseModel):
     name: str
     params: PresetParams
     stem_mix: StemMix
+
+
+class CreatePresetRequest(BaseModel):
+    name: str
+    engine_id: str
+    tempo_factor: float
+    pitch_shift_semi: float
+    reverb_mix: float
+    chop_interval_ms: float
+    bass_boost_db: float = 0.0
+    drums_tempo_factor: float = 1.0
+    vocals_gain: float = 1.0
+    drums_gain: float = 1.0
+    bass_gain: float = 1.0
+    other_gain: float = 1.0

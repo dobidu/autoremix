@@ -3,8 +3,8 @@
 ## Current Position
 
 Milestone: v8 — In Progress
-Phase: 15 — COMPLETE
-Status: 15-01 + 15-02 PLAN+APPLY+UNIFY done; Phase 15 complete
+Phase: 16 — Plans written, awaiting APPLY
+Status: Phase 15 complete + pushed; 16-01 + 16-02 plans written
 Last activity: 2026-05-16
 
 Progress:
@@ -16,13 +16,15 @@ Progress:
 PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [15-01 complete]
   ✓        ✓        ✓     [15-02 complete]
+  ✓        ✓        ✓     [16-01 complete]
+  ✓        ✓        ✓     [16-02 complete]
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-16
-Stopped at: Phase 15 complete — Musical UI Parameters delivered
-Next action: Define Phase 16 (Performance + UX polish) or commit + push v8 snapshot
+Stopped at: Phase 16 complete — Performance + UX Polish delivered
+Next action: commit + push Phase 16, then define Phase 17 (More remix styles)
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

@@ -1,6 +1,17 @@
 # AutoRemix v2 — Roadmap
 
-## Phase 15 — Musical UI Parameters 🔄 IN PROGRESS
+## Phase 16 — Performance + UX Polish ✅ COMPLETE (2026-05-16)
+
+Reduce friction in the core load→remix workflow.
+
+- **16-01**: Drag & drop file load onto waveform zone + elapsed-time counter during separation
+- **16-02**: Cancel button during remix + sidecar health auto-poll (health dot updates every 5s)
+
+Deliverable: load files by dragging; see time elapsed during slow separation; cancel stuck remixes; health dot reflects live sidecar state.
+
+---
+
+## Phase 15 — Musical UI Parameters ✅ COMPLETE (2026-05-16)
 
 Replace raw multiplier sliders with musically meaningful controls. Engine BPM
 detection already exists in base.py; expose it end-to-end to the user.

@@ -4,13 +4,15 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
+#include <atomic>
 #include "PluginProcessor.h"
 #include "AutoRemixLookAndFeel.h"
 #include "SidecarHealthDot.h"
 #include "WaveformDisplay.h"
 
 class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                       public juce::ChangeListener {
+                                       public juce::ChangeListener,
+                                       public juce::FileDragAndDropTarget {
 public:
     explicit AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor&);
     ~AutoRemixAudioProcessorEditor() override;
@@ -20,6 +22,9 @@ public:
     void changeListenerCallback(juce::ChangeBroadcaster*) override {
         juce::MessageManager::callAsync([this] { waveform_display_.repaint(); });
     }
+
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
 
 private:
     AutoRemixAudioProcessor& audioProcessor;
@@ -37,7 +42,7 @@ private:
     juce::AudioThumbnail      thumbnail_{512, format_manager_, thumbnail_cache_};
     WaveformDisplay           waveform_display_{thumbnail_};
 
-    juce::TextButton  loadfile_btn, play_btn, save_btn, preview_btn, save_preset_btn;
+    juce::TextButton  loadfile_btn, play_btn, cancel_btn, save_btn, preview_btn, save_preset_btn;
     juce::Label       file_lbl, status_lbl;
     double            progress_   = 0.0;
     juce::ProgressBar progress_bar_{progress_};
@@ -53,6 +58,24 @@ private:
     float        detected_bpm_ = 120.0f;
     juce::String detected_key_;
     juce::Label  analysis_lbl_;
+
+    struct ElapsedTimer : juce::Timer {
+        AutoRemixAudioProcessorEditor& ed;
+        explicit ElapsedTimer(AutoRemixAudioProcessorEditor& e) : ed(e) {}
+        void timerCallback() override {
+            int s = ed.elapsed_secs_.fetch_add(1) + 1;
+            bool remix = ed.in_remix_phase_.load();
+            juce::String phase = remix ? "Remixing... " : "Separating stems... ";
+            ed.status_lbl.setText(phase + juce::String(s) + "s",
+                                  juce::dontSendNotification);
+        }
+    };
+
+    ElapsedTimer*     elapsed_timer_    = nullptr;
+    std::atomic<int>  elapsed_secs_{0};
+    std::atomic<bool> in_remix_phase_{false};
+    std::atomic<bool> cancel_requested_{false};
+
     std::vector<autoremix::PresetInfo>    presets_;
     std::vector<autoremix::SeparatorInfo> separators_;
 

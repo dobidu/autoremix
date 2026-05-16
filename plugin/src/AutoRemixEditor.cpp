@@ -4,6 +4,12 @@
 #include <filesystem>
 #include <algorithm>
 
+namespace {
+static const juce::StringArray kAudioExts {
+    ".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".m4a"
+};
+} // namespace
+
 //==============================================================================
 AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
@@ -42,6 +48,7 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
 
 AutoRemixAudioProcessorEditor::~AutoRemixAudioProcessorEditor()
 {
+    if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
     thumbnail_.removeChangeListener(this);
     setLookAndFeel(nullptr);
 }
@@ -90,6 +97,42 @@ void AutoRemixAudioProcessorEditor::loadFile()
                 }).detach();
             }
         });
+}
+
+bool AutoRemixAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    if (files.isEmpty()) return false;
+    return kAudioExts.contains(juce::File(files[0]).getFileExtension().toLowerCase());
+}
+
+void AutoRemixAudioProcessorEditor::filesDropped(const juce::StringArray& files, int, int)
+{
+    if (files.isEmpty()) return;
+    juce::File f(files[0]);
+    if (!f.existsAsFile()) return;
+    if (!kAudioExts.contains(f.getFileExtension().toLowerCase())) return;
+
+    file_path_ = f.getFullPathName();
+    file_lbl.setText(f.getFileName(), juce::dontSendNotification);
+    output_path_ = {};
+    save_btn.setEnabled(false);
+    thumbnail_.setSource(new juce::FileInputSource(f));
+    waveform_display_.sourceChanged();
+
+    std::thread([this, path = file_path_]() {
+        auto info = audioProcessor.getBridge().analyzeFile(path);
+        float bpm = info.valid() ? info.bpm : 120.0f;
+        juce::String key = info.valid() ? juce::String(info.key) : "";
+        juce::MessageManager::callAsync([this, bpm, key]() {
+            detected_bpm_ = bpm;
+            detected_key_ = key;
+            juce::String txt = juce::String(bpm, 1) + " BPM";
+            txt += key.isNotEmpty() ? ("  |  " + key) : "  |  ?";
+            analysis_lbl_.setText(txt, juce::dontSendNotification);
+            if (bpm >= 40.0f && bpm <= 200.0f)
+                tempo_slider_.setValue((double)bpm, juce::dontSendNotification);
+        });
+    }).detach();
 }
 
 void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
@@ -238,6 +281,14 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     play_btn.onClick = [this] { onClick_Play(); };
     play_btn.setBounds(8, 250, 72, 26);
 
+    addAndMakeVisible(cancel_btn);
+    cancel_btn.setButtonText("Cancel");
+    cancel_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::RED));
+    cancel_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::RED));
+    cancel_btn.setBounds(8, 250, 72, 26);
+    cancel_btn.setVisible(false);
+    cancel_btn.onClick = [this] { cancel_requested_.store(true); };
+
     addAndMakeVisible(save_btn);
     save_btn.setButtonText("Save");
     save_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::SURFACE));
@@ -348,10 +399,18 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
     output_path /= input_file.getFileNameWithoutExtension().toStdString()
                    + "_" + preset.id + ".wav";
 
-    play_btn.setEnabled(false);
+    cancel_requested_.store(false);
+    play_btn.setVisible(false);
+    cancel_btn.setVisible(true);
     progress_ = -1.0;
     progress_bar_.setVisible(true);
-    status_lbl.setText("Separating stems...", juce::dontSendNotification);
+    status_lbl.setText("Separating stems... 0s", juce::dontSendNotification);
+
+    elapsed_secs_.store(0);
+    in_remix_phase_.store(false);
+    if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; }
+    elapsed_timer_ = new ElapsedTimer(*this);
+    elapsed_timer_->startTimer(1000);
 
     std::string input_str = file_path_.toStdString();
 
@@ -365,21 +424,41 @@ void AutoRemixAudioProcessorEditor::onClick_Play()
 
         if (!stems.valid) {
             juce::MessageManager::callAsync([this] {
+                if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
                 status_lbl.setText("Error: separation failed.", juce::dontSendNotification);
                 progress_bar_.setVisible(false);
+                cancel_btn.setVisible(false);
+                play_btn.setVisible(true);
+                play_btn.setEnabled(true);
+            });
+            return;
+        }
+
+        // phase-boundary cancel check (cannot abort mid-HTTP but catches between phases)
+        if (cancel_requested_.load()) {
+            juce::MessageManager::callAsync([this] {
+                if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
+                status_lbl.setText("Cancelled.", juce::dontSendNotification);
+                progress_bar_.setVisible(false);
+                cancel_btn.setVisible(false);
+                play_btn.setVisible(true);
                 play_btn.setEnabled(true);
             });
             return;
         }
 
         juce::MessageManager::callAsync([this] {
-            status_lbl.setText("Remixing...", juce::dontSendNotification);
+            elapsed_secs_.store(0);
+            in_remix_phase_.store(true);
         });
 
         auto result = bridge.applyRemix(stems, params, output_path);
 
         juce::MessageManager::callAsync([this, result]() mutable {
+            if (elapsed_timer_) { elapsed_timer_->stopTimer(); delete elapsed_timer_; elapsed_timer_ = nullptr; }
             progress_bar_.setVisible(false);
+            cancel_btn.setVisible(false);
+            play_btn.setVisible(true);
             if (result.success) {
                 output_path_ = juce::String(result.output_path.string());
                 status_lbl.setText("Done - click Save to export.", juce::dontSendNotification);

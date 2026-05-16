@@ -3,7 +3,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <thread>
 #include <atomic>
-#include <filesystem>
 #include "ScreenBase.h"
 #include "AutoRemixLookAndFeel.h"
 #include "PluginTypes.h"
@@ -14,18 +13,13 @@ class ScreenEmpty : public ScreenBase,
 {
 public:
     using AnalyzeFn      = std::function<autoremix::FileAnalysis(const juce::String&)>;
-    using SeparateFn     = std::function<autoremix::StemPaths(const std::filesystem::path&,
-                                                               const std::filesystem::path&,
-                                                               const std::string&)>;
     using FileChooserFn  = std::function<void()>;
 
     ScreenEmpty(ScreenContext&  ctx,
                 AnalyzeFn      analyze_fn,
-                SeparateFn     separate_fn,
                 FileChooserFn  open_chooser_fn)
         : ScreenBase(ctx),
           analyze_fn_(std::move(analyze_fn)),
-          separate_fn_(std::move(separate_fn)),
           open_chooser_fn_(std::move(open_chooser_fn)),
           thumbnail_cache_(5),
           thumbnail_(512, format_manager_, thumbnail_cache_)
@@ -190,7 +184,6 @@ private:
     }
 
     AnalyzeFn     analyze_fn_;
-    SeparateFn    separate_fn_;
     FileChooserFn open_chooser_fn_;
 
     juce::AudioFormatManager  format_manager_;

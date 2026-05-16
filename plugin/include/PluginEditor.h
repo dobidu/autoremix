@@ -29,12 +29,8 @@ private:
 
     // ── Header widgets (always visible, owned by editor) ──────────────────────
     juce::Label      title_lbl;
-    juce::ComboBox   style_combo_;
     juce::ComboBox   separator_combo_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
-    juce::TextButton save_preset_btn;
-    juce::TextButton loadfile_btn;
-    juce::TextButton save_btn;
 
     // ── Footer ────────────────────────────────────────────────────────────────
     juce::Label status_lbl;
@@ -54,9 +50,6 @@ private:
     void loadFile();
     void loadEngineDefaults(int idx);
     void drawAndConfigComponents();
-    void onClick_Play();
-    void onClick_Save();
-    void onClick_SavePreset();
     void navigateTo(ScreenId id, bool animate = true);
     void installScreen(ScreenId id, bool animate);
 

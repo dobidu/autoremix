@@ -34,14 +34,14 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 
 # 3. Start Python sidecar
-cd python
+cd sidecar
 uv venv && source .venv/bin/activate
 uv pip install -r requirements.txt
 python -m server.main &
 
 # 4. Launch standalone plugin
 cd ..
-AUTOREMIX_SERVER_PATH=$(pwd)/python \
+AUTOREMIX_SERVER_PATH=$(pwd)/sidecar/server/main.py \
   ./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
 ```
 
@@ -128,7 +128,7 @@ After loading, the plugin analyses the file (BPM detection, key detection) and s
 
 **Before separating**, choose your stem separator in the header combo:
 - **Algorithmic FFT** — fast, always available, rough stems (band-split)
-- **Demucs (ML)** — slow on CPU (~1-5 min), professional-quality isolation (requires `pip install demucs`)
+- **Demucs (ML)** — slow on CPU (~1-5 min), professional-quality isolation (requires `uv pip install demucs`)
 
 Click **Separate Stems** to proceed.
 
@@ -387,7 +387,7 @@ build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3\
 The plugin communicates with a local Python FastAPI server on port **17432**.
 
 ```bash
-cd python
+cd sidecar
 uv venv
 source .venv/bin/activate     # Linux / macOS
 # .venv\Scripts\activate      # Windows
@@ -396,22 +396,22 @@ uv pip install -r requirements.txt
 python -m server.main         # starts on http://127.0.0.1:17432
 ```
 
-**Auto-start**: set `AUTOREMIX_SERVER_PATH` to the `python/` directory and the plugin will fork the sidecar automatically on launch and shut it down on exit:
+**Auto-start**: set `AUTOREMIX_SERVER_PATH` to the path of `server/main.py` and the plugin will fork the sidecar automatically on launch and shut it down on exit:
 
 ```bash
 # Linux / macOS
-export AUTOREMIX_SERVER_PATH=/path/to/autoremix/python
+export AUTOREMIX_SERVER_PATH=/path/to/autoremix/sidecar/server/main.py
 ./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
 
 # Windows
-set AUTOREMIX_SERVER_PATH=C:\path\to\autoremix\python
+set AUTOREMIX_SERVER_PATH=C:\path\to\autoremix\sidecar\server\main.py
 build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 ```
 
 **Optional — Demucs ML separator** (high-quality stem isolation, ~2 GB download):
 
 ```bash
-pip install demucs
+uv pip install demucs
 ```
 
 Without demucs, the algorithmic FFT separator is always available. With demucs installed, `DemucsSeparator` appears automatically in the sidecar's `/health` response and in the plugin's separator combo.
@@ -511,7 +511,7 @@ Presets are JSON files. Drop them in `~/.config/autoremix/modes/` (Linux/macOS) 
 ## Running Tests
 
 ```bash
-cd python
+cd sidecar
 source .venv/bin/activate
 python -m pytest tests/ -v
 ```

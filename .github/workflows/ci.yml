@@ -21,11 +21,11 @@ jobs:
         run: pip install uv
 
       - name: Create venv and install deps
-        working-directory: python
+        working-directory: sidecar
         run: |
           uv venv
           uv pip install -r requirements.txt
 
       - name: Run pytest
-        working-directory: python
+        working-directory: sidecar
         run: .venv/bin/python -m pytest tests/ -v

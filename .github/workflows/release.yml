@@ -42,7 +42,7 @@ jobs:
                 dist/AutoRemix-linux/
           cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
                 dist/AutoRemix-linux/
-          cp -r python dist/AutoRemix-linux/sidecar
+          cp -r sidecar dist/AutoRemix-linux/sidecar
           cp    README.md LICENSE dist/AutoRemix-linux/
           cd dist
           zip -r AutoRemix-linux-${{ github.ref_name }}.zip AutoRemix-linux/
@@ -78,7 +78,7 @@ jobs:
                 dist/AutoRemix-macos/
           cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
                 dist/AutoRemix-macos/
-          cp -r python dist/AutoRemix-macos/sidecar
+          cp -r sidecar dist/AutoRemix-macos/sidecar
           cp    README.md LICENSE dist/AutoRemix-macos/
           cd dist
           zip -r AutoRemix-macos-${{ github.ref_name }}.zip AutoRemix-macos/
@@ -112,7 +112,7 @@ jobs:
           Copy-Item `
             build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
             dist\AutoRemix-windows\
-          Copy-Item -Recurse python dist\AutoRemix-windows\sidecar
+          Copy-Item -Recurse sidecar dist\AutoRemix-windows\sidecar
           Copy-Item README.md, LICENSE dist\AutoRemix-windows\
           Compress-Archive -Path dist\AutoRemix-windows `
             -DestinationPath dist\AutoRemix-windows-${{ github.ref_name }}.zip
@@ -158,7 +158,7 @@ jobs:
 
             ### Requirements
             - Python 3.12 + uv (for the sidecar)
-            - Optional: `pip install demucs` for high-quality ML stem separation (~2 GB)
+            - Optional: `uv pip install demucs` for high-quality ML stem separation (~2 GB)
 
             ### What's new
             See [CHANGELOG](https://github.com/dobidu/autoremix/commits/main) for details.

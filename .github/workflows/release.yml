@@ -1,0 +1,168 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Linux VST3 + Standalone ──────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            cmake ninja-build \
+            libasound2-dev libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxcursor-dev libxrandr-dev \
+            libxcomposite-dev libxext-dev \
+            libgl1-mesa-dev libglu1-mesa-dev \
+            libgtk-3-dev \
+            libcurl4-openssl-dev
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/AutoRemix-linux
+          cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
+                dist/AutoRemix-linux/
+          cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
+                dist/AutoRemix-linux/
+          cp -r python dist/AutoRemix-linux/sidecar
+          cp    README.md LICENSE dist/AutoRemix-linux/
+          cd dist
+          zip -r AutoRemix-linux-${{ github.ref_name }}.zip AutoRemix-linux/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-linux
+          path: dist/AutoRemix-linux-${{ github.ref_name }}.zip
+
+  # ── macOS VST3 + AU + Standalone ────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: brew install cmake ninja
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/AutoRemix-macos
+          cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
+                dist/AutoRemix-macos/
+          cp -r build/plugin/AutoRemix_artefacts/Release/AU/AutoRemix.component \
+                dist/AutoRemix-macos/
+          cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
+                dist/AutoRemix-macos/
+          cp -r python dist/AutoRemix-macos/sidecar
+          cp    README.md LICENSE dist/AutoRemix-macos/
+          cd dist
+          zip -r AutoRemix-macos-${{ github.ref_name }}.zip AutoRemix-macos/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-macos
+          path: dist/AutoRemix-macos-${{ github.ref_name }}.zip
+
+  # ── Windows VST3 + Standalone ────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist\AutoRemix-windows | Out-Null
+          Copy-Item -Recurse `
+            build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3 `
+            dist\AutoRemix-windows\
+          Copy-Item `
+            build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
+            dist\AutoRemix-windows\
+          Copy-Item -Recurse python dist\AutoRemix-windows\sidecar
+          Copy-Item README.md, LICENSE dist\AutoRemix-windows\
+          Compress-Archive -Path dist\AutoRemix-windows `
+            -DestinationPath dist\AutoRemix-windows-${{ github.ref_name }}.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-windows
+          path: dist/AutoRemix-windows-${{ github.ref_name }}.zip
+
+  # ── Publish GitHub Release ───────────────────────────────────────────────────
+  publish-release:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AutoRemix ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          body: |
+            ## AutoRemix ${{ github.ref_name }}
+
+            ### Installation
+
+            1. Download the zip for your platform below.
+            2. Extract it.
+            3. **VST3**: copy `AutoRemix.vst3` to your VST3 folder:
+               - Linux: `~/.vst3/`
+               - macOS: `~/Library/Audio/Plug-Ins/VST3/`
+               - Windows: `C:\Program Files\Common Files\VST3\`
+            4. **AU** (macOS only): copy `AutoRemix.component` to `~/Library/Audio/Plug-Ins/Components/`
+               > macOS 13+: go to System Settings → Privacy & Security → allow AutoRemix
+            5. **Standalone**: run `AutoRemix` (Linux/macOS) or `AutoRemix.exe` (Windows) directly.
+            6. **Sidecar**: see `sidecar/README.md` or the main README for Python setup.
+
+            ### Requirements
+            - Python 3.12 + uv (for the sidecar)
+            - Optional: `pip install demucs` for high-quality ML stem separation (~2 GB)
+
+            ### What's new
+            See [CHANGELOG](https://github.com/dobidu/autoremix/commits/main) for details.
+          files: |
+            artifacts/AutoRemix-linux/AutoRemix-linux-${{ github.ref_name }}.zip
+            artifacts/AutoRemix-macos/AutoRemix-macos-${{ github.ref_name }}.zip
+            artifacts/AutoRemix-windows/AutoRemix-windows-${{ github.ref_name }}.zip

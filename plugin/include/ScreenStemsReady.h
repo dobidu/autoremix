@@ -74,12 +74,22 @@ public:
 
     void timerCallback() override
     {
+        bool needRepaint = false;
         for (int i = 0; i < 4; ++i) {
             bool playing = ctx_.is_stem_playing && ctx_.is_stem_playing(i);
             rows_[(size_t)i].play_btn.setButtonText(
                 playing ? juce::String::fromUTF8("\xE2\x96\xA0")   // ■
                         : juce::String::fromUTF8("\xE2\x96\xB6")); // ▶
+            if (playing) {
+                play_positions_[i] = ctx_.get_stem_position ? ctx_.get_stem_position(i) : 0.0;
+                needRepaint = true;
+            } else if (was_playing_[i]) {
+                play_positions_[i] = 0.0; // clear cursor on stop
+                needRepaint = true;
+            }
+            was_playing_[i] = playing;
         }
+        if (needRepaint) repaint();
     }
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override { repaint(); }
@@ -235,6 +245,13 @@ private:
             r.thumb->drawChannels(g, centerCol, 0.0, r.thumb->getTotalLength(), 0.8f);
         }
 
+        // Playback cursor (position cached by timer — no callbacks from paint)
+        if (was_playing_[i]) {
+            int cx = centerCol.getX() + (int)(play_positions_[i] * centerCol.getWidth());
+            g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+            g.fillRect(cx, centerCol.getY(), 2, centerCol.getHeight());
+        }
+
         // Unity tick at center of gain slider track (3 buttons: play + mute + solo)
         auto rightCol  = juce::Rectangle<int>(row.getRight() - RIGHT_COL_W, row.getY(), RIGHT_COL_W, row.getHeight());
         int sliderLeft  = rightCol.getX() + TOGGLE_SIZE * 3 + TOGGLE_GAP * 4;
@@ -331,6 +348,9 @@ private:
     juce::AudioThumbnail      drums_thumb_;
     juce::AudioThumbnail      bass_thumb_;
     juce::AudioThumbnail      other_thumb_;
+
+    std::array<double, 4> play_positions_{};
+    std::array<bool,   4> was_playing_{};
 
     int               drag_stem_idx_ = -1;
     juce::Point<int>  mouse_down_pos_;

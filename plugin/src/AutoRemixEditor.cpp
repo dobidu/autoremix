@@ -43,6 +43,8 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     ctx_.stop_stem           = [this](int idx) { audioProcessor.stopStem(idx); };
     ctx_.is_stem_playing     = [this](int idx) { return audioProcessor.isStemPlaying(idx); };
     ctx_.stop_all_stems      = [this] { audioProcessor.stopAllStems(); };
+    ctx_.get_preview_position = [this] { return audioProcessor.getPreviewPosition(); };
+    ctx_.get_stem_position    = [this](int idx) { return audioProcessor.getStemPosition(idx); };
 
     navigateTo(ScreenId::Empty, false);
 

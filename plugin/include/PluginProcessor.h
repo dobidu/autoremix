@@ -47,6 +47,10 @@ public:
     bool isStemPlaying(int idx) const;
     void stopAllStems();
 
+    // Playback positions (0.0–1.0)
+    double getPreviewPosition() const;
+    double getStemPosition(int idx) const;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessor)
 
 private:

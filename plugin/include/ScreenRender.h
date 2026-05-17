@@ -21,11 +21,13 @@ public:
     ScreenRender(ScreenContext& ctx, RenderFn render_fn)
         : ScreenBase(ctx),
           render_fn_(std::move(render_fn)),
-          thumbnail_cache_(4),
+          thumbnail_cache_(8),
+          in_thumb_ (512, format_manager_, thumbnail_cache_),
           out_thumb_(512, format_manager_, thumbnail_cache_),
           progress_value_(-1.0)
     {
         format_manager_.registerBasicFormats();
+        in_thumb_ .addChangeListener(this);
         out_thumb_.addChangeListener(this);
 
         addAndMakeVisible(header_lbl_);
@@ -98,6 +100,7 @@ public:
 
     ~ScreenRender() override
     {
+        in_thumb_ .removeChangeListener(this);
         out_thumb_.removeChangeListener(this);
         stopTimer();
         cancel_requested_.store(true);
@@ -110,6 +113,9 @@ public:
         preview_mode_ = PreviewMode::None;
         cancel_requested_.store(false);
         timer_lbl_.setText("0 s", juce::dontSendNotification);
+
+        in_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.file_path)));
+
         applyState();
         startTimer(1000);
         startRender();
@@ -131,11 +137,18 @@ public:
             timer_lbl_.setText(juce::String(elapsed_secs_) + " s", juce::dontSendNotification);
         } else if (state_ == State::Done) {
             bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
-            if (!playing && preview_mode_ != PreviewMode::None) {
-                preview_mode_ = PreviewMode::None;
+            if (playing) {
+                preview_position_ = ctx_.get_preview_position ? ctx_.get_preview_position() : 0.0;
+                repaint();
+            } else if (was_preview_playing_) {
+                // playback just stopped (EOF or user) — clear cursor, reset buttons
+                preview_position_ = 0.0;
+                preview_mode_     = PreviewMode::None;
                 original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
                 remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+                repaint();
             }
+            was_preview_playing_ = playing;
         }
     }
 
@@ -145,15 +158,52 @@ public:
     {
         g.fillAll(juce::Colour(AR::BG));
 
-        if (state_ == State::Done && out_thumb_.getTotalLength() > 0.0) {
-            auto waveArea = getLocalBounds()
+        if (state_ == State::Done) {
+            auto fullContent = getLocalBounds()
                 .withTrimmedTop(80)
-                .withTrimmedBottom(72)
-                .reduced(32, 16);
+                .withTrimmedBottom(72);
+
+            int halfH = fullContent.getHeight() / 2;
+            auto origSection  = fullContent.removeFromTop(halfH).reduced(32, 6);
+            auto remixSection = fullContent.reduced(32, 6);
+
+            // Section labels
+            g.setFont(AR::font(AR::FontRole::section_label));
+            g.setColour(juce::Colour(AR::COMMENT));
+            g.drawText("ORIGINAL", origSection.removeFromTop(14), juce::Justification::centredLeft);
+            g.drawText("REMIX",    remixSection.removeFromTop(14), juce::Justification::centredLeft);
+
+            // Original waveform background
             g.setColour(juce::Colour(AR::BG_DEEP));
-            g.fillRect(waveArea);
-            g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.85f));
-            out_thumb_.drawChannels(g, waveArea, 0.0, out_thumb_.getTotalLength(), 1.0f);
+            g.fillRect(origSection);
+
+            if (in_thumb_.getTotalLength() > 0.0) {
+                g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.6f));
+                in_thumb_.drawChannels(g, origSection, 0.0, in_thumb_.getTotalLength(), 1.0f);
+            }
+
+            // Original cursor (position cached by timer — no callbacks from paint)
+            if (preview_mode_ == PreviewMode::Original && was_preview_playing_) {
+                int cx = origSection.getX() + (int)(preview_position_ * origSection.getWidth());
+                g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                g.fillRect(cx, origSection.getY(), 2, origSection.getHeight());
+            }
+
+            // Remix waveform background
+            g.setColour(juce::Colour(AR::BG_DEEP));
+            g.fillRect(remixSection);
+
+            if (out_thumb_.getTotalLength() > 0.0) {
+                g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.85f));
+                out_thumb_.drawChannels(g, remixSection, 0.0, out_thumb_.getTotalLength(), 1.0f);
+            }
+
+            // Remix cursor (position cached by timer — no callbacks from paint)
+            if (preview_mode_ == PreviewMode::Remix && was_preview_playing_) {
+                int cx = remixSection.getX() + (int)(preview_position_ * remixSection.getWidth());
+                g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                g.fillRect(cx, remixSection.getY(), 2, remixSection.getHeight());
+            }
         }
     }
 
@@ -163,9 +213,10 @@ public:
         auto actionBar = b.removeFromBottom(72).reduced(16, 16);
 
         auto headerArea = b.removeFromTop(80).reduced(16, 8);
-        header_lbl_.setBounds(headerArea.removeFromTop(32));
+        auto headerFirstLine = headerArea.removeFromTop(32);
+        header_lbl_.setBounds(headerFirstLine);
+        done_lbl_  .setBounds(headerFirstLine);
         timer_lbl_ .setBounds(headerArea.removeFromTop(24));
-        done_lbl_  .setBounds(getLocalBounds().withTrimmedBottom(72).withTrimmedTop(20));
 
         auto midArea = b.withTrimmedBottom(0).reduced(32, 16);
         progress_bar_.setBounds(midArea.removeFromTop(8));
@@ -352,11 +403,14 @@ private:
     State       state_        = State::Rendering;
     PreviewMode preview_mode_ = PreviewMode::None;
     int         elapsed_secs_ = 0;
+    double      preview_position_    = 0.0;
+    bool        was_preview_playing_ = false;
     std::atomic<bool> cancel_requested_{false};
     RenderFn          render_fn_;
 
     juce::AudioFormatManager  format_manager_;
     juce::AudioThumbnailCache thumbnail_cache_;
+    juce::AudioThumbnail      in_thumb_;
     juce::AudioThumbnail      out_thumb_;
 
     std::unique_ptr<juce::FileChooser> chooser_;

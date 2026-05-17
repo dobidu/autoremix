@@ -74,4 +74,8 @@ struct ScreenContext {
     std::function<void(int)>                    stop_stem;
     std::function<bool(int)>                    is_stem_playing;
     std::function<void()>                       stop_all_stems;
+
+    // Playback positions (0.0–1.0) — for cursor rendering
+    std::function<double()>    get_preview_position;
+    std::function<double(int)> get_stem_position;
 };

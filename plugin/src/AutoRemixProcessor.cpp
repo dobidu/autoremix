@@ -91,6 +91,19 @@ void AutoRemixAudioProcessor::stopAllStems()
         sp.transport.stop();
 }
 
+double AutoRemixAudioProcessor::getPreviewPosition() const
+{
+    double len = preview_transport_.getLengthInSeconds();
+    return (len > 0.0) ? preview_transport_.getCurrentPosition() / len : 0.0;
+}
+
+double AutoRemixAudioProcessor::getStemPosition(int idx) const
+{
+    if (idx < 0 || idx >= 4) return 0.0;
+    double len = stem_players_[idx].transport.getLengthInSeconds();
+    return (len > 0.0) ? stem_players_[idx].transport.getCurrentPosition() / len : 0.0;
+}
+
 //==============================================================================
 const juce::String AutoRemixAudioProcessor::getName() const { return JucePlugin_Name; }
 

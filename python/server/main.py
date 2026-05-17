@@ -4,6 +4,7 @@ Serves stem separation and remix endpoints for the JUCE plugin.
 Default port: 17432
 """
 
+import asyncio
 import os
 import re
 import logging
@@ -46,12 +47,14 @@ async def analyze(path: str):
     file_path = Path(path)
     if not file_path.exists():
         raise HTTPException(status_code=400, detail=f"File not found: {path}")
-    try:
+    def _run():
         duration_sec = float(sf.info(str(file_path)).duration)
         y, sr = librosa.load(str(file_path), sr=None, mono=True, duration=60.0)
         bpm = detect_bpm(y, sr)
         key = detect_key(y, sr)
         return {"bpm": round(float(bpm), 2), "key": key, "duration_sec": round(duration_sec, 3)}
+    try:
+        return await asyncio.to_thread(_run)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Analysis failed: {e}")
 
@@ -119,7 +122,7 @@ async def separate(req: SeparateRequest):
             raise HTTPException(status_code=503, detail=f"Separator {req.separator_id} not available")
 
         logger.info(f"Separating {input_path} with {req.separator_id}")
-        stems: StemPaths = separator.separate(input_path, output_dir)
+        stems = await asyncio.to_thread(separator.separate, input_path, output_dir)
 
         return SeparateResponse(success=True, stems=StemPathsModel.from_domain(stems))
     except HTTPException:
@@ -158,7 +161,7 @@ async def remix(req: RemixRequest):
 
         if req.stem_mix_override:
             weighted_dir = TEMP_DIR / "weighted" / Path(req.vocals_path).stem
-            stems = _apply_stem_weights(stems, req.stem_mix_override, weighted_dir)
+            stems = await asyncio.to_thread(_apply_stem_weights, stems, req.stem_mix_override, weighted_dir)
 
         output_path = Path(req.output_path)
 
@@ -173,12 +176,12 @@ async def remix(req: RemixRequest):
                 active_preset.effects = list(preset.effects) + [chop_op]
             from .remix.chain_interpreter import EffectChainEngine
             logger.info(f"Remixing via effect chain {req.engine_id} (chop_mode={req.chop_mode}) → {output_path}")
-            result = EffectChainEngine().process(stems, active_preset, output_path)
+            result = await asyncio.to_thread(EffectChainEngine().process, stems, active_preset, output_path)
         else:
             engine = get_engine(req.engine_id)
             params = req.to_params()
             logger.info(f"Remixing with engine {req.engine_id} → {output_path}")
-            result = engine.process(stems, params, output_path)
+            result = await asyncio.to_thread(engine.process, stems, params, output_path)
 
         return RemixResponse(success=True, output_path=str(result))
     except HTTPException:

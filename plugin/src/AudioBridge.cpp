@@ -25,7 +25,7 @@ AudioBridge::AudioBridge(const std::string& host, int port)
 bool AudioBridge::isServerAlive() const {
     try {
         auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/health")},
-                          cpr::Timeout{500});
+                          cpr::Timeout{3000});
         return r.status_code == 200;
     } catch (...) { return false; }
 }
@@ -175,7 +175,7 @@ std::vector<SeparatorInfo> AudioBridge::getAvailableSeparators() {
     };
     try {
         auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/health")},
-                          cpr::Timeout{500});
+                          cpr::Timeout{3000});
         if (r.status_code != 200) return {};
 
         auto body = nlohmann::json::parse(r.text);

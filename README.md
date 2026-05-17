@@ -24,25 +24,50 @@ Stem separation and remix engines are **pluggable**: new backends register via `
 
 ## Quick Start
 
+**Linux / macOS**
+
 ```bash
 # 1. Clone
 git clone --recurse-submodules https://github.com/dobidu/autoremix.git
 cd autoremix
 
-# 2. Build plugin (Linux / macOS)
+# 2. Build plugin
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 
-# 3. Start Python sidecar
+# 3. Start sidecar
 cd sidecar
 uv venv && source .venv/bin/activate
 uv pip install -r requirements.txt
 python -m server.main &
 
-# 4. Launch standalone plugin
+# 4. Launch standalone
 cd ..
 AUTOREMIX_SERVER_PATH=$(pwd)/sidecar/server/main.py \
   ./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
+```
+
+**Windows**
+
+```bat
+:: 1. Clone
+git clone --recurse-submodules https://github.com/dobidu/autoremix.git
+cd autoremix
+
+:: 2. Build plugin
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+
+:: 3. Start sidecar
+cd sidecar
+uv venv
+.venv\Scripts\activate
+uv pip install -r requirements.txt
+python -m server.main
+
+:: 4. Launch standalone (new terminal, from repo root)
+set AUTOREMIX_SERVER_PATH=%CD%\sidecar\server\main.py
+build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 ```
 
 ---

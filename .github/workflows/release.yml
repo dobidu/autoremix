@@ -43,6 +43,8 @@ jobs:
           cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
                 dist/AutoRemix-linux/
           cp -r sidecar dist/AutoRemix-linux/sidecar
+          cp    launch-linux.sh dist/AutoRemix-linux/launch.sh
+          chmod +x dist/AutoRemix-linux/launch.sh
           cp    README.md LICENSE dist/AutoRemix-linux/
           cd dist
           zip -r AutoRemix-linux-${{ github.ref_name }}.zip AutoRemix-linux/
@@ -79,6 +81,8 @@ jobs:
           cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
                 dist/AutoRemix-macos/
           cp -r sidecar dist/AutoRemix-macos/sidecar
+          cp    launch-macos.sh dist/AutoRemix-macos/launch.sh
+          chmod +x dist/AutoRemix-macos/launch.sh
           cp    README.md LICENSE dist/AutoRemix-macos/
           cd dist
           zip -r AutoRemix-macos-${{ github.ref_name }}.zip AutoRemix-macos/
@@ -113,6 +117,7 @@ jobs:
             build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
             dist\AutoRemix-windows\
           Copy-Item -Recurse sidecar dist\AutoRemix-windows\sidecar
+          Copy-Item launch.bat dist\AutoRemix-windows\
           Copy-Item README.md, LICENSE dist\AutoRemix-windows\
           Compress-Archive -Path dist\AutoRemix-windows `
             -DestinationPath dist\AutoRemix-windows-${{ github.ref_name }}.zip

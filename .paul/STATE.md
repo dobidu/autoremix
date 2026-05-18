@@ -2,13 +2,14 @@
 
 ## Current Position
 
-Milestone: v9 — IN PROGRESS
-Phase: 20 — COMPLETE
-Status: In-plugin audio playback delivered (stems + original/remix preview)
-Last activity: 2026-05-16
+Milestone: v10 — IN PROGRESS
+Phase: 21 — PLANNING
+Status: 21-01 PLAN created (sidecar MashupEngine + endpoint). Awaiting APPLY.
+Last activity: 2026-05-18
 
 Progress:
 - Milestone: v9 [██████████] 100%
+- Milestone: v10 [░░░░░░░░░░] 0% (Phase 21 just opened)
 
 ## Loop Position
 
@@ -21,6 +22,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [18-05 complete] ScreenRender + editor migration
   ✓        ✓        ✓     [19-01 complete] Stem drag-to-DAW
   ✓        ✓        ✓     [20-01 complete] Audio playback (stems + original/remix preview)
+  ✓        ·        ·     [21-01 planned ] AutoMashup sidecar (MashupEngine + endpoint)
 ```
 
 ## Session Continuity

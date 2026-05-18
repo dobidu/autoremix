@@ -1,5 +1,31 @@
 # AutoRemix v2 — Roadmap
 
+## Phase 21 — AutoMashup 🚧 PLANNED
+
+Pairwise mashup: combine two tracks into a coherent remix by reusing the existing
+stem-separation, BPM/key detection, and time-stretch/pitch-shift infrastructure.
+User picks per-stem source (A or B), target BPM, target key — sidecar separates
+both, tempo-matches, key-matches, muxes stems, mixes.
+
+Default policies (revisitable during implementation):
+- Anchor = track A (target BPM and key default to A's; user-overridable)
+- Pitch-shift track B to target key
+- Length = `min(len_a, len_b)` (truncate to shorter; loop/crossfade deferred)
+- Beat-1 auto-aligned via downbeat detection (manual offset slider deferred to a future phase)
+- Pairwise only (no N-track mashups)
+
+### Sub-plans
+
+- **21-01**: Sidecar — `MashupEngine` + `POST /api/v1/mashup` + pytest coverage
+- **21-02**: C++ glue — `MashupParams`, `AudioBridge::mashup()`, `ScreenContext` fields (`file_path_b`, `stems_b`, mashup callbacks)
+- **21-03**: `ScreenMashup` UI — per-stem A/B source toggles + target BPM/key sliders
+- **21-04**: Entry-point flow — "Mashup" button on `ScreenStemsReady`; load-2nd-file + 2nd separation
+- **21-05**: Render integration + tests + README update + release v3.1.0
+
+Deliverable: load two files → pick stems from each → render unified mashup with aligned tempo + key.
+
+---
+
 ## Phase 20 — Audio Playback ✅ COMPLETE (2026-05-16)
 
 In-plugin playback replacing OS media player:

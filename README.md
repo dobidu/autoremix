@@ -17,6 +17,7 @@ Stem separation and remix engines are **pluggable**: new backends register via `
 | ![Stems Ready](docs/screenshots/03-stems-ready.png) | **Step 3 — Stems Ready**: per-stem playback, mix, and drag-to-DAW |
 | ![Mode Params](docs/screenshots/04-mode-params.png) | **Step 4 — Mode & Parameters**: choose style, tune remix settings |
 | ![Render](docs/screenshots/05-render.png) | **Step 5 — Render**: dual waveform comparison, play original vs remix |
+| ![Mashup](docs/screenshots/06-mashup.png) | **Step 6 — Mashup**: combine 2 tracks, two-column 8-stem mixer, 8 built-in templates |
 
 > **Note:** Screenshots not yet captured. Run the standalone app and record your own.
 
@@ -350,6 +351,97 @@ The plugin sends stems + parameters to the sidecar for processing. A Cancel butt
 
 ---
 
+### Step 6 — Mashup (combine two tracks)
+
+Pair two tracks into a single coherent remix. AutoRemix reuses the same
+stem-separation, BPM detection, key detection, and time-stretch +
+pitch-shift infrastructure to align track B to track A automatically.
+
+**Entry point**: from **ScreenStemsReady** (after track A is separated),
+click the **[MASHUP >]** footer button (teal). The orange **[REMIX >]**
+button continues to the single-track remix flow — the two are independent.
+
+A file picker opens for track B. After picking, the status bar reports
+`Track B: analyzing... → Track B: separating...` and you land on the
+mashup screen.
+
+**Screen: Mashup**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  MASHUP   TEMPLATE [ Vocal Acapella ▼ ]                          [ Advanced ▾ ]    │
+│                                                                                     │
+│  TRACK A | track_a.wav        │  TRACK B | track_b.wav                              │
+│  BPM 128.0  KEY Am            │  BPM 96.0   KEY C                                   │
+│  ─────────────────────────────┼─────────────────────────────                       │
+│  VOCALS   ──────────●────── 1.0  │  VOCALS  ●─────────────── 0.0                    │
+│  DRUMS    ●──────────────── 0.0  │  DRUMS   ──────────●───── 1.0                    │
+│  BASS     ●──────────────── 0.0  │  BASS    ──────────●───── 1.0                    │
+│  OTHER    ●──────────────── 0.0  │  OTHER   ──────────●───── 1.0                    │
+│                                                                                     │
+│  TARGET BPM  ──●──────────  128.0    TARGET KEY  [ Anchor to A ▼]                  │
+│                                                                                     │
+│  [ < Back ]                                              [ Generate > ]            │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  Track B ready                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+> `[SCREENSHOT: 06-mashup.png — two-column 8-stem mixer with TEMPLATE combo and Advanced ▾]`
+
+**The two-column mixer**: 8 volume sliders total — one per stem per track.
+Slide to 0 for silence, 1 for unity, 2 for +6 dB. The mashup output is the
+sum of all 8 weighted stems, LUFS-normalized.
+
+**Templates** (one-click presets): the TEMPLATE combo populates every
+slider and the Advanced section. 8 built-ins ship with AutoRemix:
+
+| Template | Description |
+|----------|-------------|
+| Vocal Acapella | A's voice over B's instrumental — classic mashup |
+| Drum Swap | A's track with B's drums replacing A's |
+| Slowed Mashup | Both tracks slowed (0.75×) + heavy reverb + −2 semi |
+| Nightcore Mashup | Both tracks sped up (1.30×) and pitched up (+4 semi) |
+| Dub Echo | A's vocals swimming over B's drums + bass + heavy reverb |
+| Instrumental Layer | A's instrumentals layered with B's pads + drums |
+| Bass Swap | A's track with B's bass line replacing A's |
+| Frankenstein | Balanced split: A vox + other, B drums + bass |
+
+Custom user templates: drop your own JSON files in `~/.config/autoremix/mashup/`
+(Linux/macOS) or `%APPDATA%\autoremix\mashup\` (Windows) — they appear in the
+combo after restarting the sidecar.
+
+**Advanced ▾ (5 feel knobs)**: click to reveal extra sliders for finer
+sonic control. All five start at no-op defaults, so collapsed = same as
+the simple mixer.
+
+| Knob | Range | Effect |
+|------|-------|--------|
+| Tempo Mod | 0.5–1.5× | Multiplier on top of the anchored BPM. 0.75 = slowed, 1.3 = nightcore |
+| Master Pitch | −12 to +12 semi | Extra pitch shift on the final mix, on top of key matching |
+| Reverb Mix | 0–1 | Master reverb wet level (Pedalboard) |
+| Reverb Room | 0–1 | Master reverb room size |
+| HPF Track B | 0–400 Hz | High-pass filter on track B before mixing — solves the "two bass lines clashing" problem in layered mashups |
+
+**Auto-alignment**: when you click **Generate >**, AutoRemix:
+1. Separates both tracks (if not already cached for this session)
+2. Detects A and B's BPM + key independently
+3. Time-stretches track B to match `target_bpm × tempo_modifier` (clamp 0.5–2.0)
+4. Pitch-shifts track B by the shortest semitone path to `target_key`
+5. Applies per-stem gains for both tracks
+6. Sums all 8 weighted stems, truncating to the shorter track
+7. Applies master pitch + reverb if non-zero
+8. LUFS-normalizes and writes the output WAV
+
+A rendering screen with elapsed seconds appears while the sidecar works
+(can take 30s–5min depending on separator choice). Result lands on the
+ScreenRender Done state, where you can play the mashup, save it, or
+return to start a new one.
+
+---
+
 ## Requirements
 
 ### Linux
@@ -553,17 +645,20 @@ python -m pytest tests/ -v
 │                                 │   port 17432        │                              │
 │  PluginProcessor                │                     │  POST /api/v1/separate       │
 │  ├─ AudioBridge (HTTP IPC)      │                     │  POST /api/v1/remix          │
-│  ├─ MixerAudioSource            │                     │  GET  /api/v1/health         │
-│  │   ├─ StemPlayer[4]           │                     │  GET  /api/v1/presets        │
-│  │   └─ preview transport       │                     │  GET  /api/v1/analyze        │
-│  └─ SidecarHealthDot            │                     │  POST /api/v1/presets        │
-│                                 │                     │                              │
-│  PluginEditor (5-screen flow)   │                     │  AlgorithmicSeparator        │
-│  ├─ ScreenEmpty                 │                     │  DemucsSeparator             │
-│  ├─ ScreenSeparating            │                     │  ChoppedAndScrewedEngine     │
-│  ├─ ScreenStemsReady            │                     │  SlowedReverbEngine          │
-│  ├─ ScreenModeParams            │                     │  DrumAndBassEngine           │
-│  └─ ScreenRender                │                     │  EffectChainEngine (DSL)     │
+│  ├─ MixerAudioSource            │                     │  POST /api/v1/mashup         │
+│  │   ├─ StemPlayer[4]           │                     │  GET  /api/v1/health         │
+│  │   └─ preview transport       │                     │  GET  /api/v1/presets        │
+│  └─ SidecarHealthDot            │                     │  GET  /api/v1/mashup_presets │
+│                                 │                     │  GET  /api/v1/analyze        │
+│  PluginEditor (6-screen flow)   │                     │  POST /api/v1/presets        │
+│  ├─ ScreenEmpty                 │                     │                              │
+│  ├─ ScreenSeparating            │                     │  AlgorithmicSeparator        │
+│  ├─ ScreenStemsReady            │                     │  DemucsSeparator             │
+│  ├─ ScreenModeParams            │                     │  ChoppedAndScrewedEngine     │
+│  ├─ ScreenRender                │                     │  SlowedReverbEngine          │
+│  └─ ScreenMashup                │                     │  DrumAndBassEngine           │
+│                                 │                     │  EffectChainEngine (DSL)     │
+│                                 │                     │  MashupEngine (pairwise)     │
 └─────────────────────────────────┘                     └──────────────────────────────┘
 ```
 

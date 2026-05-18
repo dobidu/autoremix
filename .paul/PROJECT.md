@@ -34,6 +34,7 @@ and ML backends coexist behind stable interfaces.
 - [x] In-plugin audio preview via AudioTransportSource plays remixed WAV through plugin output — Phase 13-02
 - [x] Save-as-preset writes custom preset JSON to user dir; style_combo_ refreshes live — Phase 13-03
 - [x] Musical chop modes (beat/onset/bar/energy/structural) selectable from UI; ops inject into effect chains — Phase 14
+- [x] Pairwise mashup: load 2 files, two-column 8-stem mixer with per-stem volume, 8 built-in templates, 5 feel knobs (tempo mod, master pitch, reverb mix + room, HPF B); auto BPM + key alignment — Phase 21
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)
@@ -55,4 +56,4 @@ and ML backends coexist behind stable interfaces.
 - OP_REGISTRY grows 6 → 11 entries; _chop_at_boundaries private helper shared by 3 boundary-based ops
 
 ---
-*Last updated: 2026-05-16 after Phase 14 (Musical Chop Intelligence)*
+*Last updated: 2026-05-18 after Phase 21 (AutoMashup)*

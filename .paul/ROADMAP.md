@@ -1,18 +1,11 @@
 # AutoRemix v2 — Roadmap
 
-## Phase 21 — AutoMashup 🚧 PLANNED
+## Phase 21 — AutoMashup ✅ COMPLETE (2026-05-18)
 
-Pairwise mashup: combine two tracks into a coherent remix by reusing the existing
-stem-separation, BPM/key detection, and time-stretch/pitch-shift infrastructure.
-User picks per-stem source (A or B), target BPM, target key — sidecar separates
-both, tempo-matches, key-matches, muxes stems, mixes.
-
-Default policies (revisitable during implementation):
-- Anchor = track A (target BPM and key default to A's; user-overridable)
-- Pitch-shift track B to target key
-- Length = `min(len_a, len_b)` (truncate to shorter; loop/crossfade deferred)
-- Beat-1 auto-aligned via downbeat detection (manual offset slider deferred to a future phase)
-- Pairwise only (no N-track mashups)
+Pairwise mashup: combine two tracks into a coherent remix. Two-column
+8-stem mixer with per-stem volume sliders. 8 built-in templates + 5 feel
+knobs (tempo mod, master pitch, reverb mix + room, HPF on B). Sidecar
+auto-aligns BPM and key via time-stretch + pitch-shift.
 
 ### Sub-plans
 
@@ -20,8 +13,10 @@ Default policies (revisitable during implementation):
 - **21-02**: C++ glue — `MashupParams`, `AudioBridge::mashup()`, `ScreenContext` fields ✅
 - **21-03**: `ScreenMashup` UI — two-column 8-stem mixer with per-stem volume sliders ✅
 - **21-04**: Entry-point flow — "Mashup >" button (teal) on `ScreenStemsReady`; 2nd-file load + 2nd separation ✅
-- **21-05**: Mashup templates — JSON template format with feel knobs (bpm_modifier, master_pitch_offset_semi, master_reverb_mix, master_reverb_room, highpass_b_hz), 8 built-in presets, sidecar + C++ + UI combo with Advanced ▾ disclosure
-- **21-06**: Release integration — README mashup tutorial + screenshots + version bump v3.1.0 + tag
+- **21-05**: Mashup templates — 8 built-in JSON templates + 5 feel knobs (bpm_modifier, master_pitch_offset_semi, master_reverb_mix, master_reverb_room, highpass_b_hz) + Advanced ▾ disclosure ✅
+- **21-06**: Release — README mashup tutorial + CLAUDE/PROJECT updates + sidecar v0.5.0 + git tag v3.1.0 ✅
+
+Deliverable: load two files → pick stems from each (or apply a template) → render unified mashup with aligned tempo + key ✓
 
 Deliverable: load two files → pick stems from each → render unified mashup with aligned tempo + key.
 

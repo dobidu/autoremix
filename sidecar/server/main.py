@@ -26,7 +26,7 @@ from .mashup_presets.loader import MashupPresetLoader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AutoRemix Sidecar", version="0.4.0")
+app = FastAPI(title="AutoRemix Sidecar", version="0.5.0")
 
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR",
     str(Path(tempfile.gettempdir()) / "autoremix")))

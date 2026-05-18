@@ -4,7 +4,7 @@
 
 Milestone: v10 — IN PROGRESS
 Phase: 21 — IN PROGRESS
-Status: 21-05 UNIFY complete. Mashup templates shipped (8 built-ins + feel knobs). Ready for 21-06 (release).
+Status: 21-06 PLAN drafted (docs + release v3.1.0). Awaiting APPLY.
 Last activity: 2026-05-18
 
 Progress:
@@ -27,6 +27,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [21-03 complete] ScreenMashup UI (widgets, layout, run_mashup wiring)
   ✓        ✓        ✓     [21-04 complete] Entry-point flow + redesign (8-stem 2-col mixer, vibrant colors, render progress)
   ✓        ✓        ✓     [21-05 complete] Mashup templates (8 built-ins + 5 feel knobs + Advanced ▾)
+  ✓        ·        ·     [21-06 planned ] Docs + release v3.1.0 (README mashup tutorial + version bump + tag)
 ```
 
 ## Session Continuity

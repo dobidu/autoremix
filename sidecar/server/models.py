@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 class SeparateRequest(BaseModel):
     input_path: str
@@ -120,6 +120,54 @@ class PresetSummary(BaseModel):
     params: PresetParams
     stem_mix: StemMix
     effects: list = []
+
+
+class MashupRequest(BaseModel):
+    file_a: str
+    file_b: str
+    separator_id: str = "algorithmic"
+    # Per-stem gains for each track (0.0 = silent, 1.0 = unity, 2.0 = +6dB).
+    # Keys: "vocals", "drums", "bass", "other". Missing keys default to 1.0.
+    stem_gains_a: dict[str, float] = {"vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0}
+    stem_gains_b: dict[str, float] = {"vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0}
+    target_bpm: Optional[float] = None
+    target_key: Optional[str] = None
+    output_dir: Optional[str] = None
+    # Feel knobs (Phase 21-05). Defaults preserve pre-21-05 behavior.
+    bpm_modifier:             float = 1.0   # multiplier on anchored BPM
+    master_pitch_offset_semi: float = 0.0   # extra shift on top of key match
+    master_reverb_mix:        float = 0.0   # 0..1 wet, applied to final mix
+    master_reverb_room:       float = 0.5   # 0..1 room size
+    highpass_b_hz:            float = 0.0   # cut B's lows before mix (0 = off)
+
+
+class MashupPreset(BaseModel):
+    id: str
+    version: str = "1.0"
+    name: str
+    description: str = ""
+    author: str = "AutoRemix"
+    tags: list[str] = []
+    stem_gains_a: dict[str, float]
+    stem_gains_b: dict[str, float]
+    target_bpm_mode: Literal["anchor_a", "anchor_b", "average", "absolute"] = "anchor_a"
+    target_bpm_absolute: Optional[float] = None
+    target_key_mode: Literal["anchor_a", "anchor_b", "absolute"] = "anchor_a"
+    target_key_absolute: Optional[str] = None
+    bpm_modifier:             float = 1.0
+    master_pitch_offset_semi: float = 0.0
+    master_reverb_mix:        float = 0.0
+    master_reverb_room:       float = 0.5
+    highpass_b_hz:            float = 0.0
+
+
+class MashupResponse(BaseModel):
+    success: bool
+    output_path: Optional[str] = None
+    target_bpm: Optional[float] = None
+    target_key: Optional[str] = None
+    length_sec: Optional[float] = None
+    error: Optional[str] = None
 
 
 class CreatePresetRequest(BaseModel):

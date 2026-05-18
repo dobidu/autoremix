@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# Phase 21 additions
+__pycache__/
+*.pyc
+.cache/
+build/
+graphify-out/
+sidecar/.venv/

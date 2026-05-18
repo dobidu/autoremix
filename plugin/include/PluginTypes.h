@@ -39,6 +39,54 @@ struct ProcessResult {
     std::filesystem::path output_path;
 };
 
+// --- Mashup parameters (pairwise mashup: combine track A and track B) ---
+struct MashupParams {
+    std::filesystem::path file_a;
+    std::filesystem::path file_b;
+    std::string separator_id = "algorithmic";
+    // Per-stem gain for each track. Keys: "vocals", "drums", "bass", "other".
+    // 0.0 = silent, 1.0 = unity, 2.0 = +6 dB. Missing keys default to 1.0.
+    std::unordered_map<std::string, float> stem_gains_a;
+    std::unordered_map<std::string, float> stem_gains_b;
+    float       target_bpm     = 0.0f;
+    bool        has_target_bpm = false;
+    std::string target_key;            // empty = anchor to A
+    // Feel knobs (Phase 21-05). Defaults preserve pre-21-05 behavior.
+    float bpm_modifier             = 1.0f;
+    float master_pitch_offset_semi = 0.0f;
+    float master_reverb_mix        = 0.0f;
+    float master_reverb_room       = 0.5f;
+    float highpass_b_hz            = 0.0f;
+};
+
+// --- Mashup preset metadata returned by AudioBridge::getMashupPresets() ---
+struct MashupPresetInfo {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::unordered_map<std::string, float> stem_gains_a;
+    std::unordered_map<std::string, float> stem_gains_b;
+    std::string target_bpm_mode      = "anchor_a";
+    float       target_bpm_absolute  = 0.0f;     // 0 = unset
+    std::string target_key_mode      = "anchor_a";
+    std::string target_key_absolute;
+    float       bpm_modifier             = 1.0f;
+    float       master_pitch_offset_semi = 0.0f;
+    float       master_reverb_mix        = 0.0f;
+    float       master_reverb_room       = 0.5f;
+    float       highpass_b_hz            = 0.0f;
+};
+
+// --- Mashup result ---
+struct MashupResult {
+    bool        success = false;
+    std::string error_message;
+    std::filesystem::path output_path;
+    float       target_bpm = 0.0f;
+    std::string target_key;
+    float       length_sec = 0.0f;
+};
+
 // --- Preset metadata returned by AudioBridge::getPresets() ---
 struct PresetInfo {
     std::string id;

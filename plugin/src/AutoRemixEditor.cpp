@@ -7,6 +7,7 @@
 #include "ScreenStemsReady.h"
 #include "ScreenModeParams.h"
 #include "ScreenRender.h"
+#include "ScreenMashup.h"
 #include <thread>
 #include <filesystem>
 #include <algorithm>
@@ -46,15 +47,32 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     ctx_.get_preview_position = [this] { return audioProcessor.getPreviewPosition(); };
     ctx_.get_stem_position    = [this](int idx) { return audioProcessor.getStemPosition(idx); };
 
+    ctx_.run_mashup = [this](autoremix::MashupParams params,
+                             std::function<void(autoremix::MashupResult)> on_complete) {
+        std::thread([this, params = std::move(params),
+                     on_complete = std::move(on_complete)]() mutable {
+            auto result = audioProcessor.getBridge().mashup(params);
+            juce::MessageManager::callAsync(
+                [on_complete = std::move(on_complete),
+                 result = std::move(result)]() mutable {
+                    on_complete(std::move(result));
+                });
+        }).detach();
+    };
+
+    ctx_.start_mashup_flow = [this] { startMashupFlow(); };
+
     navigateTo(ScreenId::Empty, false);
 
     std::thread([this]() {
-        auto& bridge = audioProcessor.getBridge();
-        auto presets = bridge.getPresets();
-        auto seps    = bridge.getAvailableSeparators();
-        if (presets.empty() && seps.empty()) return;
-        juce::MessageManager::callAsync([this, presets = std::move(presets),
-                                               seps    = std::move(seps)]() mutable {
+        auto& bridge       = audioProcessor.getBridge();
+        auto presets       = bridge.getPresets();
+        auto seps          = bridge.getAvailableSeparators();
+        auto mashup_presets = bridge.getMashupPresets();
+        if (presets.empty() && seps.empty() && mashup_presets.empty()) return;
+        juce::MessageManager::callAsync([this, presets       = std::move(presets),
+                                               seps          = std::move(seps),
+                                               mashup_presets = std::move(mashup_presets)]() mutable {
             if (!presets.empty()) {
                 presets_     = std::move(presets);
                 ctx_.presets = presets_;
@@ -68,6 +86,8 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
                     separator_combo_.addItem(separators_[(size_t)i].display_name, i + 1);
                 separator_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
             }
+            if (!mashup_presets.empty())
+                ctx_.mashup_presets = std::move(mashup_presets);
         });
     }).detach();
 }
@@ -101,6 +121,69 @@ void AutoRemixAudioProcessorEditor::loadFile()
                 if (auto* se = dynamic_cast<ScreenEmpty*>(screen_.get()))
                     se->fileWasSelected(f);
             }
+        });
+}
+
+void AutoRemixAudioProcessorEditor::startMashupFlow()
+{
+#if defined(_WIN32) || defined(__APPLE__)
+    constexpr bool useNativeDialog = true;
+#else
+    constexpr bool useNativeDialog = false;
+#endif
+    chooser_ = std::make_unique<juce::FileChooser>(
+        "Load track B for mashup...",
+        juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+        "*.wav;*.aif;*.aiff;*.mp3;*.flac;*.ogg;*.m4a",
+        useNativeDialog);
+
+    chooser_->launchAsync(
+        juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [this](const juce::FileChooser& fc) {
+            auto results = fc.getResults();
+            if (results.isEmpty()) return;
+            auto f = results[0];
+            if (!f.existsAsFile()) return;
+
+            const juce::String b_path_str = f.getFullPathName();
+            if (ctx_.set_status) ctx_.set_status("Track B: analyzing...");
+
+            std::thread([this, b_path_str]() {
+                auto& bridge = audioProcessor.getBridge();
+                auto fa = bridge.analyzeFile(b_path_str);
+
+                juce::MessageManager::callAsync([this, fa] {
+                    if (fa.bpm > 0.0f) ctx_.detected_bpm_b = fa.bpm;
+                    ctx_.detected_key_b = juce::String(fa.key);
+                    if (ctx_.set_status) ctx_.set_status("Track B: separating...");
+                });
+
+                std::string sep_id = "algorithmic";
+                if (!separators_.empty()
+                    && ctx_.selected_separator_idx >= 0
+                    && (size_t)ctx_.selected_separator_idx < separators_.size())
+                    sep_id = separators_[(size_t)ctx_.selected_separator_idx].id;
+
+                std::filesystem::path in_path  = b_path_str.toStdString();
+                std::filesystem::path out_dir  =
+                    std::filesystem::temp_directory_path() / "autoremix"
+                    / "stems_b" / in_path.stem();
+
+                auto stems = bridge.separateStems(in_path, out_dir, sep_id);
+
+                juce::MessageManager::callAsync(
+                    [this, b_path_str, stems = std::move(stems)]() mutable {
+                        if (!stems.valid) {
+                            if (ctx_.set_status)
+                                ctx_.set_status("Track B separation failed");
+                            return;
+                        }
+                        ctx_.file_path_b = b_path_str;
+                        ctx_.stems_b     = std::move(stems);
+                        if (ctx_.set_status) ctx_.set_status("Track B ready");
+                        if (ctx_.navigate)   ctx_.navigate(ScreenId::Mashup);
+                    });
+            }).detach();
         });
 }
 
@@ -248,6 +331,10 @@ void AutoRemixAudioProcessorEditor::installScreen(ScreenId id, bool animate)
                 }
             );
             newScreen.reset(s);
+            break;
+        }
+        case ScreenId::Mashup: {
+            newScreen = std::make_unique<ScreenMashup>(ctx_);
             break;
         }
         default:

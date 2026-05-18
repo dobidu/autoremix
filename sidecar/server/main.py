@@ -15,11 +15,13 @@ from fastapi import FastAPI, HTTPException
 from .models import (
     SeparateRequest, SeparateResponse, StemPaths as StemPathsModel,
     RemixRequest, RemixResponse, HealthResponse,
+    MashupRequest, MashupResponse, MashupPreset,
     PresetSummary, CreatePresetRequest,
     RemixPreset, PresetParams, StemMix,
 )
 from .registry import get_separator, get_engine, list_separators, list_engines
 from .presets.loader import PresetLoader
+from .mashup_presets.loader import MashupPresetLoader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +31,7 @@ app = FastAPI(title="AutoRemix Sidecar", version="0.4.0")
 TEMP_DIR = Path(os.environ.get("AUTOREMIX_TEMP_DIR",
     str(Path(tempfile.gettempdir()) / "autoremix")))
 _presets = PresetLoader().load_all()
+_mashup_presets = MashupPresetLoader().load_all()
 
 _CHOP_MODE_OPS: dict[str, dict] = {
     "beat":       {"op": "chop_beats",    "stems": "vocals", "params": {"division": 1.0, "repeat": 2}},
@@ -191,6 +194,66 @@ async def remix(req: RemixRequest):
     except Exception as e:
         logger.exception("Remix failed")
         return RemixResponse(success=False, error=str(e))
+
+
+@app.get("/api/v1/mashup_presets", response_model=list[MashupPreset])
+async def list_mashup_presets():
+    return list(_mashup_presets.values())
+
+
+@app.post("/api/v1/mashup", response_model=MashupResponse)
+async def mashup(req: MashupRequest):
+    try:
+        file_a = Path(req.file_a)
+        file_b = Path(req.file_b)
+        if not file_a.exists():
+            raise HTTPException(status_code=400, detail=f"File not found: {req.file_a}")
+        if not file_b.exists():
+            raise HTTPException(status_code=400, detail=f"File not found: {req.file_b}")
+
+        separator = get_separator(req.separator_id)
+        if not separator.is_available():
+            raise HTTPException(
+                status_code=503,
+                detail=f"Separator {req.separator_id} not available",
+            )
+
+        from .remix.mashup import MashupEngine
+
+        out_dir_a = TEMP_DIR / "mashup" / file_a.stem / "a"
+        out_dir_b = TEMP_DIR / "mashup" / file_b.stem / "b"
+        out_root = Path(req.output_dir) if req.output_dir else (TEMP_DIR / "mashup" / "output")
+        output_path = out_root / f"{file_a.stem}__{file_b.stem}_mashup.wav"
+
+        logger.info(f"Mashup {file_a.name} × {file_b.name} ({req.separator_id})")
+        engine = MashupEngine()
+        result = await asyncio.to_thread(
+            engine.process,
+            file_a, file_b, separator,
+            req.stem_gains_a, req.stem_gains_b,
+            req.target_bpm, req.target_key,
+            out_dir_a, out_dir_b, output_path,
+            req.bpm_modifier,
+            req.master_pitch_offset_semi,
+            req.master_reverb_mix,
+            req.master_reverb_room,
+            req.highpass_b_hz,
+        )
+
+        return MashupResponse(
+            success=True,
+            output_path=str(output_path),
+            target_bpm=result["target_bpm"],
+            target_key=result["target_key"],
+            length_sec=result["length_sec"],
+        )
+    except HTTPException:
+        raise
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Mashup failed")
+        return MashupResponse(success=False, error=str(e))
 
 
 if __name__ == "__main__":

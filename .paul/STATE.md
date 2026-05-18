@@ -3,8 +3,8 @@
 ## Current Position
 
 Milestone: v10 — IN PROGRESS
-Phase: 21 — PLANNING
-Status: 21-01 PLAN created (sidecar MashupEngine + endpoint). Awaiting APPLY.
+Phase: 21 — IN PROGRESS
+Status: 21-05 UNIFY complete. Mashup templates shipped (8 built-ins + feel knobs). Ready for 21-06 (release).
 Last activity: 2026-05-18
 
 Progress:
@@ -22,7 +22,11 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [18-05 complete] ScreenRender + editor migration
   ✓        ✓        ✓     [19-01 complete] Stem drag-to-DAW
   ✓        ✓        ✓     [20-01 complete] Audio playback (stems + original/remix preview)
-  ✓        ·        ·     [21-01 planned ] AutoMashup sidecar (MashupEngine + endpoint)
+  ✓        ✓        ✓     [21-01 complete] AutoMashup sidecar (MashupEngine + endpoint)
+  ✓        ✓        ✓     [21-02 complete] C++ glue (MashupParams/Result + AudioBridge::mashup + ScreenContext fields)
+  ✓        ✓        ✓     [21-03 complete] ScreenMashup UI (widgets, layout, run_mashup wiring)
+  ✓        ✓        ✓     [21-04 complete] Entry-point flow + redesign (8-stem 2-col mixer, vibrant colors, render progress)
+  ✓        ✓        ✓     [21-05 complete] Mashup templates (8 built-ins + 5 feel knobs + Advanced ▾)
 ```
 
 ## Session Continuity

@@ -48,6 +48,7 @@ private:
     juce::ComponentAnimator      screen_animator_;
 
     void loadFile();
+    void startMashupFlow();
     void loadEngineDefaults(int idx);
     void drawAndConfigComponents();
     void navigateTo(ScreenId id, bool animate = true);

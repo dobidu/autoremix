@@ -1,0 +1,17 @@
+{
+  "id": "nightcore_mashup",
+  "version": "1.0",
+  "name": "Nightcore Mashup",
+  "description": "Both tracks sped up and pitched up.",
+  "author": "AutoRemix",
+  "tags": ["mashup", "nightcore", "fast"],
+  "stem_gains_a": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "stem_gains_b": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "target_bpm_mode": "anchor_a",
+  "target_key_mode": "anchor_a",
+  "bpm_modifier": 1.30,
+  "master_pitch_offset_semi": 4.0,
+  "master_reverb_mix": 0.0,
+  "master_reverb_room": 0.5,
+  "highpass_b_hz": 0.0
+}

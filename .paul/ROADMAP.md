@@ -16,11 +16,12 @@ Default policies (revisitable during implementation):
 
 ### Sub-plans
 
-- **21-01**: Sidecar — `MashupEngine` + `POST /api/v1/mashup` + pytest coverage
-- **21-02**: C++ glue — `MashupParams`, `AudioBridge::mashup()`, `ScreenContext` fields (`file_path_b`, `stems_b`, mashup callbacks)
-- **21-03**: `ScreenMashup` UI — per-stem A/B source toggles + target BPM/key sliders
-- **21-04**: Entry-point flow — "Mashup" button on `ScreenStemsReady`; load-2nd-file + 2nd separation
-- **21-05**: Render integration + tests + README update + release v3.1.0
+- **21-01**: Sidecar — `MashupEngine` + `POST /api/v1/mashup` + pytest coverage ✅
+- **21-02**: C++ glue — `MashupParams`, `AudioBridge::mashup()`, `ScreenContext` fields ✅
+- **21-03**: `ScreenMashup` UI — two-column 8-stem mixer with per-stem volume sliders ✅
+- **21-04**: Entry-point flow — "Mashup >" button (teal) on `ScreenStemsReady`; 2nd-file load + 2nd separation ✅
+- **21-05**: Mashup templates — JSON template format with feel knobs (bpm_modifier, master_pitch_offset_semi, master_reverb_mix, master_reverb_room, highpass_b_hz), 8 built-in presets, sidecar + C++ + UI combo with Advanced ▾ disclosure
+- **21-06**: Release integration — README mashup tutorial + screenshots + version bump v3.1.0 + tag
 
 Deliverable: load two files → pick stems from each → render unified mashup with aligned tempo + key.
 

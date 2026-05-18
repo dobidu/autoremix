@@ -15,7 +15,8 @@ namespace AR {
     constexpr uint32_t COMMENT = 0xFF5A5A60;   // de-emphasized text
 
     // ── Accent + semantic ─────────────────────────────────────────────────────
-    constexpr uint32_t ACCENT  = 0xFFD4652A;   // burnt orange — primary CTA
+    constexpr uint32_t ACCENT  = 0xFFD4652A;   // burnt orange — primary CTA (Remix)
+    constexpr uint32_t MASHUP  = 0xFF2EC4B6;   // tiffany teal — Mashup CTA
     constexpr uint32_t SUCCESS = 0xFF6B8E23;   // olive green
     constexpr uint32_t WARNING = 0xFFC89B3C;   // amber
     constexpr uint32_t ERROR   = 0xFFA0392C;   // muted red
@@ -127,11 +128,15 @@ public:
                               bool shouldDrawButtonAsDown) override
     {
         auto bounds = button.getLocalBounds().toFloat();
-        bool isPrimary = (button.getComponentID() == "primary");
+        auto cid = button.getComponentID();
+        bool isPrimary       = (cid == "primary");
+        bool isPrimaryMashup = (cid == "primary_mashup");
         float alpha = button.isEnabled() ? 1.0f : 0.4f;
 
-        if (isPrimary) {
-            auto fill = juce::Colour(AR::ACCENT).withAlpha(alpha);
+        if (isPrimary || isPrimaryMashup) {
+            auto base = isPrimaryMashup ? juce::Colour(AR::MASHUP)
+                                        : juce::Colour(AR::ACCENT);
+            auto fill = base.withAlpha(alpha);
             if (shouldDrawButtonAsDown)        fill = fill.darker(0.25f);
             if (shouldDrawButtonAsHighlighted) fill = fill.brighter(0.15f);
             g.setColour(fill);
@@ -156,7 +161,8 @@ public:
     {
         g.setFont(AR::font(AR::FontRole::button));
         float alpha = button.isEnabled() ? 1.0f : 0.4f;
-        bool isPrimary = (button.getComponentID() == "primary");
+        auto cid = button.getComponentID();
+        bool isPrimary = (cid == "primary" || cid == "primary_mashup");
         g.setColour(isPrimary ? juce::Colour(AR::FG).withAlpha(alpha)
                               : juce::Colour(AR::FG).withAlpha(alpha * 0.85f));
         g.drawFittedText(button.getButtonText().toUpperCase(),

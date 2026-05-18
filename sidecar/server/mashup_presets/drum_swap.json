@@ -1,0 +1,17 @@
+{
+  "id": "drum_swap",
+  "version": "1.0",
+  "name": "Drum Swap",
+  "description": "A's track with B's drums.",
+  "author": "AutoRemix",
+  "tags": ["mashup", "drums"],
+  "stem_gains_a": { "vocals": 1.0, "drums": 0.0, "bass": 1.0, "other": 1.0 },
+  "stem_gains_b": { "vocals": 0.0, "drums": 1.0, "bass": 0.0, "other": 0.0 },
+  "target_bpm_mode": "anchor_a",
+  "target_key_mode": "anchor_a",
+  "bpm_modifier": 1.0,
+  "master_pitch_offset_semi": 0.0,
+  "master_reverb_mix": 0.05,
+  "master_reverb_room": 0.4,
+  "highpass_b_hz": 60.0
+}

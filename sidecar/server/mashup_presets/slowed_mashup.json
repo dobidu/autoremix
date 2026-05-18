@@ -1,0 +1,17 @@
+{
+  "id": "slowed_mashup",
+  "version": "1.0",
+  "name": "Slowed Mashup",
+  "description": "Both tracks slowed and drenched in reverb.",
+  "author": "AutoRemix",
+  "tags": ["mashup", "slowed", "reverb"],
+  "stem_gains_a": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "stem_gains_b": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "target_bpm_mode": "anchor_a",
+  "target_key_mode": "anchor_a",
+  "bpm_modifier": 0.75,
+  "master_pitch_offset_semi": -2.0,
+  "master_reverb_mix": 0.35,
+  "master_reverb_room": 0.7,
+  "highpass_b_hz": 0.0
+}

@@ -113,6 +113,105 @@ ProcessResult AudioBridge::applyRemix(
     } catch (...) { return {}; }
 }
 
+MashupResult AudioBridge::mashup(const MashupParams& params) {
+    try {
+        nlohmann::json gains_a = nlohmann::json::object();
+        for (auto& [k, v] : params.stem_gains_a) gains_a[k] = v;
+        nlohmann::json gains_b = nlohmann::json::object();
+        for (auto& [k, v] : params.stem_gains_b) gains_b[k] = v;
+
+        nlohmann::json body = {
+            {"file_a",                   params.file_a.string()},
+            {"file_b",                   params.file_b.string()},
+            {"separator_id",             params.separator_id},
+            {"stem_gains_a",             gains_a},
+            {"stem_gains_b",             gains_b},
+            {"bpm_modifier",             params.bpm_modifier},
+            {"master_pitch_offset_semi", params.master_pitch_offset_semi},
+            {"master_reverb_mix",        params.master_reverb_mix},
+            {"master_reverb_room",       params.master_reverb_room},
+            {"highpass_b_hz",            params.highpass_b_hz},
+        };
+        if (params.has_target_bpm)
+            body["target_bpm"] = params.target_bpm;
+        if (!params.target_key.empty())
+            body["target_key"] = params.target_key;
+
+        auto r = cpr::Post(
+            cpr::Url{makeUrl("/api/v1/mashup")},
+            cpr::Header{{"Content-Type", "application/json"}},
+            cpr::Body{body.dump()},
+            cpr::Timeout{600000}
+        );
+
+        MashupResult result;
+        if (r.status_code != 200) {
+            result.error_message = "HTTP " + std::to_string(r.status_code);
+            return result;
+        }
+
+        auto resp = nlohmann::json::parse(r.text);
+        if (!resp.value("success", false)) {
+            result.error_message = resp.value("error", std::string{"mashup failed"});
+            return result;
+        }
+
+        result.success     = true;
+        result.output_path = resp.value("output_path", std::string{});
+        result.target_bpm  = resp.value("target_bpm",  0.0f);
+        result.target_key  = resp.value("target_key",  std::string{});
+        result.length_sec  = resp.value("length_sec",  0.0f);
+        return result;
+
+    } catch (const std::exception& e) {
+        return {false, e.what()};
+    } catch (...) {
+        return {false, "unknown exception"};
+    }
+}
+
+std::vector<MashupPresetInfo> AudioBridge::getMashupPresets() {
+    try {
+        auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/mashup_presets")},
+                          cpr::Timeout{3000});
+        if (r.status_code != 200) return {};
+
+        auto arr = nlohmann::json::parse(r.text);
+        std::vector<MashupPresetInfo> result;
+        result.reserve(arr.size());
+
+        for (auto& item : arr) {
+            MashupPresetInfo info;
+            info.id          = item.value("id", std::string{});
+            info.name        = item.value("name", info.id);
+            info.description = item.value("description", std::string{});
+
+            if (item.contains("stem_gains_a"))
+                for (auto& [k, v] : item["stem_gains_a"].items())
+                    info.stem_gains_a[k] = v.get<float>();
+            if (item.contains("stem_gains_b"))
+                for (auto& [k, v] : item["stem_gains_b"].items())
+                    info.stem_gains_b[k] = v.get<float>();
+
+            info.target_bpm_mode      = item.value("target_bpm_mode", std::string{"anchor_a"});
+            if (item.contains("target_bpm_absolute") && !item["target_bpm_absolute"].is_null())
+                info.target_bpm_absolute = item["target_bpm_absolute"].get<float>();
+            info.target_key_mode      = item.value("target_key_mode", std::string{"anchor_a"});
+            if (item.contains("target_key_absolute") && !item["target_key_absolute"].is_null())
+                info.target_key_absolute = item["target_key_absolute"].get<std::string>();
+
+            info.bpm_modifier             = item.value("bpm_modifier",             1.0f);
+            info.master_pitch_offset_semi = item.value("master_pitch_offset_semi", 0.0f);
+            info.master_reverb_mix        = item.value("master_reverb_mix",        0.0f);
+            info.master_reverb_room       = item.value("master_reverb_room",       0.5f);
+            info.highpass_b_hz            = item.value("highpass_b_hz",            0.0f);
+
+            result.push_back(std::move(info));
+        }
+        return result;
+    } catch (...) { return {}; }
+}
+
 std::vector<PresetInfo> AudioBridge::getPresets() {
     try {
         auto r = cpr::Get(cpr::Url{makeUrl("/api/v1/presets")},

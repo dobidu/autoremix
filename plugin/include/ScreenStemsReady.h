@@ -34,9 +34,16 @@ public:
         back_btn_.onClick = [this] { ctx_.navigate(ScreenId::Empty); };
 
         addAndMakeVisible(next_btn_);
-        next_btn_.setButtonText("Choose Style >");
+        next_btn_.setButtonText("Remix >");
         next_btn_.setComponentID("primary");
         next_btn_.onClick = [this] { ctx_.navigate(ScreenId::ModeParams); };
+
+        addAndMakeVisible(mashup_btn_);
+        mashup_btn_.setButtonText("Mashup >");
+        mashup_btn_.setComponentID("primary_mashup");
+        mashup_btn_.onClick = [this] {
+            if (ctx_.start_mashup_flow) ctx_.start_mashup_flow();
+        };
     }
 
     ~ScreenStemsReady() override
@@ -137,6 +144,8 @@ public:
         auto ab = actionBar.reduced(16, 16);
         back_btn_.setBounds(ab.removeFromLeft(120));
         next_btn_.setBounds(ab.removeFromRight(180));
+        ab.removeFromRight(12);
+        mashup_btn_.setBounds(ab.removeFromRight(110));
     }
 
 private:
@@ -357,6 +366,7 @@ private:
 
     juce::TextButton back_btn_;
     juce::TextButton next_btn_;
+    juce::TextButton mashup_btn_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenStemsReady)
 };

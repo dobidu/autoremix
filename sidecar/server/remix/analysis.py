@@ -33,6 +33,28 @@ def detect_key(audio: np.ndarray, sr: int) -> str:
     return best_key
 
 
+def _key_root_index(key: str) -> int:
+    """Parse "C", "C#", "Eb", "Am", "F#m", "Bbm" → root index in [0, 11].
+    Mode suffix ("m") is stripped; mode is not preserved at this layer."""
+    k = key.strip()
+    if len(k) > 1 and k.endswith("m"):
+        k = k[:-1]
+    if k not in _NOTE_NAMES:
+        raise ValueError(f"Unknown key: {key!r}")
+    return _NOTE_NAMES.index(k)
+
+
+def semitone_delta(key_from: str, key_to: str) -> int:
+    """Return shortest semitone path from `key_from` to `key_to` in (-6, +6].
+    Mode (major/minor) is ignored — only the root tone matters for pitch-shift."""
+    src = _key_root_index(key_from)
+    dst = _key_root_index(key_to)
+    raw = (dst - src) % 12   # 0..11
+    if raw > 6:
+        raw -= 12            # → (-6, 0]
+    return raw
+
+
 def _to_mono(audio: np.ndarray) -> np.ndarray:
     if audio.ndim == 1:
         return audio

@@ -55,6 +55,16 @@ public:
         const std::filesystem::path& output_path
     );
 
+    /**
+     * Pairwise mashup: combine two tracks. Sidecar separates both, tempo-matches
+     * and key-matches track B to track A (or to user-specified targets), and
+     * muxes stems per `params.stem_sources`.
+     */
+    MashupResult mashup(const MashupParams& params);
+
+    /** Fetch available mashup templates from the sidecar. Returns empty on failure. */
+    std::vector<MashupPresetInfo> getMashupPresets();
+
     /** Start the Python sidecar as a child process */
     bool startSidecar(const std::filesystem::path& server_script_path);
 

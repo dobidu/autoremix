@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_core/juce_core.h>
 #include <functional>
+#include <unordered_map>
 #include <vector>
 #include "PluginTypes.h"
 
@@ -12,7 +13,8 @@ enum class ScreenId {
     Separating,   // stem separation in progress
     StemsReady,   // 4 stem rows with waveforms + mix controls
     ModeParams,   // preset + BPM/pitch/reverb/chop params
-    Render        // render progress + done state
+    Render,       // render progress + done state
+    Mashup        // pairwise mashup: pick stems from A or B + target BPM/key
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -78,4 +80,36 @@ struct ScreenContext {
     // Playback positions (0.0–1.0) — for cursor rendering
     std::function<double()>    get_preview_position;
     std::function<double(int)> get_stem_position;
+
+    // ── Track B + mashup state (populated by mashup flow; see Phase 21) ──────
+    juce::String         file_path_b;
+    float                detected_bpm_b = 120.0f;
+    juce::String         detected_key_b;
+    autoremix::StemPaths stems_b;
+    juce::String         mashup_output_path;
+    float                mashup_target_bpm = 0.0f;
+    juce::String         mashup_target_key;
+    // Mashup template registry (Phase 21-05). populated by the editor at startup.
+    std::vector<autoremix::MashupPresetInfo> mashup_presets;
+    int   selected_mashup_preset_idx       = -1;     // -1 = Custom
+    float mashup_bpm_modifier              = 1.0f;
+    float mashup_master_pitch_offset_semi  = 0.0f;
+    float mashup_master_reverb_mix         = 0.0f;
+    float mashup_master_reverb_room        = 0.5f;
+    float mashup_highpass_b_hz             = 0.0f;
+    // Per-stem gain for each track (0.0 = silent, 1.0 = unity, 2.0 = +6 dB).
+    // Defaults: track A vocals/other on, track B drums/bass on — vocal-over-instrumental.
+    std::unordered_map<std::string, float> mashup_gains_a{
+        {"vocals", 1.0f}, {"drums", 0.0f}, {"bass", 0.0f}, {"other", 1.0f}
+    };
+    std::unordered_map<std::string, float> mashup_gains_b{
+        {"vocals", 0.0f}, {"drums", 1.0f}, {"bass", 1.0f}, {"other", 0.0f}
+    };
+
+    std::function<void(autoremix::MashupParams,
+                       std::function<void(autoremix::MashupResult)>)> run_mashup;
+
+    // Invoked by ScreenStemsReady to open the track-B file picker and
+    // run the analyze+separate pipeline for the second track.
+    std::function<void()> start_mashup_flow;
 };

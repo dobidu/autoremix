@@ -25,6 +25,7 @@ jobs:
         run: |
           uv venv
           uv pip install -r requirements.txt
+          uv pip install -r requirements-dev.txt
 
       - name: Run pytest
         working-directory: sidecar

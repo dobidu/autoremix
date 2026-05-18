@@ -2,14 +2,14 @@
 
 ## Current Position
 
-Milestone: v10 — IN PROGRESS
-Phase: 21 — IN PROGRESS
-Status: 21-06 PLAN drafted (docs + release v3.1.0). Awaiting APPLY.
+Milestone: v10 — COMPLETE
+Phase: 21 — ✅ COMPLETE (2026-05-18)
+Status: Phase 21 shipped. v3.1.0 release live with mashup tutorial + binaries.
 Last activity: 2026-05-18
 
 Progress:
 - Milestone: v9 [██████████] 100%
-- Milestone: v10 [░░░░░░░░░░] 0% (Phase 21 just opened)
+- Milestone: v10 [██████████] 100% (Phase 21 complete)
 
 ## Loop Position
 
@@ -27,7 +27,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [21-03 complete] ScreenMashup UI (widgets, layout, run_mashup wiring)
   ✓        ✓        ✓     [21-04 complete] Entry-point flow + redesign (8-stem 2-col mixer, vibrant colors, render progress)
   ✓        ✓        ✓     [21-05 complete] Mashup templates (8 built-ins + 5 feel knobs + Advanced ▾)
-  ✓        ·        ·     [21-06 planned ] Docs + release v3.1.0 (README mashup tutorial + version bump + tag)
+  ✓        ✓        ✓     [21-06 complete] Docs + release v3.1.0 — all green
 ```
 
 ## Session Continuity

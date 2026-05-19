@@ -4,7 +4,7 @@
 
 Milestone: v11 — IN PROGRESS
 Phase: 22 — UX Polish (planning)
-Status: 22-03 UNIFY complete. Tooltips + suffixes + SIDECAR label live. Ready for 22-04.
+Status: 22-04 UNIFY complete. Drop-zone orientation live. Ready for 22-05 (final polish).
 Last activity: 2026-05-19
 
 Progress:
@@ -32,6 +32,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [22-01 complete] Track B separation uses ScreenSeparating (mashup-aware)
   ✓        ✓        ✓     [22-02 complete] ScreenRender mashup-aware Done state (MASHUP DONE + 3 play btns + New Mashup)
   ✓        ✓        ✓     [22-03 complete] Tooltips + slider unit suffixes + SIDECAR label
+  ✓        ✓        ✓     [22-04 complete] Drop-zone orientation copy (headline + subtitle + hint)
 ```
 
 ## Session Continuity

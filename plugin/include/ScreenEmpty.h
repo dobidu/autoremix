@@ -111,16 +111,28 @@ public:
         auto contentArea = bounds.withTrimmedBottom(72);
 
         if (ctx_.file_path.isEmpty()) {
+            // Headline
             g.setFont(AR::font(AR::FontRole::display_mega));
             g.setColour(juce::Colour(AR::COMMENT));
-            g.drawText("Drop audio file here",
-                       contentArea.withTrimmedBottom(60),
+            g.drawText("Drop a song here",
+                       contentArea.withTrimmedBottom(140),
                        juce::Justification::centred);
 
+            // Subtitle (one-line intro to the app)
+            g.setFont(AR::font(AR::FontRole::status));
+            g.setColour(juce::Colour(AR::FG).withAlpha(0.7f));
+            g.drawText(juce::String::fromUTF8(
+                           "Separate stems  \xC2\xB7  Remix  \xC2\xB7  Mashup two tracks"),
+                       juce::Rectangle<int>(0, contentArea.getCentreY() + 12,
+                                            getWidth(), 22),
+                       juce::Justification::centred);
+
+            // Hint
             g.setFont(AR::font(AR::FontRole::secondary));
             g.setColour(juce::Colour(AR::COMMENT).withAlpha(0.7f));
-            g.drawText("or",
-                       juce::Rectangle<int>(0, contentArea.getCentreY() + 20, getWidth(), 20),
+            g.drawText("or click Load File below",
+                       juce::Rectangle<int>(0, contentArea.getCentreY() + 60,
+                                            getWidth(), 20),
                        juce::Justification::centred);
         } else {
             auto waveArea = contentArea.reduced(0, 16);

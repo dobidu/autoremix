@@ -79,6 +79,18 @@ public:
         new_remix_btn_.onClick = [this] { ctx_.navigate(ScreenId::ModeParams); };
         new_remix_btn_.setVisible(false);
 
+        addAndMakeVisible(track_b_btn_);
+        track_b_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Track B"));
+        track_b_btn_.setComponentID("ghost");
+        track_b_btn_.onClick = [this] { handleTrackBPlay(); };
+        track_b_btn_.setVisible(false);
+
+        addAndMakeVisible(new_mashup_btn_);
+        new_mashup_btn_.setButtonText("New Mashup");
+        new_mashup_btn_.setComponentID("primary_mashup");
+        new_mashup_btn_.onClick = [this] { ctx_.navigate(ScreenId::Mashup); };
+        new_mashup_btn_.setVisible(false);
+
         addAndMakeVisible(new_file_btn_);
         new_file_btn_.setButtonText("New File");
         new_file_btn_.setComponentID("ghost");
@@ -108,7 +120,6 @@ public:
 
     void onEnter() override
     {
-        state_ = State::Rendering;
         elapsed_secs_ = 0;
         preview_mode_ = PreviewMode::None;
         cancel_requested_.store(false);
@@ -116,11 +127,22 @@ public:
 
         in_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.file_path)));
 
-        applyState();
-        startTimer(1000);
-        startRender();
-        resized();
-        repaint();
+        if (ctx_.render_is_mashup && ctx_.output_path.isNotEmpty()) {
+            // Mashup already rendered by ScreenMashup — just show it.
+            out_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.output_path)));
+            state_ = State::Done;
+            applyState();
+            startTimer(100);   // playback-position polling
+            resized();
+            repaint();
+        } else {
+            state_ = State::Rendering;
+            applyState();
+            startTimer(1000);
+            startRender();
+            resized();
+            repaint();
+        }
     }
 
     void onExit() override
@@ -144,8 +166,9 @@ public:
                 // playback just stopped (EOF or user) — clear cursor, reset buttons
                 preview_position_ = 0.0;
                 preview_mode_     = PreviewMode::None;
-                original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
-                remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+                original_btn_.setButtonText(originalIdleText());
+                remix_btn_   .setButtonText(remixIdleText());
+                track_b_btn_ .setButtonText(trackBIdleText());
                 repaint();
             }
             was_preview_playing_ = playing;
@@ -170,8 +193,11 @@ public:
             // Section labels
             g.setFont(AR::font(AR::FontRole::section_label));
             g.setColour(juce::Colour(AR::COMMENT));
-            g.drawText("ORIGINAL", origSection.removeFromTop(14), juce::Justification::centredLeft);
-            g.drawText("REMIX",    remixSection.removeFromTop(14), juce::Justification::centredLeft);
+            const bool mashup = ctx_.render_is_mashup;
+            g.drawText(mashup ? "TRACK A" : "ORIGINAL",
+                       origSection.removeFromTop(14), juce::Justification::centredLeft);
+            g.drawText(mashup ? "MASHUP" : "REMIX",
+                       remixSection.removeFromTop(14), juce::Justification::centredLeft);
 
             // Original waveform background
             g.setColour(juce::Colour(AR::BG_DEEP));
@@ -227,16 +253,26 @@ public:
             case State::Rendering:
                 cancel_btn_.setBounds(actionBar.withSizeKeepingCentre(120, 36));
                 break;
-            case State::Done:
+            case State::Done: {
+                bool mashup = ctx_.render_is_mashup;
                 new_file_btn_ .setBounds(actionBar.removeFromLeft(100));
                 actionBar.removeFromLeft(8);
-                original_btn_ .setBounds(actionBar.removeFromLeft(120));
-                actionBar.removeFromLeft(8);
-                remix_btn_    .setBounds(actionBar.removeFromLeft(120));
-                actionBar.removeFromLeft(8);
-                save_btn_     .setBounds(actionBar.removeFromLeft(100));
-                new_remix_btn_.setBounds(actionBar.removeFromRight(140));
+                int playW = mashup ? 100 : 120;
+                original_btn_ .setBounds(actionBar.removeFromLeft(playW));
+                actionBar.removeFromLeft(6);
+                if (mashup) {
+                    track_b_btn_ .setBounds(actionBar.removeFromLeft(playW));
+                    actionBar.removeFromLeft(6);
+                }
+                remix_btn_    .setBounds(actionBar.removeFromLeft(playW));
+                actionBar.removeFromLeft(6);
+                save_btn_     .setBounds(actionBar.removeFromLeft(80));
+                if (mashup)
+                    new_mashup_btn_.setBounds(actionBar.removeFromRight(140));
+                else
+                    new_remix_btn_ .setBounds(actionBar.removeFromRight(140));
                 break;
+            }
             case State::Error:
                 new_file_btn_.setBounds(actionBar.removeFromLeft(120));
                 retry_btn_   .setBounds(actionBar.removeFromRight(140));
@@ -246,29 +282,46 @@ public:
 
 private:
     enum class State     { Rendering, Done, Error };
-    enum class PreviewMode { None, Original, Remix };
+    enum class PreviewMode { None, Original, Remix, TrackB };
 
     void applyState()
     {
         bool rendering = (state_ == State::Rendering);
         bool done      = (state_ == State::Done);
         bool error     = (state_ == State::Error);
+        bool mashup    = ctx_.render_is_mashup;
 
         header_lbl_   .setVisible(rendering);
         timer_lbl_    .setVisible(rendering);
         progress_bar_ .setVisible(rendering);
         cancel_btn_   .setVisible(rendering);
 
-        done_lbl_     .setVisible(done);
-        original_btn_ .setVisible(done);
-        remix_btn_    .setVisible(done);
-        save_btn_     .setVisible(done);
-        new_remix_btn_.setVisible(done);
+        // Done header — different text/color for mashup
+        if (done) {
+            done_lbl_.setText(mashup ? "MASHUP DONE" : "DONE", juce::dontSendNotification);
+            done_lbl_.setColour(juce::Label::textColourId,
+                                juce::Colour(mashup ? AR::MASHUP : AR::SUCCESS));
+        }
+        done_lbl_      .setVisible(done);
 
-        error_lbl_    .setVisible(error);
-        retry_btn_    .setVisible(error);
+        // Play buttons (renamed in mashup mode)
+        original_btn_  .setVisible(done);
+        remix_btn_     .setVisible(done);
+        track_b_btn_   .setVisible(done && mashup);
+        if (done) {
+            original_btn_.setButtonText(originalIdleText());
+            remix_btn_   .setButtonText(remixIdleText());
+            track_b_btn_ .setButtonText(trackBIdleText());
+        }
 
-        new_file_btn_.setVisible(done || error);
+        save_btn_      .setVisible(done);
+        new_remix_btn_ .setVisible(done && !mashup);
+        new_mashup_btn_.setVisible(done && mashup);
+
+        error_lbl_     .setVisible(error);
+        retry_btn_     .setVisible(error);
+
+        new_file_btn_  .setVisible(done || error);
     }
 
     void startRender()
@@ -350,13 +403,14 @@ private:
         if (preview_mode_ == PreviewMode::Original && playing) {
             ctx_.stop_preview();
             preview_mode_ = PreviewMode::None;
-            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+            original_btn_.setButtonText(originalIdleText());
         } else {
             if (ctx_.stop_preview) ctx_.stop_preview();
             preview_mode_ = PreviewMode::Original;
-            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+            remix_btn_  .setButtonText(remixIdleText());
+            track_b_btn_.setButtonText(trackBIdleText());
             if (ctx_.play_preview) ctx_.play_preview(juce::File(ctx_.file_path));
-            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xA0 Original"));
+            original_btn_.setButtonText(originalPlayingText());
         }
     }
 
@@ -366,14 +420,55 @@ private:
         if (preview_mode_ == PreviewMode::Remix && playing) {
             ctx_.stop_preview();
             preview_mode_ = PreviewMode::None;
-            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Remix"));
+            remix_btn_.setButtonText(remixIdleText());
         } else {
             if (ctx_.stop_preview) ctx_.stop_preview();
             preview_mode_ = PreviewMode::Remix;
-            original_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xB6 Original"));
+            original_btn_.setButtonText(originalIdleText());
+            track_b_btn_ .setButtonText(trackBIdleText());
             if (ctx_.play_preview) ctx_.play_preview(juce::File(ctx_.output_path));
-            remix_btn_.setButtonText(juce::String::fromUTF8("\xE2\x96\xA0 Remix"));
+            remix_btn_.setButtonText(remixPlayingText());
         }
+    }
+
+    void handleTrackBPlay()
+    {
+        bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
+        if (preview_mode_ == PreviewMode::TrackB && playing) {
+            ctx_.stop_preview();
+            preview_mode_ = PreviewMode::None;
+            track_b_btn_.setButtonText(trackBIdleText());
+        } else {
+            if (ctx_.stop_preview) ctx_.stop_preview();
+            preview_mode_ = PreviewMode::TrackB;
+            original_btn_.setButtonText(originalIdleText());
+            remix_btn_   .setButtonText(remixIdleText());
+            if (ctx_.play_preview) ctx_.play_preview(juce::File(ctx_.file_path_b));
+            track_b_btn_.setButtonText(trackBPlayingText());
+        }
+    }
+
+    juce::String originalIdleText() const {
+        return juce::String::fromUTF8(ctx_.render_is_mashup ? "\xE2\x96\xB6 Track A"
+                                                            : "\xE2\x96\xB6 Original");
+    }
+    juce::String originalPlayingText() const {
+        return juce::String::fromUTF8(ctx_.render_is_mashup ? "\xE2\x96\xA0 Track A"
+                                                            : "\xE2\x96\xA0 Original");
+    }
+    juce::String remixIdleText() const {
+        return juce::String::fromUTF8(ctx_.render_is_mashup ? "\xE2\x96\xB6 Mashup"
+                                                            : "\xE2\x96\xB6 Remix");
+    }
+    juce::String remixPlayingText() const {
+        return juce::String::fromUTF8(ctx_.render_is_mashup ? "\xE2\x96\xA0 Mashup"
+                                                            : "\xE2\x96\xA0 Remix");
+    }
+    juce::String trackBIdleText() const {
+        return juce::String::fromUTF8("\xE2\x96\xB6 Track B");
+    }
+    juce::String trackBPlayingText() const {
+        return juce::String::fromUTF8("\xE2\x96\xA0 Track B");
     }
 
     void saveOutput()
@@ -424,8 +519,10 @@ private:
     juce::Label      done_lbl_;
     juce::TextButton original_btn_;
     juce::TextButton remix_btn_;
+    juce::TextButton track_b_btn_;
     juce::TextButton save_btn_;
     juce::TextButton new_remix_btn_;
+    juce::TextButton new_mashup_btn_;
     juce::TextButton new_file_btn_;
 
     juce::Label      error_lbl_;

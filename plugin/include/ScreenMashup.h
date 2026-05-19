@@ -532,6 +532,7 @@ private:
         }
         ctx_.mashup_output_path = juce::String(r.output_path.string());
         ctx_.output_path        = ctx_.mashup_output_path;
+        ctx_.render_is_mashup   = true;
         if (ctx_.navigate) ctx_.navigate(ScreenId::Render);
     }
 

@@ -103,7 +103,10 @@ public:
         addAndMakeVisible(render_btn_);
         render_btn_.setButtonText("Render >");
         render_btn_.setComponentID("primary");
-        render_btn_.onClick = [this] { ctx_.navigate(ScreenId::Render); };
+        render_btn_.onClick = [this] {
+            ctx_.render_is_mashup = false;
+            ctx_.navigate(ScreenId::Render);
+        };
     }
 
     void onEnter() override

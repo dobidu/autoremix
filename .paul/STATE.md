@@ -4,7 +4,7 @@
 
 Milestone: v11 — IN PROGRESS
 Phase: 22 — UX Polish (planning)
-Status: 22-01 UNIFY complete. Track B has proper progress UI. Ready for 22-02.
+Status: 22-02 UNIFY complete. Render Done state mashup-aware. Ready for 22-03 (tooltips + slider units).
 Last activity: 2026-05-19
 
 Progress:
@@ -30,6 +30,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [21-05 complete] Mashup templates (8 built-ins + 5 feel knobs + Advanced ▾)
   ✓        ✓        ✓     [21-06 complete] Docs + release v3.1.0 — all green
   ✓        ✓        ✓     [22-01 complete] Track B separation uses ScreenSeparating (mashup-aware)
+  ✓        ✓        ✓     [22-02 complete] ScreenRender mashup-aware Done state (MASHUP DONE + 3 play btns + New Mashup)
 ```
 
 ## Session Continuity

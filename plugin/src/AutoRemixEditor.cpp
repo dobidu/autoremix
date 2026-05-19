@@ -146,6 +146,7 @@ void AutoRemixAudioProcessorEditor::startMashupFlow()
             if (!f.existsAsFile()) return;
 
             const juce::String b_path_str = f.getFullPathName();
+            ctx_.file_path_b = b_path_str;
             if (ctx_.set_status) ctx_.set_status("Track B: analyzing...");
 
             std::thread([this, b_path_str]() {
@@ -155,34 +156,9 @@ void AutoRemixAudioProcessorEditor::startMashupFlow()
                 juce::MessageManager::callAsync([this, fa] {
                     if (fa.bpm > 0.0f) ctx_.detected_bpm_b = fa.bpm;
                     ctx_.detected_key_b = juce::String(fa.key);
-                    if (ctx_.set_status) ctx_.set_status("Track B: separating...");
+                    ctx_.mashup_mode_separating = true;
+                    if (ctx_.navigate) ctx_.navigate(ScreenId::Separating);
                 });
-
-                std::string sep_id = "algorithmic";
-                if (!separators_.empty()
-                    && ctx_.selected_separator_idx >= 0
-                    && (size_t)ctx_.selected_separator_idx < separators_.size())
-                    sep_id = separators_[(size_t)ctx_.selected_separator_idx].id;
-
-                std::filesystem::path in_path  = b_path_str.toStdString();
-                std::filesystem::path out_dir  =
-                    std::filesystem::temp_directory_path() / "autoremix"
-                    / "stems_b" / in_path.stem();
-
-                auto stems = bridge.separateStems(in_path, out_dir, sep_id);
-
-                juce::MessageManager::callAsync(
-                    [this, b_path_str, stems = std::move(stems)]() mutable {
-                        if (!stems.valid) {
-                            if (ctx_.set_status)
-                                ctx_.set_status("Track B separation failed");
-                            return;
-                        }
-                        ctx_.file_path_b = b_path_str;
-                        ctx_.stems_b     = std::move(stems);
-                        if (ctx_.set_status) ctx_.set_status("Track B ready");
-                        if (ctx_.navigate)   ctx_.navigate(ScreenId::Mashup);
-                    });
             }).detach();
         });
 }

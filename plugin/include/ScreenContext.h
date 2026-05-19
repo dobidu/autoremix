@@ -86,6 +86,7 @@ struct ScreenContext {
     float                detected_bpm_b = 120.0f;
     juce::String         detected_key_b;
     autoremix::StemPaths stems_b;
+    bool                 mashup_mode_separating = false;  // ScreenSeparating reads this
     juce::String         mashup_output_path;
     float                mashup_target_bpm = 0.0f;
     juce::String         mashup_target_key;

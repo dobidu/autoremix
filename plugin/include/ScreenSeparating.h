@@ -55,6 +55,9 @@ public:
     {
         elapsed_secs_ = 0;
         cancel_requested_.store(false);
+        mashup_mode_  = ctx_.mashup_mode_separating;
+        header_lbl_.setText(mashup_mode_ ? "SEPARATING TRACK B" : "SEPARATING STEMS",
+                            juce::dontSendNotification);
         for (auto& s : stems_) s.status = StemStatus::Waiting;
         startTimer(1000);
         startSeparation();
@@ -146,10 +149,13 @@ private:
 
     void startSeparation()
     {
-        juce::File inputFile(ctx_.file_path);
+        const juce::String inputPathStr = mashup_mode_ ? ctx_.file_path_b : ctx_.file_path;
+        const char* subdir = mashup_mode_ ? "stems_b" : "stems";
+
+        juce::File inputFile(inputPathStr);
         auto stemsDirJuce = juce::File::getSpecialLocation(juce::File::tempDirectory)
                                 .getChildFile("autoremix")
-                                .getChildFile("stems")
+                                .getChildFile(subdir)
                                 .getChildFile(inputFile.getFileNameWithoutExtension());
         std::filesystem::path outputDir = stemsDirJuce.getFullPathName().toStdString();
         std::filesystem::create_directories(outputDir);
@@ -158,7 +164,9 @@ private:
             ? "algorithmic"
             : ctx_.separators[(size_t)ctx_.selected_separator_idx].id;
 
-        std::thread([this, inputPath = ctx_.file_path.toStdString(), outputDir, separator_id]() mutable {
+        std::thread([this,
+                     inputPath = inputPathStr.toStdString(),
+                     outputDir, separator_id]() mutable {
             juce::MessageManager::callAsync([this] {
                 for (auto& s : stems_) s.status = StemStatus::Separating;
                 repaint();
@@ -174,14 +182,22 @@ private:
 
             juce::MessageManager::callAsync([this, result]() mutable {
                 if (result.valid) {
-                    ctx_.stems = result;
                     for (auto& s : stems_) s.status = StemStatus::Done;
                     repaint();
-                    ctx_.navigate(ScreenId::StemsReady);
+                    if (mashup_mode_) {
+                        ctx_.stems_b = result;
+                        ctx_.mashup_mode_separating = false;
+                        ctx_.navigate(ScreenId::Mashup);
+                    } else {
+                        ctx_.stems = result;
+                        ctx_.navigate(ScreenId::StemsReady);
+                    }
                 } else {
                     for (auto& s : stems_) s.status = StemStatus::Failed;
                     repaint();
-                    ctx_.set_status("Stem separation failed.");
+                    ctx_.set_status(mashup_mode_
+                        ? juce::String("Track B separation failed.")
+                        : juce::String("Stem separation failed."));
                 }
             });
         }).detach();
@@ -190,8 +206,14 @@ private:
     void requestCancel()
     {
         cancel_requested_.store(true);
-        ctx_.stems = {};
-        ctx_.navigate(ScreenId::Empty);
+        if (mashup_mode_) {
+            ctx_.stems_b = {};
+            ctx_.mashup_mode_separating = false;
+            ctx_.navigate(ScreenId::StemsReady);
+        } else {
+            ctx_.stems = {};
+            ctx_.navigate(ScreenId::Empty);
+        }
     }
 
     SeparateFn              separate_fn_;
@@ -205,6 +227,7 @@ private:
 
     int               elapsed_secs_ = 0;
     std::atomic<bool> cancel_requested_{false};
+    bool              mashup_mode_     = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenSeparating)
 };

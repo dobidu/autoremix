@@ -2,14 +2,15 @@
 
 ## Current Position
 
-Milestone: v10 — COMPLETE
-Phase: 21 — ✅ COMPLETE (2026-05-18)
-Status: Phase 21 shipped. v3.1.0 release live with mashup tutorial + binaries.
-Last activity: 2026-05-18
+Milestone: v11 — IN PROGRESS
+Phase: 22 — UX Polish (planning)
+Status: 22-01 UNIFY complete. Track B has proper progress UI. Ready for 22-02.
+Last activity: 2026-05-19
 
 Progress:
 - Milestone: v9 [██████████] 100%
 - Milestone: v10 [██████████] 100% (Phase 21 complete)
+- Milestone: v11 [░░░░░░░░░░] 0% (Phase 22 just opened)
 
 ## Loop Position
 
@@ -28,6 +29,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [21-04 complete] Entry-point flow + redesign (8-stem 2-col mixer, vibrant colors, render progress)
   ✓        ✓        ✓     [21-05 complete] Mashup templates (8 built-ins + 5 feel knobs + Advanced ▾)
   ✓        ✓        ✓     [21-06 complete] Docs + release v3.1.0 — all green
+  ✓        ✓        ✓     [22-01 complete] Track B separation uses ScreenSeparating (mashup-aware)
 ```
 
 ## Session Continuity

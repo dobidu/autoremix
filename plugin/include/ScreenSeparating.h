@@ -187,9 +187,11 @@ private:
                     if (mashup_mode_) {
                         ctx_.stems_b = result;
                         ctx_.mashup_mode_separating = false;
+                        if (ctx_.set_status) ctx_.set_status("Track B ready");
                         ctx_.navigate(ScreenId::Mashup);
                     } else {
                         ctx_.stems = result;
+                        if (ctx_.set_status) ctx_.set_status("Stems ready");
                         ctx_.navigate(ScreenId::StemsReady);
                     }
                 } else {

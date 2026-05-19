@@ -21,13 +21,15 @@ public:
     ScreenRender(ScreenContext& ctx, RenderFn render_fn)
         : ScreenBase(ctx),
           render_fn_(std::move(render_fn)),
-          thumbnail_cache_(8),
+          thumbnail_cache_(12),
           in_thumb_ (512, format_manager_, thumbnail_cache_),
+          b_thumb_  (512, format_manager_, thumbnail_cache_),
           out_thumb_(512, format_manager_, thumbnail_cache_),
           progress_value_(-1.0)
     {
         format_manager_.registerBasicFormats();
         in_thumb_ .addChangeListener(this);
+        b_thumb_  .addChangeListener(this);
         out_thumb_.addChangeListener(this);
 
         addAndMakeVisible(header_lbl_);
@@ -113,6 +115,7 @@ public:
     ~ScreenRender() override
     {
         in_thumb_ .removeChangeListener(this);
+        b_thumb_  .removeChangeListener(this);
         out_thumb_.removeChangeListener(this);
         stopTimer();
         cancel_requested_.store(true);
@@ -129,6 +132,10 @@ public:
 
         if (ctx_.render_is_mashup && ctx_.output_path.isNotEmpty()) {
             // Mashup already rendered by ScreenMashup — just show it.
+            if (ctx_.file_path_b.isNotEmpty())
+                b_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.file_path_b)));
+            else
+                b_thumb_.setSource(nullptr);
             out_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.output_path)));
             state_ = State::Done;
             applyState();
@@ -186,49 +193,93 @@ public:
                 .withTrimmedTop(80)
                 .withTrimmedBottom(72);
 
-            int halfH = fullContent.getHeight() / 2;
-            auto origSection  = fullContent.removeFromTop(halfH).reduced(32, 6);
-            auto remixSection = fullContent.reduced(32, 6);
-
-            // Section labels
-            g.setFont(AR::font(AR::FontRole::section_label));
-            g.setColour(juce::Colour(AR::COMMENT));
             const bool mashup = ctx_.render_is_mashup;
-            g.drawText(mashup ? "TRACK A" : "ORIGINAL",
-                       origSection.removeFromTop(14), juce::Justification::centredLeft);
-            g.drawText(mashup ? "MASHUP" : "REMIX",
-                       remixSection.removeFromTop(14), juce::Justification::centredLeft);
 
-            // Original waveform background
-            g.setColour(juce::Colour(AR::BG_DEEP));
-            g.fillRect(origSection);
+            if (mashup) {
+                // Three sections: TRACK A / TRACK B / MASHUP
+                int third = fullContent.getHeight() / 3;
+                auto aSection = fullContent.removeFromTop(third).reduced(32, 4);
+                auto bSection = fullContent.removeFromTop(third).reduced(32, 4);
+                auto mSection = fullContent.reduced(32, 4);
 
-            if (in_thumb_.getTotalLength() > 0.0) {
-                g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.6f));
-                in_thumb_.drawChannels(g, origSection, 0.0, in_thumb_.getTotalLength(), 1.0f);
-            }
+                g.setFont(AR::font(AR::FontRole::section_label));
+                g.setColour(juce::Colour(AR::COMMENT));
+                g.drawText("TRACK A", aSection.removeFromTop(14), juce::Justification::centredLeft);
+                g.drawText("TRACK B", bSection.removeFromTop(14), juce::Justification::centredLeft);
+                g.drawText("MASHUP",  mSection.removeFromTop(14), juce::Justification::centredLeft);
 
-            // Original cursor (position cached by timer — no callbacks from paint)
-            if (preview_mode_ == PreviewMode::Original && was_preview_playing_) {
-                int cx = origSection.getX() + (int)(preview_position_ * origSection.getWidth());
-                g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
-                g.fillRect(cx, origSection.getY(), 2, origSection.getHeight());
-            }
+                // Track A
+                g.setColour(juce::Colour(AR::BG_DEEP));
+                g.fillRect(aSection);
+                if (in_thumb_.getTotalLength() > 0.0) {
+                    g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.6f));
+                    in_thumb_.drawChannels(g, aSection, 0.0, in_thumb_.getTotalLength(), 1.0f);
+                }
+                if (preview_mode_ == PreviewMode::Original && was_preview_playing_) {
+                    int cx = aSection.getX() + (int)(preview_position_ * aSection.getWidth());
+                    g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                    g.fillRect(cx, aSection.getY(), 2, aSection.getHeight());
+                }
 
-            // Remix waveform background
-            g.setColour(juce::Colour(AR::BG_DEEP));
-            g.fillRect(remixSection);
+                // Track B
+                g.setColour(juce::Colour(AR::BG_DEEP));
+                g.fillRect(bSection);
+                if (b_thumb_.getTotalLength() > 0.0) {
+                    g.setColour(juce::Colour(AR::STEM_VOCALS).withAlpha(0.75f));
+                    b_thumb_.drawChannels(g, bSection, 0.0, b_thumb_.getTotalLength(), 1.0f);
+                }
+                if (preview_mode_ == PreviewMode::TrackB && was_preview_playing_) {
+                    int cx = bSection.getX() + (int)(preview_position_ * bSection.getWidth());
+                    g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                    g.fillRect(cx, bSection.getY(), 2, bSection.getHeight());
+                }
 
-            if (out_thumb_.getTotalLength() > 0.0) {
-                g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.85f));
-                out_thumb_.drawChannels(g, remixSection, 0.0, out_thumb_.getTotalLength(), 1.0f);
-            }
+                // Mashup
+                g.setColour(juce::Colour(AR::BG_DEEP));
+                g.fillRect(mSection);
+                if (out_thumb_.getTotalLength() > 0.0) {
+                    g.setColour(juce::Colour(AR::MASHUP).withAlpha(0.95f));
+                    out_thumb_.drawChannels(g, mSection, 0.0, out_thumb_.getTotalLength(), 1.0f);
+                }
+                if (preview_mode_ == PreviewMode::Remix && was_preview_playing_) {
+                    int cx = mSection.getX() + (int)(preview_position_ * mSection.getWidth());
+                    g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                    g.fillRect(cx, mSection.getY(), 2, mSection.getHeight());
+                }
+            } else {
+                // Two-section remix layout (unchanged)
+                int halfH = fullContent.getHeight() / 2;
+                auto origSection  = fullContent.removeFromTop(halfH).reduced(32, 6);
+                auto remixSection = fullContent.reduced(32, 6);
 
-            // Remix cursor (position cached by timer — no callbacks from paint)
-            if (preview_mode_ == PreviewMode::Remix && was_preview_playing_) {
-                int cx = remixSection.getX() + (int)(preview_position_ * remixSection.getWidth());
-                g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
-                g.fillRect(cx, remixSection.getY(), 2, remixSection.getHeight());
+                g.setFont(AR::font(AR::FontRole::section_label));
+                g.setColour(juce::Colour(AR::COMMENT));
+                g.drawText("ORIGINAL", origSection.removeFromTop(14), juce::Justification::centredLeft);
+                g.drawText("REMIX",    remixSection.removeFromTop(14), juce::Justification::centredLeft);
+
+                g.setColour(juce::Colour(AR::BG_DEEP));
+                g.fillRect(origSection);
+                if (in_thumb_.getTotalLength() > 0.0) {
+                    g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.6f));
+                    in_thumb_.drawChannels(g, origSection, 0.0, in_thumb_.getTotalLength(), 1.0f);
+                }
+                if (preview_mode_ == PreviewMode::Original && was_preview_playing_) {
+                    int cx = origSection.getX() + (int)(preview_position_ * origSection.getWidth());
+                    g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                    g.fillRect(cx, origSection.getY(), 2, origSection.getHeight());
+                }
+
+                g.setColour(juce::Colour(AR::BG_DEEP));
+                g.fillRect(remixSection);
+                if (out_thumb_.getTotalLength() > 0.0) {
+                    g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.85f));
+                    out_thumb_.drawChannels(g, remixSection, 0.0, out_thumb_.getTotalLength(), 1.0f);
+                }
+                if (preview_mode_ == PreviewMode::Remix && was_preview_playing_) {
+                    int cx = remixSection.getX() + (int)(preview_position_ * remixSection.getWidth());
+                    g.setColour(juce::Colour(AR::FG).withAlpha(0.9f));
+                    g.fillRect(cx, remixSection.getY(), 2, remixSection.getHeight());
+                }
             }
         }
     }
@@ -481,8 +532,18 @@ private:
             juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
             [this](const juce::FileChooser& fc) {
                 auto dest = fc.getResult();
-                if (dest.getFullPathName().isNotEmpty())
-                    juce::File(ctx_.output_path).copyFileTo(dest);
+                if (dest.getFullPathName().isEmpty()) return;
+                juce::File src(ctx_.output_path);
+                if (!src.existsAsFile()) {
+                    if (ctx_.set_status) ctx_.set_status("Save failed: source file missing");
+                    return;
+                }
+                if (src.copyFileTo(dest)) {
+                    if (ctx_.set_status) ctx_.set_status("Saved: " + dest.getFileName());
+                    dest.revealToUser();
+                } else {
+                    if (ctx_.set_status) ctx_.set_status("Save failed: copy error");
+                }
             });
     }
 
@@ -506,6 +567,7 @@ private:
     juce::AudioFormatManager  format_manager_;
     juce::AudioThumbnailCache thumbnail_cache_;
     juce::AudioThumbnail      in_thumb_;
+    juce::AudioThumbnail      b_thumb_;
     juce::AudioThumbnail      out_thumb_;
 
     std::unique_ptr<juce::FileChooser> chooser_;

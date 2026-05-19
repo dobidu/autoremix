@@ -2,15 +2,15 @@
 
 ## Current Position
 
-Milestone: v11 — IN PROGRESS
-Phase: 22 — UX Polish (planning)
-Status: 22-04 UNIFY complete. Drop-zone orientation live. Ready for 22-05 (final polish).
+Milestone: v11 — COMPLETE
+Phase: 22 — UX Polish ✅ COMPLETE (2026-05-19)
+Status: Phase 22 closed. All 5 sub-plans shipped. Ready for v3.2.0 release tag or new Phase 23.
 Last activity: 2026-05-19
 
 Progress:
 - Milestone: v9 [██████████] 100%
 - Milestone: v10 [██████████] 100% (Phase 21 complete)
-- Milestone: v11 [░░░░░░░░░░] 0% (Phase 22 just opened)
+- Milestone: v11 [██████████] 100% (Phase 22 complete)
 
 ## Loop Position
 
@@ -33,6 +33,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [22-02 complete] ScreenRender mashup-aware Done state (MASHUP DONE + 3 play btns + New Mashup)
   ✓        ✓        ✓     [22-03 complete] Tooltips + slider unit suffixes + SIDECAR label
   ✓        ✓        ✓     [22-04 complete] Drop-zone orientation copy (headline + subtitle + hint)
+  ✓        ✓        ✓     [22-05 complete] Final polish: copy + 3 waveforms + reveal + status
 ```
 
 ## Session Continuity

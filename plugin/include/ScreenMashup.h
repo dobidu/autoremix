@@ -44,6 +44,17 @@ public:
         rendering_hint_lbl_.setJustificationType(juce::Justification::centred);
         rendering_hint_lbl_.setVisible(false);
 
+        addAndMakeVisible(rendering_time_lbl_);
+        rendering_time_lbl_.setText(
+            juce::String::fromUTF8(
+                "Algorithmic: ~30s  \xC2\xB7  Demucs ML: 1-4 min per track"),
+            juce::dontSendNotification);
+        rendering_time_lbl_.setFont(AR::font(AR::FontRole::secondary));
+        rendering_time_lbl_.setColour(juce::Label::textColourId,
+                                      juce::Colour(AR::COMMENT).withAlpha(0.6f));
+        rendering_time_lbl_.setJustificationType(juce::Justification::centred);
+        rendering_time_lbl_.setVisible(false);
+
         addAndMakeVisible(header_lbl_);
         header_lbl_.setText("MASHUP", juce::dontSendNotification);
         header_lbl_.setFont(AR::font(AR::FontRole::section));
@@ -130,7 +141,7 @@ public:
         target_key_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
 
         addAndMakeVisible(target_key_combo_);
-        target_key_combo_.addItem("Anchor to A", 1);
+        target_key_combo_.addItem("Match A's key", 1);
         int id = 2;
         for (auto* note : kNotes) target_key_combo_.addItem(note, id++);
         target_key_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
@@ -166,14 +177,16 @@ public:
     void onEnter() override
     {
         setRendering(false);
-        a_header_lbl_.setText("TRACK A | " + filenameOf(ctx_.file_path),
+        a_header_lbl_.setText(juce::String::fromUTF8("TRACK A \xC2\xB7 ")
+                                  + filenameOf(ctx_.file_path),
                               juce::dontSendNotification);
         a_info_lbl_.setText("BPM " + juce::String(ctx_.detected_bpm, 1)
                             + "   KEY " + (ctx_.detected_key.isEmpty()
                                            ? juce::String("--") : ctx_.detected_key),
                             juce::dontSendNotification);
 
-        b_header_lbl_.setText("TRACK B | " + filenameOf(ctx_.file_path_b),
+        b_header_lbl_.setText(juce::String::fromUTF8("TRACK B \xC2\xB7 ")
+                                  + filenameOf(ctx_.file_path_b),
                               juce::dontSendNotification);
         b_info_lbl_.setText("BPM " + juce::String(ctx_.detected_bpm_b, 1)
                             + "   KEY " + (ctx_.detected_key_b.isEmpty()
@@ -298,6 +311,7 @@ public:
         rendering_header_lbl_ .setBounds(0, kHeaderH + centerH / 2 - 60, W, 60);
         rendering_elapsed_lbl_.setBounds(0, kHeaderH + centerH / 2 + 4,  W, 28);
         rendering_hint_lbl_   .setBounds(20, kHeaderH + centerH / 2 + 40, W - 40, 20);
+        rendering_time_lbl_   .setBounds(20, kHeaderH + centerH / 2 + 62, W - 40, 18);
     }
 
 private:
@@ -369,7 +383,7 @@ private:
     void populateTemplateCombo()
     {
         template_combo_.clear(juce::dontSendNotification);
-        template_combo_.addItem("Custom", 1);
+        template_combo_.addItem("Free mix", 1);
         for (size_t i = 0; i < ctx_.mashup_presets.size(); ++i)
             template_combo_.addItem(ctx_.mashup_presets[i].name, (int)(i + 2));
         template_combo_.setSelectedItemIndex(0, juce::dontSendNotification);
@@ -458,6 +472,7 @@ private:
         rendering_header_lbl_ .setVisible(on);
         rendering_elapsed_lbl_.setVisible(on);
         rendering_hint_lbl_   .setVisible(on);
+        rendering_time_lbl_   .setVisible(on);
 
         if (on) {
             render_start_ms_ = juce::Time::getMillisecondCounterHiRes();
@@ -540,6 +555,8 @@ private:
         ctx_.mashup_output_path = juce::String(r.output_path.string());
         ctx_.output_path        = ctx_.mashup_output_path;
         ctx_.render_is_mashup   = true;
+        if (ctx_.set_status)
+            ctx_.set_status("Mashup ready: " + juce::String(r.length_sec, 1) + " s");
         if (ctx_.navigate) ctx_.navigate(ScreenId::Render);
     }
 
@@ -564,6 +581,7 @@ private:
     juce::Label rendering_header_lbl_;
     juce::Label rendering_elapsed_lbl_;
     juce::Label rendering_hint_lbl_;
+    juce::Label rendering_time_lbl_;
     bool        is_rendering_   = false;
     double      render_start_ms_ = 0.0;
 

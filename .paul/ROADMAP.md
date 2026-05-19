@@ -1,22 +1,17 @@
 # AutoRemix v2 — Roadmap
 
-## Phase 22 — UX Polish 🚧 PLANNED
+## Phase 22 — UX Polish ✅ COMPLETE (2026-05-19)
 
 Post-21 polish pass addressing friction points found during user testing
-of the mashup flow + general UX gaps:
+of the mashup flow + general UX gaps.
 
-- **22-01**: Track B progress screen — route through `ScreenSeparating` in
-  mashup mode so the 2nd separation has the same 4-row + timer UI as the 1st
-- **22-02**: ScreenRender mashup-aware Done state — header "MASHUP DONE",
-  buttons "▶ Track A / ▶ Track B / ▶ Mashup", "New Mashup" returns to ScreenMashup
-- **22-03**: Tooltips + labels + slider units — health dot, M/S, separator
-  combo, `×` suffix on stem volumes + tempo mod, `Hz` suffix on HPF B
-- **22-04**: First-time orientation — bigger drop-zone headline + one-line subtitle
-- **22-05**: Minor copy/visual — "Anchor to A" → "Match A's key", "Custom" → "Free mix",
-  `TRACK A | filename` → `TRACK A · filename`, render hint includes time estimate,
-  Reveal-in-folder after Save
+- **22-01**: Track B progress screen — route through `ScreenSeparating` in mashup mode ✅
+- **22-02**: ScreenRender mashup-aware Done state — "MASHUP DONE" header, ▶ Track A / B / Mashup, "New Mashup" → ScreenMashup ✅
+- **22-03**: Tooltips + labels + slider units — health dot, M/S, separator combo, ×/BPM/Hz/semi suffixes, SIDECAR label ✅
+- **22-04**: First-time orientation — drop-zone headline + subtitle + hint ✅
+- **22-05**: Final polish — Free mix / Match A's key / · / time hint / 3-waveform Done state with distinct colors / reveal-in-folder / status messages ✅
 
-Deliverable: v3.2.0 with frictionless mashup flow and clearer first-run UX.
+Deliverable: mashup flow polished end-to-end; remix flow unchanged ✓
 
 ---
 

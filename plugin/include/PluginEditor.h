@@ -30,6 +30,7 @@ private:
     // ── Header widgets (always visible, owned by editor) ──────────────────────
     juce::Label      title_lbl;
     juce::ComboBox   separator_combo_;
+    juce::Label      sidecar_lbl_;
     SidecarHealthDot health_dot_{[this]{ return audioProcessor.getBridge().isServerAlive(); }};
 
     // ── Footer ────────────────────────────────────────────────────────────────
@@ -37,6 +38,9 @@ private:
 
     // ── File dialog ───────────────────────────────────────────────────────────
     std::unique_ptr<juce::FileChooser> chooser_;
+
+    // ── Tooltip support ───────────────────────────────────────────────────────
+    juce::TooltipWindow tooltip_window_{ this, 750 };
 
     // ── Sidecar registry data ─────────────────────────────────────────────────
     std::vector<autoremix::PresetInfo>    presets_;

@@ -192,6 +192,7 @@ private:
             r.play_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
             r.play_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ACCENT));
             r.play_btn.onClick = [this, i] { handlePlay(i); };
+            r.play_btn.setTooltip("Play / stop this stem (multiple stems can play together)");
 
             addAndMakeVisible(r.mute_btn);
             r.mute_btn.setButtonText("M");
@@ -199,6 +200,7 @@ private:
             r.mute_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
             r.mute_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ERROR));
             r.mute_btn.onClick = [this, i] { handleMute(i); };
+            r.mute_btn.setTooltip("Mute this stem in the remix output");
 
             addAndMakeVisible(r.solo_btn);
             r.solo_btn.setButtonText("S");
@@ -206,6 +208,7 @@ private:
             r.solo_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
             r.solo_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::WARNING));
             r.solo_btn.onClick = [this, i] { handleSolo(i); };
+            r.solo_btn.setTooltip("Solo: silence all other stems");
 
             addAndMakeVisible(r.gain_slider);
             r.gain_slider.setSliderStyle(juce::Slider::LinearHorizontal);

@@ -198,10 +198,22 @@ void AutoRemixAudioProcessorEditor::drawAndConfigComponents()
     separator_combo_.setColour(juce::ComboBox::backgroundColourId, juce::Colour(AR::ELEVATED));
     separator_combo_.setColour(juce::ComboBox::outlineColourId,    juce::Colour(AR::SURFACE));
     separator_combo_.setColour(juce::ComboBox::arrowColourId,      juce::Colour(AR::FG));
+    separator_combo_.setTooltip("Stem separation engine");
 
-    // ── Header: sidecar health dot
+    // ── Header: sidecar status label + health dot
+    addAndMakeVisible(sidecar_lbl_);
+    sidecar_lbl_.setText("SIDECAR", juce::dontSendNotification);
+    sidecar_lbl_.setFont(AR::font(AR::FontRole::section_label));
+    sidecar_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::COMMENT));
+    sidecar_lbl_.setJustificationType(juce::Justification::centredRight);
+    sidecar_lbl_.setBounds(getWidth() - 92, 12, 60, 24);
+    sidecar_lbl_.setTooltip("Sidecar status: green = connected, "
+                            "amber = checking, red = offline");
+
     addAndMakeVisible(health_dot_);
     health_dot_.setBounds(getWidth() - 24, 20, 8, 8);
+    health_dot_.setTooltip("Sidecar status: green = connected, "
+                           "amber = checking, red = offline");
 
     // ── Footer: status label
     addAndMakeVisible(status_lbl);

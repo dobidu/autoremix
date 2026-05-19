@@ -39,8 +39,9 @@ public:
 
         addAndMakeVisible(bpm_slider_);
         bpm_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
-        bpm_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 24);
+        bpm_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 70, 24);
         bpm_slider_.setRange(40.0, 200.0, 0.5);
+        bpm_slider_.setTextValueSuffix(" BPM");
         bpm_slider_.onValueChange = [this] { ctx_.target_bpm = (float)bpm_slider_.getValue(); };
 
         addAndMakeVisible(pitch_section_lbl_);
@@ -50,8 +51,9 @@ public:
 
         addAndMakeVisible(pitch_slider_);
         pitch_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
-        pitch_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 24);
+        pitch_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 70, 24);
         pitch_slider_.setRange(-12.0, 12.0, 0.5);
+        pitch_slider_.setTextValueSuffix(" semi");
         pitch_slider_.onValueChange = [this] { ctx_.pitch_semi = (float)pitch_slider_.getValue(); };
 
         addAndMakeVisible(reverb_section_lbl_);

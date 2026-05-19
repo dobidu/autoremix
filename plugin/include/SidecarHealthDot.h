@@ -5,7 +5,9 @@
 #include <functional>
 #include <thread>
 
-class SidecarHealthDot : public juce::Component, private juce::Timer {
+class SidecarHealthDot : public juce::Component,
+                         public juce::SettableTooltipClient,
+                         private juce::Timer {
 public:
     explicit SidecarHealthDot(std::function<bool()> pollFn)
         : poll_fn_(std::move(pollFn))

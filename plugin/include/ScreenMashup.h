@@ -70,19 +70,22 @@ public:
 
         initAdvancedSlider(tempo_mod_lbl_,     "TEMPO MOD",  tempo_mod_slider_,
                            0.5, 1.5, 0.01, 1.0,
-                           [this] { ctx_.mashup_bpm_modifier = (float)tempo_mod_slider_.getValue(); });
-        initAdvancedSlider(master_pitch_lbl_,  "MASTER PITCH (semi)", master_pitch_slider_,
+                           [this] { ctx_.mashup_bpm_modifier = (float)tempo_mod_slider_.getValue(); },
+                           juce::String::fromUTF8("\xC3\x97"));   // ×
+        initAdvancedSlider(master_pitch_lbl_,  "MASTER PITCH", master_pitch_slider_,
                            -12.0, 12.0, 1.0, 0.0,
-                           [this] { ctx_.mashup_master_pitch_offset_semi = (float)master_pitch_slider_.getValue(); });
+                           [this] { ctx_.mashup_master_pitch_offset_semi = (float)master_pitch_slider_.getValue(); },
+                           " semi");
         initAdvancedSlider(master_reverb_lbl_, "REVERB MIX", master_reverb_slider_,
                            0.0, 1.0, 0.01, 0.0,
                            [this] { ctx_.mashup_master_reverb_mix = (float)master_reverb_slider_.getValue(); });
         initAdvancedSlider(reverb_room_lbl_,   "REVERB ROOM", reverb_room_slider_,
                            0.0, 1.0, 0.01, 0.5,
                            [this] { ctx_.mashup_master_reverb_room = (float)reverb_room_slider_.getValue(); });
-        initAdvancedSlider(hpf_b_lbl_,         "HPF TRACK B (Hz)", hpf_b_slider_,
+        initAdvancedSlider(hpf_b_lbl_,         "HPF TRACK B", hpf_b_slider_,
                            0.0, 400.0, 1.0, 0.0,
-                           [this] { ctx_.mashup_highpass_b_hz = (float)hpf_b_slider_.getValue(); });
+                           [this] { ctx_.mashup_highpass_b_hz = (float)hpf_b_slider_.getValue(); },
+                           " Hz");
 
         // Track A column header
         addAndMakeVisible(a_header_lbl_);
@@ -114,8 +117,9 @@ public:
 
         addAndMakeVisible(target_bpm_slider_);
         target_bpm_slider_.setSliderStyle(juce::Slider::LinearHorizontal);
-        target_bpm_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 24);
+        target_bpm_slider_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 70, 24);
         target_bpm_slider_.setRange(40.0, 200.0, 0.5);
+        target_bpm_slider_.setTextValueSuffix(" BPM");
         target_bpm_slider_.onValueChange = [this] {
             ctx_.mashup_target_bpm = (float)target_bpm_slider_.getValue();
         };
@@ -324,8 +328,9 @@ private:
 
         addAndMakeVisible(row.gain);
         row.gain.setSliderStyle(juce::Slider::LinearHorizontal);
-        row.gain.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 22);
+        row.gain.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 22);
         row.gain.setRange(0.0, 2.0, 0.01);
+        row.gain.setTextValueSuffix(juce::String::fromUTF8("\xC3\x97"));   // ×
         row.gain.setValue(1.0, juce::dontSendNotification);
         row.gain.onValueChange = [this, &row, is_b] {
             auto& dst = is_b ? ctx_.mashup_gains_b : ctx_.mashup_gains_a;
@@ -342,7 +347,8 @@ private:
 
     void initAdvancedSlider(juce::Label& lbl, const char* text, juce::Slider& slider,
                             double minV, double maxV, double step, double def,
-                            std::function<void()> on_change)
+                            std::function<void()> on_change,
+                            const juce::String& suffix = {})
     {
         addAndMakeVisible(lbl);
         lbl.setText(text, juce::dontSendNotification);
@@ -352,8 +358,9 @@ private:
 
         addAndMakeVisible(slider);
         slider.setSliderStyle(juce::Slider::LinearHorizontal);
-        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 22);
+        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 22);
         slider.setRange(minV, maxV, step);
+        if (suffix.isNotEmpty()) slider.setTextValueSuffix(suffix);
         slider.setValue(def, juce::dontSendNotification);
         slider.setVisible(false);
         slider.onValueChange = std::move(on_change);

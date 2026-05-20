@@ -1,5 +1,65 @@
 # AutoRemix v2 — Roadmap
 
+---
+
+## v3.x main branch — FROZEN (2026-05-20)
+
+v3.2.0 is the last v3 release. Bugfixes are accepted into a v4 native branch
+and backported only if critical. New features land in v4.
+
+---
+
+## v4.0 — Native rewrite (branch: `native`)
+
+Eliminate the Python sidecar. All audio processing native C++ inside the
+plugin/standalone. Single-binary install. No HTTP IPC. No external runtime.
+
+**Why**: Python sidecar = install friction (uv venv, deps, ~2 GB demucs model)
++ runtime fragility (port conflicts, stale processes, env-var paths) + DAW
+hostility (extra child process inside the host).
+
+**Native replacements**:
+- RubberBand (GPL) — time-stretch + pitch-shift
+- aubio (MIT) — BPM, beats, onsets
+- juce::dsp — FFT, IIR filters, Reverb
+- Port Krumhansl-Schmuckler key detection (~80 LOC, was in Python)
+- Port EBU R128 LUFS (~150 LOC)
+- ONNX Runtime (MIT) + demucs ONNX export — ML stem separation
+- nlohmann/json — preset JSON loading (already in plugin)
+
+### Phase 23 — Native foundation (RubberBand + aubio + analysis + algorithmic)
+
+- **23-01**: CMake integration — pull RubberBand + aubio via FetchContent / submodule
+- **23-02**: Native analysis — port `detect_bpm`, `detect_key`, `detect_beats`, `detect_onsets`, `normalize_lufs` to C++ (header-only utility module)
+- **23-03**: Native AlgorithmicSeparator — port FFT band-split using juce::dsp::FFT
+
+### Phase 24 — Native remix engines
+
+- **24-01**: Port `ChoppedAndScrewedEngine` + `SlowedReverbEngine` + `DrumAndBassEngine` to C++
+- **24-02**: Port `EffectChainEngine` (DSL interpreter) + 11 ops to C++
+
+### Phase 25 — Native mashup + presets
+
+- **25-01**: Port `MashupEngine` + `semitone_delta` + feel-knob processing
+- **25-02**: Port `PresetLoader` + `MashupPresetLoader` (filesystem JSON loading) to C++
+
+### Phase 26 — Native Demucs (ONNX)
+
+- **26-01**: Export demucs htdemucs to ONNX + bundle model file (or download-on-demand)
+- **26-02**: ONNX Runtime integration + native `DemucsSeparator`
+
+### Phase 27 — Wire-up + release v4.0.0
+
+- **27-01**: Remove `AudioBridge` HTTP layer; replace with direct C++ calls from screens
+- **27-02**: Remove `sidecar/` from build packaging + CI
+- **27-03**: Full regression test on all 6 screens + remix + mashup flows
+- **27-04**: README rewrite (no Python install section) + version bump 3.2.0 → 4.0.0 + tag v4.0.0
+
+Deliverable: v4.0.0 ships as single-binary VST3/AU/Standalone. Zero Python.
+All v3.2 features preserved.
+
+---
+
 ## Phase 22 — UX Polish ✅ COMPLETE (2026-05-19)
 
 Post-21 polish pass addressing friction points found during user testing

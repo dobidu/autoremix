@@ -4,6 +4,8 @@
 #include "dsp/NativeAnalysis.h"              // Phase 23-02 smoke
 #include "dsp/NativeAlgorithmicSeparator.h"  // Phase 23-03 smoke
 #include "dsp/NativeRemixEngines.h"          // Phase 24-01 smoke
+#include "dsp/NativeEffectOps.h"             // Phase 24-02 smoke
+#include "dsp/NativeEffectChainEngine.h"     // Phase 24-02 smoke
 #include <cstdlib>
 #include <filesystem>
 

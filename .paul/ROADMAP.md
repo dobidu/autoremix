@@ -33,10 +33,10 @@ hostility (extra child process inside the host).
 - **23-02**: `NativeAnalysis.h` — BPM, beats, onsets, bars, key, semitone_delta, LUFS, energy gates (juce::dsp::FFT only; aubio dropped) ✅
 - **23-03**: `NativeAlgorithmicSeparator.h` — 4-band IIR cascade ✅
 
-### Phase 24 — Native remix engines
+### Phase 24 — Native remix engines ✅ COMPLETE (2026-05-20)
 
-- **24-01**: Port `ChoppedAndScrewedEngine` + `SlowedReverbEngine` + `DrumAndBassEngine` to C++
-- **24-02**: Port `EffectChainEngine` (DSL interpreter) + 11 ops to C++
+- **24-01**: `NativeRemixEngines.h` — ChoppedAndScrewed + SlowedReverb + DrumAndBass ✅
+- **24-02**: `NativeEffectOps.h` (11 ops) + `NativeEffectChainEngine.h` (interpreter) ✅
 
 ### Phase 25 — Native mashup + presets
 

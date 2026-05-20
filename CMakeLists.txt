@@ -34,6 +34,30 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 
+# RubberBand — time-stretch + pitch-shift (replaces librosa.effects.* in v4 native).
+# Upstream uses Meson; we use its supported "single-file build" path
+# (single/RubberBandSingle.cpp) which produces a self-contained TU.
+FetchContent_Declare(
+  rubberband
+  GIT_REPOSITORY https://github.com/breakfastquay/rubberband.git
+  GIT_TAG        v3.3.0
+)
+FetchContent_GetProperties(rubberband)
+if(NOT rubberband_POPULATED)
+  FetchContent_Populate(rubberband)
+endif()
+add_library(rubberband STATIC
+  ${rubberband_SOURCE_DIR}/single/RubberBandSingle.cpp
+)
+target_include_directories(rubberband PUBLIC
+  ${rubberband_SOURCE_DIR}
+  ${rubberband_SOURCE_DIR}/rubberband
+)
+target_compile_features(rubberband PUBLIC cxx_std_17)
+if(NOT WIN32)
+  set_target_properties(rubberband PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # Workaround async file chooser
 add_definitions(-DJUCE_MODAL_LOOPS_PERMITTED=1)
 

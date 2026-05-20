@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "dsp/TimePitchStretcher.h"   // Phase 23-01 smoke: ensure header compiles
 #include <cstdlib>
 #include <filesystem>
 

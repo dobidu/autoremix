@@ -2,15 +2,15 @@
 
 ## Current Position
 
-Milestone: v11 — COMPLETE
-Phase: 22 — UX Polish ✅ COMPLETE (2026-05-19)
-Status: Phase 22 closed. All 5 sub-plans shipped. Ready for v3.2.0 release tag or new Phase 23.
-Last activity: 2026-05-19
+Milestone: v12 (v4-native) — IN PROGRESS
+Branch: native
+Phase: 23 — Native foundation (planning)
+Status: 23-01 UNIFY complete. RubberBand integrated. Ready for 23-02 (native analysis).
+Last activity: 2026-05-20
 
 Progress:
-- Milestone: v9 [██████████] 100%
-- Milestone: v10 [██████████] 100% (Phase 21 complete)
-- Milestone: v11 [██████████] 100% (Phase 22 complete)
+- v3 main: FROZEN at v3.2.0
+- Milestone v12 (v4-native): [░░░░░░░░░░] 0% (5 phases ahead: 23/24/25/26/27)
 
 ## Loop Position
 
@@ -34,6 +34,9 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [22-03 complete] Tooltips + slider unit suffixes + SIDECAR label
   ✓        ✓        ✓     [22-04 complete] Drop-zone orientation copy (headline + subtitle + hint)
   ✓        ✓        ✓     [22-05 complete] Final polish: copy + 3 waveforms + reveal + status
+
+═══ v4 NATIVE REWRITE (branch: native) ═══
+  ✓        ✓        ✓     [23-01 complete] RubberBand FetchContent + TimePitchStretcher wrapper
 ```
 
 ## Session Continuity

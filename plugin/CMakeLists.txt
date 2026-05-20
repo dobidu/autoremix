@@ -55,6 +55,7 @@ target_link_libraries(AutoRemix PRIVATE
   juce::juce_gui_extra
   cpr::cpr
   nlohmann_json::nlohmann_json
+  rubberband
   juce::juce_recommended_config_flags
   juce::juce_recommended_lto_flags
   juce::juce_recommended_warning_flags

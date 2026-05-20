@@ -4,8 +4,8 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 24 — ✅ COMPLETE (2026-05-20)
-Status: Phase 24 closed. All native engines + chain DSL ready. Next: Phase 25 (mashup + presets).
+Phase: 25 — Native mashup + presets (planning)
+Status: 25-01 UNIFY complete. Native mashup engine ready. Next: 25-02 (preset loaders).
 Last activity: 2026-05-20
 
 Progress:
@@ -41,6 +41,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [23-03 complete] NativeAlgorithmicSeparator.h: 4-band IIR split (closes Phase 23)
   ✓        ✓        ✓     [24-01 complete] Native remix engines: ChoppedAndScrewed + SlowedReverb + DrumAndBass
   ✓        ✓        ✓     [24-02 complete] EffectChainEngine + 11 ops (closes Phase 24)
+  ✓        ✓        ✓     [25-01 complete] NativeMashupEngine.h (port of v3 mashup.py)
 ```
 
 ## Session Continuity

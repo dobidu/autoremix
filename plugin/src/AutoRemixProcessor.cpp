@@ -6,6 +6,7 @@
 #include "dsp/NativeRemixEngines.h"          // Phase 24-01 smoke
 #include "dsp/NativeEffectOps.h"             // Phase 24-02 smoke
 #include "dsp/NativeEffectChainEngine.h"     // Phase 24-02 smoke
+#include "dsp/NativeMashupEngine.h"          // Phase 25-01 smoke
 #include <cstdlib>
 #include <filesystem>
 

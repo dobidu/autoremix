@@ -1,7 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "dsp/TimePitchStretcher.h"   // Phase 23-01 smoke: ensure header compiles
-#include "dsp/NativeAnalysis.h"        // Phase 23-02 smoke: ensure header compiles
+#include "dsp/TimePitchStretcher.h"          // Phase 23-01 smoke
+#include "dsp/NativeAnalysis.h"              // Phase 23-02 smoke
+#include "dsp/NativeAlgorithmicSeparator.h"  // Phase 23-03 smoke
 #include <cstdlib>
 #include <filesystem>
 

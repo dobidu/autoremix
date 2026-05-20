@@ -27,11 +27,11 @@ hostility (extra child process inside the host).
 - ONNX Runtime (MIT) + demucs ONNX export — ML stem separation
 - nlohmann/json — preset JSON loading (already in plugin)
 
-### Phase 23 — Native foundation (RubberBand + aubio + analysis + algorithmic)
+### Phase 23 — Native foundation ✅ COMPLETE (2026-05-20)
 
-- **23-01**: CMake integration — pull RubberBand + aubio via FetchContent / submodule
-- **23-02**: Native analysis — port `detect_bpm`, `detect_key`, `detect_beats`, `detect_onsets`, `normalize_lufs` to C++ (header-only utility module)
-- **23-03**: Native AlgorithmicSeparator — port FFT band-split using juce::dsp::FFT
+- **23-01**: RubberBand FetchContent + `TimePitchStretcher` wrapper ✅
+- **23-02**: `NativeAnalysis.h` — BPM, beats, onsets, bars, key, semitone_delta, LUFS, energy gates (juce::dsp::FFT only; aubio dropped) ✅
+- **23-03**: `NativeAlgorithmicSeparator.h` — 4-band IIR cascade ✅
 
 ### Phase 24 — Native remix engines
 

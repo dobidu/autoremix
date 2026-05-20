@@ -12,12 +12,12 @@ Stem separation and remix engines are **pluggable**: new backends register via `
 
 | Screen | Description |
 |--------|-------------|
-| ![Drop Zone](docs/screenshots/01_drop.png) | **Step 1 — Drop Zone**: drag a file or browse |
-| ![Separating](docs/screenshots/02_separating.png) | **Step 2 — Separating**: 4-stem extraction in progress |
-| ![Stems Ready](docs/screenshots/03_stem_ready.png) | **Step 3 — Stems Ready**: per-stem playback, mix, and drag-to-DAW |
-| ![Mode Params](docs/screenshots/04_mode_params.png) | **Step 4 — Mode & Parameters**: choose style, tune remix settings |
-| ![Render](docs/screenshots/05_render.png) | **Step 5 — Render**: waveform comparison, play original vs remix/mashup |
-| ![Mashup](docs/screenshots/06_mashup.png) | **Step 6 — Mashup**: combine 2 tracks, two-column 8-stem mixer, 8 built-in templates |
+| ![Drop Zone](docs/screenshots/01_drop.png) | **Drop Zone**: drag a file or browse |
+| ![Separating](docs/screenshots/02_separating.png) | **Separating**: 4-stem extraction in progress |
+| ![Stems Ready](docs/screenshots/03_stem_ready.png) | **Stems Ready**: per-stem playback, mix, and drag-to-DAW |
+| ![Mode Params](docs/screenshots/04_mode_params.png) | **Mode & Parameters**: choose style, tune remix settings |
+| ![Render](docs/screenshots/05_render.png) | **Render**: waveform comparison, play original vs remix/mashup |
+| ![Mashup](docs/screenshots/06_mashup.png) | **Mashup**: combine 2 tracks, two-column 8-stem mixer, 8 built-in templates |
 
 > **Note:** Screenshots not yet captured. Run the standalone app and record your own.
 

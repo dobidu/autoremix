@@ -4,8 +4,8 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 23 — ✅ COMPLETE (2026-05-20)
-Status: Phase 23 closed. Native foundation ready. Next: Phase 24 (engines).
+Phase: 24 — Native engines (planning)
+Status: 24-01 UNIFY complete. 3 native engines ready. Next: 24-02 (EffectChainEngine).
 Last activity: 2026-05-20
 
 Progress:
@@ -39,6 +39,7 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [23-01 complete] RubberBand FetchContent + TimePitchStretcher wrapper
   ✓        ✓        ✓     [23-02 complete] NativeAnalysis.h: BPM, beats, onsets, key, semitone_delta, LUFS, energy gates
   ✓        ✓        ✓     [23-03 complete] NativeAlgorithmicSeparator.h: 4-band IIR split (closes Phase 23)
+  ✓        ✓        ✓     [24-01 complete] Native remix engines: ChoppedAndScrewed + SlowedReverb + DrumAndBass
 ```
 
 ## Session Continuity

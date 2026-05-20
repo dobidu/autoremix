@@ -1,0 +1,306 @@
+#pragma once
+// ─────────────────────────────────────────────────────────────────────────────
+// NativePresetLoaders — Phase 25-02
+//
+// Header-only loaders for remix + mashup presets.
+//
+// Built-in presets are embedded in the plugin binary via
+// juce_add_binary_data(AutoRemixPresetsData ...) — 9 remix JSONs +
+// 8 mashup JSONs. The loaders iterate BinaryData::namedResourceList
+// to surface them at runtime.
+//
+// User presets are read from the cross-platform user config dir:
+//   Linux:   ~/.config/autoremix/{modes,mashup}
+//   macOS:   ~/Library/Application Support/autoremix/{modes,mashup}
+//   Windows: %APPDATA%\autoremix\{modes,mashup}
+//
+// User JSONs override built-ins on id collision (later wins).
+// Malformed JSONs are logged via juce::Logger and skipped (no crash).
+// ─────────────────────────────────────────────────────────────────────────────
+
+#include <algorithm>
+#include <array>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
+#include <juce_core/juce_core.h>
+#include <nlohmann/json.hpp>
+
+#include "NativePresetTypes.h"
+
+// The juce_add_binary_data(AutoRemixPresetsData ...) target generates
+// a BinaryData.h header and adds its directory to the include path of
+// every linked target. AutoRemix already links AutoRemixFonts, whose
+// BinaryData.h may shadow this one — when both exist their generated
+// classes share the same namespace "BinaryData". To stay decoupled
+// from include ordering, we forward-declare the symbols we need.
+namespace BinaryData {
+    extern const char* namedResourceList[];
+    extern const int   namedResourceListSize;
+    extern const char* getNamedResource(const char* resourceNameUTF8,
+                                        int& dataSizeInBytes);
+}
+
+namespace autoremix::dsp::presets {
+
+// ───────────────────────────────────────────────────────────────────────────
+// User dirs (cross-platform via JUCE)
+// ───────────────────────────────────────────────────────────────────────────
+
+inline juce::File user_remix_dir()
+{
+    return juce::File::getSpecialLocation(
+               juce::File::userApplicationDataDirectory)
+           .getChildFile("autoremix").getChildFile("modes");
+}
+
+inline juce::File user_mashup_dir()
+{
+    return juce::File::getSpecialLocation(
+               juce::File::userApplicationDataDirectory)
+           .getChildFile("autoremix").getChildFile("mashup");
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// JSON → struct parsers (permissive: unknown keys ignored, missing keys
+// fall back to NativeRemixPreset / NativeMashupPreset defaults)
+// ───────────────────────────────────────────────────────────────────────────
+
+inline NativeRemixPreset
+parse_remix_preset(const nlohmann::json& j)
+{
+    NativeRemixPreset out;
+    out.id          = j.value("id",          std::string{});
+    out.version     = j.value("version",     std::string{"1.0"});
+    out.name        = j.value("name",        out.id);
+    out.description = j.value("description", std::string{});
+    out.author      = j.value("author",      std::string{"AutoRemix"});
+    if (j.contains("tags") && j["tags"].is_array())
+        for (auto& t : j["tags"]) out.tags.push_back(t.get<std::string>());
+    out.engine = j.value("engine", std::string{});
+
+    if (j.contains("params") && j["params"].is_object()) {
+        const auto& p = j["params"];
+        out.params.tempo_factor       = p.value("tempo_factor",
+                                         p.value("tempo", 1.0f));
+        out.params.pitch_shift_semi   = p.value("pitch_shift_semi",
+                                         p.value("pitch", 0.0f));
+        out.params.reverb_mix         = p.value("reverb_mix",
+                                         p.value("reverb", 0.0f));
+        out.params.chop_interval_ms   = p.value("chop_interval_ms",
+                                         p.value("chop_ms", 0.0f));
+        out.params.bass_boost_db      = p.value("bass_boost_db", 0.0f);
+        out.params.drums_tempo_factor = p.value("drums_tempo_factor", 1.0f);
+    }
+    if (j.contains("stem_mix") && j["stem_mix"].is_object()) {
+        const auto& s = j["stem_mix"];
+        out.stem_mix.vocals = s.value("vocals", 1.0f);
+        out.stem_mix.drums  = s.value("drums",  1.0f);
+        out.stem_mix.bass   = s.value("bass",   1.0f);
+        out.stem_mix.other  = s.value("other",  1.0f);
+    }
+    if (j.contains("effects") && j["effects"].is_array()) {
+        for (const auto& eff : j["effects"]) {
+            engines::EffectStep step;
+            step.op = eff.value("op", std::string{});
+            if (eff.contains("stems")) {
+                const auto& s = eff["stems"];
+                if (s.is_string())
+                    step.stems.push_back(s.get<std::string>());
+                else if (s.is_array())
+                    for (const auto& n : s)
+                        step.stems.push_back(n.get<std::string>());
+            }
+            if (eff.contains("params") && eff["params"].is_object()) {
+                const auto& q = eff["params"];
+                step.params.factor        = q.value("factor",        step.params.factor);
+                step.params.semitones     = q.value("semitones",     step.params.semitones);
+                step.params.mix           = q.value("mix",           step.params.mix);
+                step.params.room_size     = q.value("room_size",     step.params.room_size);
+                step.params.interval_ms   = q.value("interval_ms",   step.params.interval_ms);
+                step.params.db            = q.value("db",            step.params.db);
+                step.params.cutoff_hz     = q.value("cutoff_hz",     step.params.cutoff_hz);
+                step.params.division      = q.value("division",      step.params.division);
+                step.params.offset_beats  = q.value("offset_beats",  step.params.offset_beats);
+                step.params.min_gap_ms    = q.value("min_gap_ms",    step.params.min_gap_ms);
+                step.params.threshold     = q.value("threshold",     step.params.threshold);
+                step.params.beats_per_bar = q.value("beats_per_bar", step.params.beats_per_bar);
+                step.params.threshold_db  = q.value("threshold_db",  step.params.threshold_db);
+                step.params.hold_ms       = q.value("hold_ms",       step.params.hold_ms);
+                step.params.n_segments    = q.value("n_segments",    step.params.n_segments);
+                step.params.mode          = q.value("mode",          step.params.mode);
+                step.params.repeat        = q.value("repeat",        step.params.repeat);
+            }
+            out.effects.push_back(std::move(step));
+        }
+    }
+    return out;
+}
+
+inline NativeMashupPreset
+parse_mashup_preset(const nlohmann::json& j)
+{
+    NativeMashupPreset out;
+    out.id          = j.value("id",          std::string{});
+    out.version     = j.value("version",     std::string{"1.0"});
+    out.name        = j.value("name",        out.id);
+    out.description = j.value("description", std::string{});
+    out.author      = j.value("author",      std::string{"AutoRemix"});
+    if (j.contains("tags") && j["tags"].is_array())
+        for (auto& t : j["tags"]) out.tags.push_back(t.get<std::string>());
+
+    auto read_gains = [](const nlohmann::json& src,
+                         std::unordered_map<std::string, float>& dst) {
+        if (!src.is_object()) return;
+        for (auto it = src.begin(); it != src.end(); ++it)
+            if (it.value().is_number())
+                dst[it.key()] = it.value().get<float>();
+    };
+    if (j.contains("stem_gains_a")) read_gains(j["stem_gains_a"], out.stem_gains_a);
+    if (j.contains("stem_gains_b")) read_gains(j["stem_gains_b"], out.stem_gains_b);
+
+    out.target_bpm_mode      = j.value("target_bpm_mode",     std::string{"anchor_a"});
+    out.target_bpm_absolute  = j.value("target_bpm_absolute", 0.0);
+    out.target_key_mode      = j.value("target_key_mode",     std::string{"anchor_a"});
+    if (j.contains("target_key_absolute") && j["target_key_absolute"].is_string())
+        out.target_key_absolute = j["target_key_absolute"].get<std::string>();
+
+    out.bpm_modifier             = j.value("bpm_modifier",             1.0f);
+    out.master_pitch_offset_semi = j.value("master_pitch_offset_semi", 0.0f);
+    out.master_reverb_mix        = j.value("master_reverb_mix",        0.0f);
+    out.master_reverb_room       = j.value("master_reverb_room",       0.5f);
+    out.highpass_b_hz            = j.value("highpass_b_hz",            0.0f);
+    return out;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Built-in routing: filename → remix vs mashup
+//
+// juce_add_binary_data converts each source filename to a C identifier
+// (e.g. "drum_swap.json" → "drum_swap_json"). namedResourceList iterates
+// these mangled names; we route by comparing against the known mashup ids.
+// ───────────────────────────────────────────────────────────────────────────
+
+namespace detail {
+
+inline bool is_mashup_resource(const char* name)
+{
+    static constexpr std::array<const char*, 8> kMashupResources = {
+        "vocal_acapella_json", "drum_swap_json", "slowed_mashup_json",
+        "nightcore_mashup_json", "dub_echo_json", "instrumental_layer_json",
+        "bass_swap_json", "frankenstein_json"
+    };
+    for (const char* r : kMashupResources)
+        if (std::strcmp(name, r) == 0) return true;
+    return false;
+}
+
+inline void
+load_builtins_from_binary(std::vector<NativeRemixPreset>&  remix_out,
+                          std::vector<NativeMashupPreset>& mashup_out)
+{
+    for (int i = 0; i < BinaryData::namedResourceListSize; ++i) {
+        const char* name = BinaryData::namedResourceList[i];
+        int size = 0;
+        const char* data = BinaryData::getNamedResource(name, size);
+        if (!data || size <= 0) continue;
+        // Skip non-JSON resources (e.g. font binaries from AutoRemixFonts).
+        const std::string_view nv(name);
+        if (nv.size() < 5 || nv.substr(nv.size() - 5) != "_json") continue;
+
+        const std::string body(data, (size_t) size);
+        try {
+            const auto j = nlohmann::json::parse(body);
+            if (is_mashup_resource(name))
+                mashup_out.push_back(parse_mashup_preset(j));
+            else
+                remix_out .push_back(parse_remix_preset(j));
+        } catch (const std::exception& e) {
+            juce::Logger::writeToLog(
+                juce::String("[preset] failed to parse builtin ")
+                + name + ": " + e.what());
+        }
+    }
+}
+
+inline void
+load_user_dir_remix(const juce::File& dir,
+                    std::vector<NativeRemixPreset>& out)
+{
+    if (!dir.isDirectory()) return;
+    for (const auto& f : dir.findChildFiles(juce::File::findFiles, false, "*.json")) {
+        try {
+            const auto body = f.loadFileAsString().toStdString();
+            out.push_back(parse_remix_preset(nlohmann::json::parse(body)));
+        } catch (const std::exception& e) {
+            juce::Logger::writeToLog(
+                juce::String("[preset] failed to parse user remix ")
+                + f.getFullPathName() + ": " + e.what());
+        }
+    }
+}
+
+inline void
+load_user_dir_mashup(const juce::File& dir,
+                     std::vector<NativeMashupPreset>& out)
+{
+    if (!dir.isDirectory()) return;
+    for (const auto& f : dir.findChildFiles(juce::File::findFiles, false, "*.json")) {
+        try {
+            const auto body = f.loadFileAsString().toStdString();
+            out.push_back(parse_mashup_preset(nlohmann::json::parse(body)));
+        } catch (const std::exception& e) {
+            juce::Logger::writeToLog(
+                juce::String("[preset] failed to parse user mashup ")
+                + f.getFullPathName() + ": " + e.what());
+        }
+    }
+}
+
+// De-dup by id, keep the last occurrence (user overrides built-in).
+template <typename Preset>
+inline std::vector<Preset> dedup_by_id(std::vector<Preset>&& in)
+{
+    std::unordered_map<std::string, size_t> latest;
+    for (size_t i = 0; i < in.size(); ++i) latest[in[i].id] = i;
+    std::vector<Preset> out;
+    out.reserve(latest.size());
+    // Preserve original (built-ins first, users last) order of last-seen ids.
+    std::vector<std::pair<size_t, std::string>> order;
+    order.reserve(latest.size());
+    for (auto& kv : latest) order.emplace_back(kv.second, kv.first);
+    std::sort(order.begin(), order.end(),
+              [](auto& a, auto& b) { return a.first < b.first; });
+    for (auto& [idx, id] : order) out.push_back(std::move(in[idx]));
+    return out;
+}
+
+} // namespace detail
+
+// ───────────────────────────────────────────────────────────────────────────
+// Public loaders
+// ───────────────────────────────────────────────────────────────────────────
+
+inline std::vector<NativeRemixPreset>
+load_remix_presets()
+{
+    std::vector<NativeRemixPreset>  remix;
+    std::vector<NativeMashupPreset> sink;
+    detail::load_builtins_from_binary(remix, sink);
+    detail::load_user_dir_remix(user_remix_dir(), remix);
+    return detail::dedup_by_id(std::move(remix));
+}
+
+inline std::vector<NativeMashupPreset>
+load_mashup_presets()
+{
+    std::vector<NativeRemixPreset>  sink;
+    std::vector<NativeMashupPreset> mashup;
+    detail::load_builtins_from_binary(sink, mashup);
+    detail::load_user_dir_mashup(user_mashup_dir(), mashup);
+    return detail::dedup_by_id(std::move(mashup));
+}
+
+} // namespace autoremix::dsp::presets

@@ -4,13 +4,13 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 25 — Native mashup + presets (planning)
-Status: 25-01 UNIFY complete. Native mashup engine ready. Next: 25-02 (preset loaders).
-Last activity: 2026-05-20
+Phase: 26 — Native Demucs (ONNX) — ready to plan
+Status: Phase 25 COMPLETE. Ready to plan Phase 26 (export demucs to ONNX → ORT integration).
+Last activity: 2026-05-20 — Phase 25 closed, transitioned to Phase 26
 
 Progress:
 - v3 main: FROZEN at v3.2.0
-- Milestone v12 (v4-native): [░░░░░░░░░░] 0% (5 phases ahead: 23/24/25/26/27)
+- Milestone v12 (v4-native): [█████░░░░░] 54% (7 of 13 sub-plans; phases 26/27 remain)
 
 ## Loop Position
 
@@ -42,13 +42,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [24-01 complete] Native remix engines: ChoppedAndScrewed + SlowedReverb + DrumAndBass
   ✓        ✓        ✓     [24-02 complete] EffectChainEngine + 11 ops (closes Phase 24)
   ✓        ✓        ✓     [25-01 complete] NativeMashupEngine.h (port of v3 mashup.py)
+  ✓        ✓        ✓     [25-02 complete] NativePresetTypes + NativePresetLoaders (binary + user dir, closes Phase 25)
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-16
-Stopped at: Phase 20 complete; build clean
-Next action: commit Phase 20; user testing
+Last session: 2026-05-20
+Stopped at: Phase 25 complete (native mashup + preset loaders); build green; v3 untouched
+Next action: /paul:plan 26-01 — export demucs to ONNX (bundle or download-on-demand)
+Resume file: .paul/ROADMAP.md (Phase 26 — Native Demucs)
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

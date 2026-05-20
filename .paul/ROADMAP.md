@@ -38,10 +38,10 @@ hostility (extra child process inside the host).
 - **24-01**: `NativeRemixEngines.h` — ChoppedAndScrewed + SlowedReverb + DrumAndBass ✅
 - **24-02**: `NativeEffectOps.h` (11 ops) + `NativeEffectChainEngine.h` (interpreter) ✅
 
-### Phase 25 — Native mashup + presets
+### Phase 25 — Native mashup + presets ✅ COMPLETE (2026-05-20)
 
-- **25-01**: Port `MashupEngine` + `semitone_delta` + feel-knob processing
-- **25-02**: Port `PresetLoader` + `MashupPresetLoader` (filesystem JSON loading) to C++
+- **25-01**: `NativeMashupEngine.h` — full port of v3 `mashup.py` (BPM/key alignment, 5 feel knobs, per-stem RubberBand) ✅
+- **25-02**: `NativePresetTypes.h` + `NativePresetLoaders.h` — 17 JSONs (9 remix + 8 mashup) embedded via `juce_add_binary_data(AutoRemixPresetsData)`; user JSONs from `~/.config/autoremix/{modes,mashup}` override built-ins on id collision ✅
 
 ### Phase 26 — Native Demucs (ONNX)
 

@@ -9,6 +9,27 @@ juce_add_binary_data(AutoRemixFonts SOURCES
 )
 set_target_properties(AutoRemixFonts PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+juce_add_binary_data(AutoRemixPresetsData SOURCES
+    ../sidecar/server/presets/chopped_screwed.json
+    ../sidecar/server/presets/slowed_reverb.json
+    ../sidecar/server/presets/drum_and_bass.json
+    ../sidecar/server/presets/trap_stutter.json
+    ../sidecar/server/presets/onset_drill.json
+    ../sidecar/server/presets/structural_loop.json
+    ../sidecar/server/presets/phonk.json
+    ../sidecar/server/presets/jersey_club.json
+    ../sidecar/server/presets/nightcore.json
+    ../sidecar/server/mashup_presets/vocal_acapella.json
+    ../sidecar/server/mashup_presets/drum_swap.json
+    ../sidecar/server/mashup_presets/slowed_mashup.json
+    ../sidecar/server/mashup_presets/nightcore_mashup.json
+    ../sidecar/server/mashup_presets/dub_echo.json
+    ../sidecar/server/mashup_presets/instrumental_layer.json
+    ../sidecar/server/mashup_presets/bass_swap.json
+    ../sidecar/server/mashup_presets/frankenstein.json
+)
+set_target_properties(AutoRemixPresetsData PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 juce_add_plugin(AutoRemix
   COMPANY_NAME "LAViD-UFPB"
   IS_SYNTH FALSE
@@ -50,6 +71,7 @@ target_compile_definitions(AutoRemix PUBLIC
 
 target_link_libraries(AutoRemix PRIVATE
   AutoRemixFonts
+  AutoRemixPresetsData
   juce::juce_audio_utils
   juce::juce_audio_processors
   juce::juce_gui_extra

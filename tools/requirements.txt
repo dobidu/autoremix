@@ -1,0 +1,16 @@
+# Offline ONNX-export tooling for demucs htdemucs.
+#
+# These deps are used ONLY by tools/export_demucs_onnx.py. They are NOT
+# part of the plugin runtime and must never be required to run AutoRemix.
+# Plugin (v4) runs pure C++ with ONNX Runtime — see Phase 26-02.
+#
+# Pin lower bounds; upper-pin only if a known incompatibility surfaces.
+
+demucs>=4.0.0
+torch>=2.0.0
+torchaudio>=2.0.0
+onnx>=1.15.0
+onnxscript>=0.1.0   # required by torch.onnx.export pipeline in torch >= 2.5
+onnxruntime>=1.16.0
+soundfile>=0.12.1
+numpy>=1.24.0

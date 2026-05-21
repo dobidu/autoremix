@@ -1,0 +1,4 @@
+# Ignore model artifacts; keep the directory tracked.
+*
+!.gitignore
+!README.md

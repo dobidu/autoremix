@@ -4,13 +4,13 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 26 — Native Demucs (ONNX) — ready to plan
-Status: Phase 25 COMPLETE. Ready to plan Phase 26 (export demucs to ONNX → ORT integration).
-Last activity: 2026-05-20 — Phase 25 closed, transitioned to Phase 26
+Phase: 26 — Native Demucs (ONNX) — 26-01 closed
+Status: 26-01 UNIFY complete. ONNX artifact ready (352.9 MB, download strategy). Next: /paul:plan 26-02 (ORT C++ integration + model downloader).
+Last activity: 2026-05-21
 
 Progress:
 - v3 main: FROZEN at v3.2.0
-- Milestone v12 (v4-native): [█████░░░░░] 54% (7 of 13 sub-plans; phases 26/27 remain)
+- Milestone v12 (v4-native): [██████░░░░] 62% (8 of 13 sub-plans; 26-02 + Phase 27 remain)
 
 ## Loop Position
 
@@ -43,14 +43,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [24-02 complete] EffectChainEngine + 11 ops (closes Phase 24)
   ✓        ✓        ✓     [25-01 complete] NativeMashupEngine.h (port of v3 mashup.py)
   ✓        ✓        ✓     [25-02 complete] NativePresetTypes + NativePresetLoaders (binary + user dir, closes Phase 25)
+  ✓        ✓        ✓     [26-01 complete] Demucs → ONNX export tooling (352.9 MB, opset 18, parity PASS, DOD chosen)
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-20
-Stopped at: Phase 25 complete (native mashup + preset loaders); build green; v3 untouched
-Next action: /paul:plan 26-01 — export demucs to ONNX (bundle or download-on-demand)
-Resume file: .paul/ROADMAP.md (Phase 26 — Native Demucs)
+Last session: 2026-05-21
+Stopped at: Phase 26-01 complete (htdemucs ONNX export tooling + 352.9 MB artifact + DOD decision)
+Next action: /paul:plan 26-02 — ONNX Runtime C++ integration + NativeDemucsSeparator + ModelDownloader
+Resume file: .paul/phases/26-native-demucs/26-01-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)
@@ -84,6 +85,11 @@ Resume file: .paul/ROADMAP.md (Phase 26 — Native Demucs)
 - Musical chop injection only for effect-chain presets (non-empty effects)
 - Effect-chain presets use engine: "effect_chain" string (RemixPreset.engine is str not Optional)
 - chop_mode appended to effects (not prepended) — existing ops run first
+- Demucs ONNX shipping: download. Reason: 352.9 MB file too large for 3× format bundling; standard ML pattern; allows model updates without plugin re-release.
+  - Cache dir: `juce::File::userApplicationDataDirectory/autoremix/models/htdemucs.onnx`
+  - Hosting URL (placeholder, pinned in 26-02): `https://github.com/dobidu/autoremix/releases/download/v4.0.0-models/htdemucs.onnx`
+  - SHA256: TBD (compute at release time and pin into plugin code in 26-02)
+- htdemucs ONNX export: torch.stft on complex tensors + nn.MultiheadAttention fused op both blocked the bare export. Fix is offline monkey-patch in tools/export_demucs_onnx.py — conv1d/conv_transpose1d DFT replacement + manual MHA primitive-ops. Patches verified by numerical parity (max abs diff < 1e-3 vs unpatched).
 
 ## Blockers
 none

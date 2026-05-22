@@ -75,9 +75,11 @@ target_link_libraries(AutoRemix PRIVATE
   juce::juce_audio_utils
   juce::juce_audio_processors
   juce::juce_gui_extra
+  juce::juce_cryptography
   cpr::cpr
   nlohmann_json::nlohmann_json
   rubberband
+  onnxruntime
   juce::juce_recommended_config_flags
   juce::juce_recommended_lto_flags
   juce::juce_recommended_warning_flags

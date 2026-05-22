@@ -36,6 +36,7 @@ and ML backends coexist behind stable interfaces.
 - [x] Musical chop modes (beat/onset/bar/energy/structural) selectable from UI; ops inject into effect chains — Phase 14
 - [x] Pairwise mashup: load 2 files, two-column 8-stem mixer with per-stem volume, 8 built-in templates, 5 feel knobs (tempo mod, master pitch, reverb mix + room, HPF B); auto BPM + key alignment — Phase 21
 - [x] Native preset loading: 17 JSONs (9 remix + 8 mashup) embedded in plugin binary via `juce_add_binary_data`; user JSONs read from `~/.config/autoremix/{modes,mashup}` (or platform equivalent) override built-ins — Phase 25
+- [x] Native ML separation foundation: `htdemucs` model exported to ONNX (352.9 MB) via offline tooling under `tools/`; ONNX Runtime 1.17.0 linked into the plugin; `ModelDownloader` provides first-launch SHA256-verified DOD; `NativeDemucsSeparator` runs chunked inference via `Ort::Session` — Phase 26 (smoke includes only; screen wiring lands in 27-01)
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)
@@ -66,5 +67,18 @@ and ML backends coexist behind stable interfaces.
 - MashupEngine ported header-only: in-memory `(NativeStems, NativeStems, sr, MashupParams) → MashupResult` (no file I/O at engine layer; caller owns WAV writing)
 - RubberBand semantics: `setTimeRatio(target_bpm / source_bpm)` matches v3 librosa `rate>1 = output longer = slowed`; per-stem fresh stretcher to avoid state accumulation
 
+## Phase 26 Key Decisions (v4 native — ML separation)
+- ONNX export approach: keep htdemucs (best quality). Three classes of monkey-patches in `tools/export_demucs_onnx.py` solve the export blockers:
+    1. conv1d/conv_transpose1d DFT replacement for `torch.stft` / `torch.istft` (real tensors, last-dim = re/im) — bypasses ONNX's lack of symbolic complex support
+    2. `HTDemucs._spec` / `_ispec` / `_magnitude` / `_mask` patched to operate on the real-tensor format end-to-end (cac=True path)
+    3. `torch.nn.MultiheadAttention.forward` replaced with manual primitive-op MHA (QKV linear → reshape → matmul → softmax → matmul → out linear) to bypass `torch._native_multi_head_attention` fast path
+- Numerical parity check gates the export — max abs diff < 1e-3 vs unpatched model on a 2 s random input. No silent quality regressions.
+- Static `n_fft` is mandatory through the export path. Threaded as Python int from `self.nfft` (HTDemucs attribute) through patched_ispec → conv_istft so `torch.arange(n_fft)` builds static-shape Conv kernels at trace time.
+- Trace-time window length (343,980 samples @ 44.1 kHz × 7.8 s) is baked into the ONNX graph despite `dynamic_axes=samples`. Plugin must feed exactly window-sized chunks at runtime; chunking + 25 % overlap + raised-cosine crossfade live in the C++ `NativeDemucsSeparator`.
+- Shipping strategy: **download-on-demand**. 352.9 MB file too large to bundle into 3 plugin formats (~1 GB total otherwise). Cache: `juce::File::userApplicationDataDirectory/autoremix/models/htdemucs.onnx`. SHA256 pinned compile-time. Hosting at github.com release tag `v4.0.0-models`.
+- ONNX Runtime 1.17.0 CPU EP only; CUDA / DirectML deferred to v4.1. Linked as SHARED IMPORTED via FetchContent per-platform tarball.
+- `NativeDemucsSeparator` requires 44.1 kHz input (hard error otherwise). Resampling lives in screens (caller knows DAW rate). Simpler + cleaner than embedding a resampler in the separator.
+- One `Ort::Session` per `separate_demucs` call, destroyed at end of scope. If usage profile warrants, Phase 27-01 may move the session to the processor.
+
 ---
-*Last updated: 2026-05-20 after Phase 25 (native mashup + preset loaders)*
+*Last updated: 2026-05-22 after Phase 26 (Native Demucs / ONNX foundation)*

@@ -58,6 +58,42 @@ if(NOT WIN32)
   set_target_properties(rubberband PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+# ONNX Runtime — pre-built per platform (Phase 26-02). Microsoft ships
+# tarballs only; we fetch the right one and import as a SHARED library.
+set(ORT_VERSION "1.17.0")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz")
+  set(ORT_SHA "efc344d54d1969446ff5d3e55b54e205c6579c06333ecf1d34a04215eefae7c6")
+  set(ORT_LIB_SUBPATH "lib/libonnxruntime.so.${ORT_VERSION}")
+elseif(APPLE)
+  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-osx-universal2-${ORT_VERSION}.tgz")
+  # SHA pinned on first macOS build — see CMakeLists.txt comment in plan 26-02.
+  set(ORT_SHA "")
+  set(ORT_LIB_SUBPATH "lib/libonnxruntime.${ORT_VERSION}.dylib")
+elseif(WIN32)
+  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-win-x64-${ORT_VERSION}.zip")
+  # SHA pinned on first Windows build.
+  set(ORT_SHA "")
+  set(ORT_LIB_SUBPATH "lib/onnxruntime.dll")
+endif()
+
+if(ORT_SHA)
+  FetchContent_Declare(onnxruntime
+    URL      ${ORT_URL}
+    URL_HASH SHA256=${ORT_SHA}
+  )
+else()
+  FetchContent_Declare(onnxruntime
+    URL ${ORT_URL}
+  )
+endif()
+FetchContent_MakeAvailable(onnxruntime)
+
+add_library(onnxruntime SHARED IMPORTED GLOBAL)
+set_target_properties(onnxruntime PROPERTIES
+  IMPORTED_LOCATION             "${onnxruntime_SOURCE_DIR}/${ORT_LIB_SUBPATH}"
+  INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include")
+
 # Workaround async file chooser
 add_definitions(-DJUCE_MODAL_LOOPS_PERMITTED=1)
 

@@ -4,9 +4,13 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 26 — Native Demucs (ONNX) — 26-01 closed
-Status: 26-01 UNIFY complete. ONNX artifact ready (352.9 MB, download strategy). Next: /paul:plan 26-02 (ORT C++ integration + model downloader).
-Last activity: 2026-05-21
+Phase: 27 — Wire-up + release v4.0.0 — ready to plan
+Status: Phase 26 COMPLETE (native ML separation foundation done). Ready to plan Phase 27 (rip AudioBridge, wire screens to native, ship v4.0.0).
+Last activity: 2026-05-22 — Phase 26 closed, transitioned to Phase 27
+
+Progress:
+- v3 main: FROZEN at v3.2.0
+- Milestone v12 (v4-native): [███████░░░] 69% (9 of 13 sub-plans; Phase 27 remains: 4 plans)
 
 Progress:
 - v3 main: FROZEN at v3.2.0
@@ -44,14 +48,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [25-01 complete] NativeMashupEngine.h (port of v3 mashup.py)
   ✓        ✓        ✓     [25-02 complete] NativePresetTypes + NativePresetLoaders (binary + user dir, closes Phase 25)
   ✓        ✓        ✓     [26-01 complete] Demucs → ONNX export tooling (352.9 MB, opset 18, parity PASS, DOD chosen)
+  ✓        ✓        ✓     [26-02 complete] ORT FetchContent + ModelDownloader + NativeDemucsSeparator (closes Phase 26)
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-21
-Stopped at: Phase 26-01 complete (htdemucs ONNX export tooling + 352.9 MB artifact + DOD decision)
-Next action: /paul:plan 26-02 — ONNX Runtime C++ integration + NativeDemucsSeparator + ModelDownloader
-Resume file: .paul/phases/26-native-demucs/26-01-SUMMARY.md
+Last session: 2026-05-22
+Stopped at: Phase 26 complete (ML separation foundation: export tooling, ORT linked, ModelDownloader, NativeDemucsSeparator)
+Next action: /paul:plan 27-01 — remove AudioBridge HTTP layer; wire screens to native engines + separators
+Resume file: .paul/ROADMAP.md (Phase 27 — Wire-up + release v4.0.0)
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

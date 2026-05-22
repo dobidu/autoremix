@@ -9,6 +9,8 @@
 #include "dsp/NativeMashupEngine.h"          // Phase 25-01 smoke
 #include "dsp/NativePresetTypes.h"           // Phase 25-02 smoke
 #include "dsp/NativePresetLoaders.h"         // Phase 25-02 smoke
+#include "dsp/ModelDownloader.h"             // Phase 26-02 smoke
+#include "dsp/NativeDemucsSeparator.h"       // Phase 26-02 smoke
 #include <cstdlib>
 #include <filesystem>
 

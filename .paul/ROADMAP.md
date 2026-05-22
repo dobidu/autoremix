@@ -43,10 +43,10 @@ hostility (extra child process inside the host).
 - **25-01**: `NativeMashupEngine.h` — full port of v3 `mashup.py` (BPM/key alignment, 5 feel knobs, per-stem RubberBand) ✅
 - **25-02**: `NativePresetTypes.h` + `NativePresetLoaders.h` — 17 JSONs (9 remix + 8 mashup) embedded via `juce_add_binary_data(AutoRemixPresetsData)`; user JSONs from `~/.config/autoremix/{modes,mashup}` override built-ins on id collision ✅
 
-### Phase 26 — Native Demucs (ONNX)
+### Phase 26 — Native Demucs (ONNX) ✅ COMPLETE (2026-05-22)
 
-- **26-01**: Export demucs htdemucs to ONNX + bundle model file (or download-on-demand)
-- **26-02**: ONNX Runtime integration + native `DemucsSeparator`
+- **26-01**: `tools/export_demucs_onnx.py` — offline torch.onnx.export with 3 classes of monkey-patches (conv-DFT, HTDemucs real-tensor ops, manual MHA) + numerical parity check. Produces `models/htdemucs.onnx` (352.9 MB, opset 18). Distribution: download-on-demand. ✅
+- **26-02**: ONNX Runtime 1.17.0 via FetchContent + `plugin/include/dsp/ModelDownloader.h` (DOD + SHA256 verification + retry × 3) + `plugin/include/dsp/NativeDemucsSeparator.h` (chunked Ort::Session inference with 25 % raised-cosine crossfade). Header-only, smoke includes only — screen wiring lands in 27-01. ✅
 
 ### Phase 27 — Wire-up + release v4.0.0
 

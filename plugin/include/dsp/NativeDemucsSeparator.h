@@ -164,8 +164,12 @@ separate_demucs(const juce::AudioBuffer<float>& input,
     juce::AudioBuffer<float> drums  = make_stem();
     juce::AudioBuffer<float> bass   = make_stem();
     juce::AudioBuffer<float> other  = make_stem();
+    // ONNX output source order matches demucs.htdemucs.model.sources:
+    //   index 0 = drums, 1 = bass, 2 = other, 3 = vocals
+    // (Verified empirically — earlier ordering [vocals, drums, bass, other]
+    // produced cross-routed stems.)
     std::array<juce::AudioBuffer<float>*, kSources> stems_out =
-        { &vocals, &drums, &bass, &other };
+        { &drums, &bass, &other, &vocals };
 
     // Chunk schedule.
     const int hop = static_cast<int>(

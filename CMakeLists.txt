@@ -106,3 +106,9 @@ if(AUTOREMIX_BUILD_TESTS)
   enable_testing()
   # add_subdirectory(tests/cpp)  # habilitar na Fase 05
 endif()
+
+# Scratch smoke tests (manual, not run by CTest)
+option(AUTOREMIX_BUILD_SCRATCH "Build scratch smoke tests under tests/scratch" ON)
+if(AUTOREMIX_BUILD_SCRATCH)
+  add_subdirectory(tests/scratch)
+endif()

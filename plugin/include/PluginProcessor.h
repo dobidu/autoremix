@@ -1,7 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "AudioBridge.h"
 
 class AutoRemixAudioProcessorEditor;
 
@@ -33,7 +32,7 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
-    autoremix::AudioBridge& getBridge() { return bridge_; }
+    juce::AudioFormatManager&  getFormatManager() { return format_manager_; }
 
     // Preview playback — original or remix, exclusive
     void loadPreviewFile(const juce::File& f);
@@ -54,8 +53,6 @@ public:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessor)
 
 private:
-    autoremix::AudioBridge bridge_{"http://127.0.0.1", 17432};
-
     juce::AudioFormatManager format_manager_;
 
     std::unique_ptr<juce::AudioFormatReaderSource> preview_reader_;

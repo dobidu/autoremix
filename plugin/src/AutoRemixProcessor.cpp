@@ -27,8 +27,8 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
                        )
 #endif
 {
-    if (const char* path = std::getenv("AUTOREMIX_SERVER_PATH"))
-        bridge_.startSidecar(std::filesystem::path(path));
+    // Phase 27-01: Python sidecar lifecycle removed. Native runtime
+    // needs no startup work.
     format_manager_.registerBasicFormats();
 }
 
@@ -41,7 +41,6 @@ AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
     }
     preview_transport_.stop();
     preview_transport_.setSource(nullptr);
-    bridge_.stopSidecar();
 }
 
 //==============================================================================

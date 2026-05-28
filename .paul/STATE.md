@@ -4,9 +4,9 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 27 — Wire-up + release v4.0.0 — ready to plan
-Status: Phase 26 COMPLETE (native ML separation foundation done). Ready to plan Phase 27 (rip AudioBridge, wire screens to native, ship v4.0.0).
-Last activity: 2026-05-22 — Phase 26 closed, transitioned to Phase 27
+Phase: 27 — Wire-up + release v4.0.0 — 27-02 planning
+Status: 27-02 PLAN created. Delete AudioBridge + cpr; strip sidecar from CI + release packaging; commit all 27-01+27-02.
+Last activity: 2026-05-28
 
 Progress:
 - v3 main: FROZEN at v3.2.0
@@ -49,13 +49,14 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [25-02 complete] NativePresetTypes + NativePresetLoaders (binary + user dir, closes Phase 25)
   ✓        ✓        ✓     [26-01 complete] Demucs → ONNX export tooling (352.9 MB, opset 18, parity PASS, DOD chosen)
   ✓        ✓        ✓     [26-02 complete] ORT FetchContent + ModelDownloader + NativeDemucsSeparator (closes Phase 26)
+  ✓        ✓        ✓     [27-01 complete] Rip 7 AudioBridge call sites; wire screens to native + DOD UI; fix TimePitchStretcher offline hang
 ```
 
 ## Session Continuity
 
-Last session: 2026-05-22
-Stopped at: Phase 26 complete (ML separation foundation: export tooling, ORT linked, ModelDownloader, NativeDemucsSeparator)
-Next action: /paul:plan 27-01 — remove AudioBridge HTTP layer; wire screens to native engines + separators
+Last session: 2026-05-28
+Stopped at: 27-01 unified. SUMMARY at .paul/phases/27-wireup-release/27-01-SUMMARY.md
+Next action: /paul:plan 27-02 — delete AudioBridge + sidecar; prune cpr dep
 Resume file: .paul/ROADMAP.md (Phase 27 — Wire-up + release v4.0.0)
 
 ## Untracked work (2026-05-16 hotfix session)

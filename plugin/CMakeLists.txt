@@ -9,7 +9,10 @@ juce_add_binary_data(AutoRemixFonts SOURCES
 )
 set_target_properties(AutoRemixFonts PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-juce_add_binary_data(AutoRemixPresetsData SOURCES
+juce_add_binary_data(AutoRemixPresetsData
+    NAMESPACE   PresetData
+    HEADER_NAME AutoRemixPresetsData.h
+    SOURCES
     ../sidecar/server/presets/chopped_screwed.json
     ../sidecar/server/presets/slowed_reverb.json
     ../sidecar/server/presets/drum_and_bass.json
@@ -47,7 +50,6 @@ juce_add_plugin(AutoRemix
 target_sources(AutoRemix PRIVATE
   src/AutoRemixProcessor.cpp
   src/AutoRemixEditor.cpp
-  src/AudioBridge.cpp
   src/separators/SpleeterSeparator.cpp
   src/separators/AlgorithmicSeparator.cpp
   src/engines/ChoppedAndScrewedEngine.cpp
@@ -65,8 +67,6 @@ target_compile_definitions(AutoRemix PUBLIC
   JUCE_USE_CURL=0
   JUCE_VST3_CAN_REPLACE_VST2=0
   JUCE_USE_MP3AUDIOFORMAT=1
-  AUTOREMIX_SIDECAR_PORT=17432
-  AUTOREMIX_SIDECAR_HOST="http://127.0.0.1"
 )
 
 target_link_libraries(AutoRemix PRIVATE
@@ -75,6 +75,7 @@ target_link_libraries(AutoRemix PRIVATE
   juce::juce_audio_utils
   juce::juce_audio_processors
   juce::juce_gui_extra
+  juce::juce_dsp
   juce::juce_cryptography
   cpr::cpr
   nlohmann_json::nlohmann_json

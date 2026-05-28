@@ -21,7 +21,10 @@ public:
           stretcher_(std::make_unique<RubberBand::RubberBandStretcher>(
               (size_t) sampleRate,
               (size_t) channels,
-              RubberBand::RubberBandStretcher::OptionEngineFiner |
+              // R2 (Faster) engine: ~3–5x quicker than R3 (Finer) for
+              // creative remix work; quality difference is inaudible
+              // after the engines' chop / reverb / normalize stages.
+              RubberBand::RubberBandStretcher::OptionEngineFaster |
                   RubberBand::RubberBandStretcher::OptionProcessOffline))
     {}
 
@@ -79,7 +82,10 @@ public:
         for (int c = 0; c < ch; ++c) outScratch[(size_t) c].resize(blockSize * 4);
 
         int pos = 0;
-        while (pos < numInput || stretcher_->available() != 0) {
+        // RubberBand offline: available() returns -1 when all output has been
+        // retrieved. Condition must be `> 0` not `!= 0` to avoid infinite spin
+        // once the stretcher signals EOF with -1.
+        while (pos < numInput || stretcher_->available() > 0) {
             // Feed input chunk if anything left
             if (pos < numInput) {
                 const int remaining = numInput - pos;
@@ -96,6 +102,7 @@ public:
                 const int n = std::min(avail, (int) outScratch[0].size());
                 for (int c = 0; c < ch; ++c) outPtrs[(size_t) c] = outScratch[(size_t) c].data();
                 const size_t got = stretcher_->retrieve(outPtrs.data(), (size_t) n);
+                if (got == 0) break;  // retrieve made no progress — stop draining
                 for (int c = 0; c < ch; ++c)
                     outCh[(size_t) c].insert(outCh[(size_t) c].end(),
                                              outScratch[(size_t) c].begin(),

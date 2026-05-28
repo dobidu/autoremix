@@ -26,7 +26,6 @@ jobs:
             libx11-dev libxinerama-dev libxcursor-dev libxrandr-dev \
             libxcomposite-dev libxext-dev \
             libgl1-mesa-dev libglu1-mesa-dev \
-            libgtk-3-dev \
             libcurl4-openssl-dev
 
       - name: Configure
@@ -42,9 +41,6 @@ jobs:
                 dist/AutoRemix-linux/
           cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
                 dist/AutoRemix-linux/
-          cp -r sidecar dist/AutoRemix-linux/sidecar
-          cp    launch-linux.sh dist/AutoRemix-linux/launch.sh
-          chmod +x dist/AutoRemix-linux/launch.sh
           cp    README.md LICENSE dist/AutoRemix-linux/
           cd dist
           zip -r AutoRemix-linux-${{ github.ref_name }}.zip AutoRemix-linux/
@@ -80,9 +76,6 @@ jobs:
                 dist/AutoRemix-macos/
           cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
                 dist/AutoRemix-macos/
-          cp -r sidecar dist/AutoRemix-macos/sidecar
-          cp    launch-macos.sh dist/AutoRemix-macos/launch.sh
-          chmod +x dist/AutoRemix-macos/launch.sh
           cp    README.md LICENSE dist/AutoRemix-macos/
           cd dist
           zip -r AutoRemix-macos-${{ github.ref_name }}.zip AutoRemix-macos/
@@ -116,8 +109,6 @@ jobs:
           Copy-Item `
             build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
             dist\AutoRemix-windows\
-          Copy-Item -Recurse sidecar dist\AutoRemix-windows\sidecar
-          Copy-Item launch.bat dist\AutoRemix-windows\
           Copy-Item README.md, LICENSE dist\AutoRemix-windows\
           Compress-Archive -Path dist\AutoRemix-windows `
             -DestinationPath dist\AutoRemix-windows-${{ github.ref_name }}.zip
@@ -148,25 +139,30 @@ jobs:
           body: |
             ## AutoRemix ${{ github.ref_name }}
 
+            Single-binary plugin. No Python required.
+
             ### Installation
 
-            1. Download the zip for your platform below.
-            2. Extract it.
-            3. **VST3**: copy `AutoRemix.vst3` to your VST3 folder:
-               - Linux: `~/.vst3/`
-               - macOS: `~/Library/Audio/Plug-Ins/VST3/`
-               - Windows: `C:\Program Files\Common Files\VST3\`
-            4. **AU** (macOS only): copy `AutoRemix.component` to `~/Library/Audio/Plug-Ins/Components/`
-               > macOS 13+: go to System Settings → Privacy & Security → allow AutoRemix
-            5. **Standalone**: run `AutoRemix` (Linux/macOS) or `AutoRemix.exe` (Windows) directly.
-            6. **Sidecar**: see `sidecar/README.md` or the main README for Python setup.
+            **VST3**: copy `AutoRemix.vst3` to your DAW's VST3 folder:
+            - Linux: `~/.vst3/`
+            - macOS: `~/Library/Audio/Plug-Ins/VST3/`
+            - Windows: `C:\Program Files\Common Files\VST3\`
+
+            **AU** (macOS only): copy `AutoRemix.component` to `~/Library/Audio/Plug-Ins/Components/`
+            > macOS 13+: go to System Settings → Privacy & Security → allow AutoRemix
+
+            **Standalone**: run `AutoRemix` (Linux/macOS) or `AutoRemix.exe` (Windows) directly.
+
+            ### ML Stem Separation (Demucs)
+            On first use of "Demucs (ML)" mode, the plugin automatically downloads
+            the htdemucs model (~353 MB). Subsequent launches use the cached model.
+            No manual installation needed.
 
             ### Requirements
-            - Python 3.12 + uv (for the sidecar)
-            - Optional: `uv pip install demucs` for high-quality ML stem separation (~2 GB)
+            No external dependencies. Everything is bundled in the binary.
 
             ### What's new
-            See [CHANGELOG](https://github.com/dobidu/autoremix/commits/main) for details.
+            See [CHANGELOG](https://github.com/dobidu/autoremix/commits/native) for details.
           files: |
             artifacts/AutoRemix-linux/AutoRemix-linux-${{ github.ref_name }}.zip
             artifacts/AutoRemix-macos/AutoRemix-macos-${{ github.ref_name }}.zip

@@ -189,19 +189,15 @@ chopped_and_screwed(const separators::NativeStems& stems, double sr,
 
     const double source_bpm = analysis::detect_bpm(buf, sr);
 
-    // 1. Time stretch (RubberBand ratio>1 = longer → invert tempo_factor)
+    // 1. Time-stretch + pitch-shift combined (one RubberBand pass)
     {
         TimePitchStretcher s((int) sr, buf.getNumChannels());
         s.setTimeRatio(1.0 / (double) p.tempo_factor);
+        if (std::abs(p.pitch_shift_semi) > 1e-3f)
+            s.setPitchSemitones((double) p.pitch_shift_semi);
         buf = s.process(buf);
     }
-    // 2. Pitch shift
-    if (std::abs(p.pitch_shift_semi) > 1e-3f) {
-        TimePitchStretcher ps((int) sr, buf.getNumChannels());
-        ps.setPitchSemitones((double) p.pitch_shift_semi);
-        buf = ps.process(buf);
-    }
-    // 3. High-pass: pitch-down accumulates sub-mud; scale cutoff with depth
+    // 2. High-pass: pitch-down accumulates sub-mud; scale cutoff with depth
     if (p.pitch_shift_semi < -1.0f) {
         const float cutoff = 60.0f + std::abs(p.pitch_shift_semi) * 4.0f;
         buf = detail::apply_iir_filter(
@@ -237,19 +233,15 @@ slowed_reverb(const separators::NativeStems& stems, double sr,
     auto buf = detail::mix_stems_equal(stems);
     if (buf.getNumSamples() == 0) return buf;
 
-    // 1. Time stretch
+    // 1. Time-stretch + pitch-shift combined (one RubberBand pass)
     {
         TimePitchStretcher s((int) sr, buf.getNumChannels());
         s.setTimeRatio(1.0 / (double) p.tempo_factor);
+        if (std::abs(p.pitch_shift_semi) > 1e-3f)
+            s.setPitchSemitones((double) p.pitch_shift_semi);
         buf = s.process(buf);
     }
-    // 2. Pitch shift
-    if (std::abs(p.pitch_shift_semi) > 1e-3f) {
-        TimePitchStretcher ps((int) sr, buf.getNumChannels());
-        ps.setPitchSemitones((double) p.pitch_shift_semi);
-        buf = ps.process(buf);
-    }
-    // 3. Restore presence lost to time-stretch (scales with slowdown depth)
+    // 2. Restore presence lost to time-stretch (scales with slowdown depth)
     const float presence_db = std::max(0.0f, (1.0f - p.tempo_factor) * 8.0f);
     if (presence_db > 0.1f) {
         const float linearGain = juce::Decibels::decibelsToGain(presence_db);
@@ -318,12 +310,16 @@ drum_and_bass(const separators::NativeStems& stems, double sr,
         bass.makeCopyOf(bassIn);
     }
 
-    // 4. Vocals: stretch + pitch
-    auto vocals = stretch(vocalsIn, vocal_factor);
-    if (std::abs(p.pitch_shift_semi) > 1e-3f) {
-        TimePitchStretcher ps((int) sr, vocals.getNumChannels());
-        ps.setPitchSemitones((double) p.pitch_shift_semi);
-        vocals = ps.process(vocals);
+    // 4. Vocals: stretch + pitch (combined, single RubberBand pass)
+    juce::AudioBuffer<float> vocals;
+    if (vocalsIn.getNumSamples() == 0) {
+        vocals.makeCopyOf(vocalsIn);
+    } else {
+        TimePitchStretcher s((int) sr, vocalsIn.getNumChannels());
+        s.setTimeRatio(1.0 / vocal_factor);
+        if (std::abs(p.pitch_shift_semi) > 1e-3f)
+            s.setPitchSemitones((double) p.pitch_shift_semi);
+        vocals = s.process(vocalsIn);
     }
 
     // 5. Other: stretch only

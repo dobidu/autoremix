@@ -59,7 +59,7 @@ struct MashupParams {
     float highpass_b_hz            = 0.0f;
 };
 
-// --- Mashup preset metadata returned by AudioBridge::getMashupPresets() ---
+// --- Mashup preset metadata ---
 struct MashupPresetInfo {
     std::string id;
     std::string name;
@@ -87,20 +87,20 @@ struct MashupResult {
     float       length_sec = 0.0f;
 };
 
-// --- Preset metadata returned by AudioBridge::getPresets() ---
+// --- Preset metadata ---
 struct PresetInfo {
     std::string id;
     std::string name;
     RemixParams default_params;
 };
 
-// --- Separator metadata returned by AudioBridge::getAvailableSeparators() ---
+// --- Separator metadata ---
 struct SeparatorInfo {
     std::string id;           // "algorithmic", "demucs"
     std::string display_name; // "Algorithmic FFT", "Demucs (ML)"
 };
 
-// --- Audio file analysis result from AudioBridge::analyzeFile() ---
+// --- Audio file analysis result ---
 struct FileAnalysis {
     float       bpm          = 0.0f;
     std::string key;

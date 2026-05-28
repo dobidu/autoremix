@@ -48,9 +48,9 @@ public:
         auto bounds = getLocalBounds().toFloat().reduced(1.0f);
         switch (state_) {
             case State::cached:      g.setColour(juce::Colour(AR::SUCCESS)); break;
-            case State::missing:     g.setColour(juce::Colour(AR::ERROR));   break;
+            case State::missing:     g.setColour(juce::Colour(AR::ERR));   break;
             case State::downloading: g.setColour(juce::Colour(AR::WARNING)); break;
-            case State::error:       g.setColour(juce::Colour(AR::ERROR));   break;
+            case State::error:       g.setColour(juce::Colour(AR::ERR));   break;
             case State::checking:    g.setColour(juce::Colour(AR::WARNING)); break;
         }
         g.fillEllipse(bounds);

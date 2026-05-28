@@ -139,7 +139,7 @@ private:
                 break;
             case StemStatus::Failed:
                 statusText  = "Failed";
-                statusColor = juce::Colour(AR::ERROR);
+                statusColor = juce::Colour(AR::ERR);
                 break;
         }
         g.setFont(AR::font(AR::FontRole::mono_label));

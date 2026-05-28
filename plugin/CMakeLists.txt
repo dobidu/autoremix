@@ -67,6 +67,7 @@ target_compile_definitions(AutoRemix PUBLIC
   JUCE_USE_CURL=0
   JUCE_VST3_CAN_REPLACE_VST2=0
   JUCE_USE_MP3AUDIOFORMAT=1
+  $<$<PLATFORM_ID:Windows>:NOMINMAX WIN32_LEAN_AND_MEAN>
 )
 
 target_link_libraries(AutoRemix PRIVATE

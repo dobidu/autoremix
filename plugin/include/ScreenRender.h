@@ -101,7 +101,7 @@ public:
 
         addAndMakeVisible(error_lbl_);
         error_lbl_.setFont(AR::font(AR::FontRole::value));
-        error_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::ERROR));
+        error_lbl_.setColour(juce::Label::textColourId, juce::Colour(AR::ERR));
         error_lbl_.setJustificationType(juce::Justification::centred);
         error_lbl_.setVisible(false);
 

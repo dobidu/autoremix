@@ -198,7 +198,7 @@ private:
             r.mute_btn.setButtonText("M");
             r.mute_btn.setClickingTogglesState(true);
             r.mute_btn.setColour(juce::TextButton::buttonColourId,   juce::Colour(AR::ELEVATED));
-            r.mute_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ERROR));
+            r.mute_btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(AR::ERR));
             r.mute_btn.onClick = [this, i] { handleMute(i); };
             r.mute_btn.setTooltip("Mute this stem in the remix output");
 

@@ -19,7 +19,7 @@ namespace AR {
     constexpr uint32_t MASHUP  = 0xFF2EC4B6;   // tiffany teal — Mashup CTA
     constexpr uint32_t SUCCESS = 0xFF6B8E23;   // olive green
     constexpr uint32_t WARNING = 0xFFC89B3C;   // amber
-    constexpr uint32_t ERROR   = 0xFFA0392C;   // muted red
+    constexpr uint32_t ERR     = 0xFFA0392C;   // muted red (ERROR renamed: Windows macro collision)
 
     // ── Stem colors ───────────────────────────────────────────────────────────
     constexpr uint32_t STEM_VOCALS = 0xFFB5C29A;   // sage green

@@ -547,7 +547,7 @@ private:
             status_lbl_.setText("Error: " + juce::String(r.error_message),
                                 juce::dontSendNotification);
             status_lbl_.setColour(juce::Label::textColourId,
-                                  juce::Colour(AR::ERROR));
+                                  juce::Colour(AR::ERR));
             status_lbl_.setVisible(true);
             generate_btn_.setEnabled(true);
             return;

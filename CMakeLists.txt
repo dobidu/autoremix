@@ -75,6 +75,7 @@ elseif(WIN32)
   # SHA pinned on first Windows build.
   set(ORT_SHA "")
   set(ORT_LIB_SUBPATH "lib/onnxruntime.dll")
+  set(ORT_IMPLIB_SUBPATH "lib/onnxruntime.lib")
 endif()
 
 if(ORT_SHA)
@@ -93,6 +94,11 @@ add_library(onnxruntime SHARED IMPORTED GLOBAL)
 set_target_properties(onnxruntime PROPERTIES
   IMPORTED_LOCATION             "${onnxruntime_SOURCE_DIR}/${ORT_LIB_SUBPATH}"
   INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include")
+if(WIN32)
+  # MSVC multi-config generators require IMPORTED_IMPLIB for SHARED IMPORTED targets.
+  set_target_properties(onnxruntime PROPERTIES
+    IMPORTED_IMPLIB "${onnxruntime_SOURCE_DIR}/${ORT_IMPLIB_SUBPATH}")
+endif()
 
 # Workaround async file chooser
 add_definitions(-DJUCE_MODAL_LOOPS_PERMITTED=1)

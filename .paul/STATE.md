@@ -2,19 +2,15 @@
 
 ## Current Position
 
-Milestone: v12 (v4-native) — IN PROGRESS
+Milestone: v12 (v4-native) — COMPLETE ✅
 Branch: native
-Phase: 27 — Wire-up + release v4.0.0 — 27-02 unified
-Status: 27-04 PLAN ✓. Next: 27-04 APPLY (README rewrite + version 4.0.0 + tag v4.0.0).
+Phase: 27 — Wire-up + release v4.0.0 — COMPLETE
+Status: 27-04 PLAN ✓ APPLY ✓ UNIFY ✓. v4.0.0 released. Phase 27 complete. v12 milestone complete.
 Last activity: 2026-05-28
 
 Progress:
 - v3 main: FROZEN at v3.2.0
-- Milestone v12 (v4-native): [███████░░░] 69% (9 of 13 sub-plans; Phase 27 remains: 4 plans)
-
-Progress:
-- v3 main: FROZEN at v3.2.0
-- Milestone v12 (v4-native): [██████░░░░] 62% (8 of 13 sub-plans; 26-02 + Phase 27 remain)
+- Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
 
 ## Loop Position
 
@@ -52,14 +48,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [27-01 complete] Rip 7 AudioBridge call sites; wire screens to native + DOD UI; fix TimePitchStretcher offline hang
   ✓        ✓        ✓     [27-02 complete] Delete AudioBridge; scrub PluginProcessor; CI + release.yml v4-ready (4b40bfc)
   ✓        ✓        ✓     [27-03 complete] Full regression test — 0 regressions, v4 cleared for release
+  ✓        ✓        ✓     [27-04 complete] README v4 + VERSION 4.0.0 + tag v4.0.0 pushed → RELEASED
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: 27-04 planned. PLAN at .paul/phases/27-wireup-release/27-04-PLAN.md
-Next action: /paul:apply 27-04 — README rewrite, version 4.0.0, commit, tag v4.0.0
-Resume file: .paul/phases/27-wireup-release/27-04-PLAN.md
+Stopped at: v4.0.0 released. All phases complete.
+Next action: monitor GitHub Actions release build at github.com/dobidu/autoremix/actions
+Resume file: none — v12 milestone complete. Next work = v4.1 planning.
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

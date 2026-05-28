@@ -109,6 +109,9 @@ jobs:
           Copy-Item `
             build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
             dist\AutoRemix-windows\
+          Copy-Item `
+            build\_deps\onnxruntime-src\lib\onnxruntime.dll `
+            dist\AutoRemix-windows\
           Copy-Item README.md, LICENSE dist\AutoRemix-windows\
           Compress-Archive -Path dist\AutoRemix-windows `
             -DestinationPath dist\AutoRemix-windows-${{ github.ref_name }}.zip

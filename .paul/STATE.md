@@ -4,8 +4,8 @@
 
 Milestone: v12 (v4-native) — IN PROGRESS
 Branch: native
-Phase: 27 — Wire-up + release v4.0.0 — 27-02 planning
-Status: 27-02 PLAN created. Delete AudioBridge + cpr; strip sidecar from CI + release packaging; commit all 27-01+27-02.
+Phase: 27 — Wire-up + release v4.0.0 — 27-02 unified
+Status: 27-04 PLAN ✓. Next: 27-04 APPLY (README rewrite + version 4.0.0 + tag v4.0.0).
 Last activity: 2026-05-28
 
 Progress:
@@ -50,14 +50,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [26-01 complete] Demucs → ONNX export tooling (352.9 MB, opset 18, parity PASS, DOD chosen)
   ✓        ✓        ✓     [26-02 complete] ORT FetchContent + ModelDownloader + NativeDemucsSeparator (closes Phase 26)
   ✓        ✓        ✓     [27-01 complete] Rip 7 AudioBridge call sites; wire screens to native + DOD UI; fix TimePitchStretcher offline hang
+  ✓        ✓        ✓     [27-02 complete] Delete AudioBridge; scrub PluginProcessor; CI + release.yml v4-ready (4b40bfc)
+  ✓        ✓        ✓     [27-03 complete] Full regression test — 0 regressions, v4 cleared for release
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: 27-01 unified. SUMMARY at .paul/phases/27-wireup-release/27-01-SUMMARY.md
-Next action: /paul:plan 27-02 — delete AudioBridge + sidecar; prune cpr dep
-Resume file: .paul/ROADMAP.md (Phase 27 — Wire-up + release v4.0.0)
+Stopped at: 27-04 planned. PLAN at .paul/phases/27-wireup-release/27-04-PLAN.md
+Next action: /paul:apply 27-04 — README rewrite, version 4.0.0, commit, tag v4.0.0
+Resume file: .paul/phases/27-wireup-release/27-04-PLAN.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

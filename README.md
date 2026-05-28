@@ -1,6 +1,7 @@
 # AutoRemix
 
-> JUCE VST3/AU/Standalone plugin + Python FastAPI sidecar for creative stem-based audio remixing.
+> JUCE VST3/AU/Standalone plugin for creative stem-based audio remixing.
+> Single-binary install — no external runtime required.
 
 Load any audio file, separate it into stems, tweak per-stem levels and remix parameters, and get a processed output — all inside the plugin. No DAW required for the standalone mode.
 
@@ -36,16 +37,8 @@ cd autoremix
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 
-# 3. Start sidecar
-cd sidecar
-uv venv && source .venv/bin/activate
-uv pip install -r requirements.txt
-python -m server.main &
-
-# 4. Launch standalone
-cd ..
-AUTOREMIX_SERVER_PATH=$(pwd)/sidecar/server/main.py \
-  ./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
+# 3. Launch standalone
+./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
 ```
 
 **Windows**
@@ -59,15 +52,7 @@ cd autoremix
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 
-:: 3. Start sidecar
-cd sidecar
-uv venv
-.venv\Scripts\activate
-uv pip install -r requirements.txt
-python -m server.main
-
-:: 4. Launch standalone (new terminal, from repo root)
-set AUTOREMIX_SERVER_PATH=%CD%\sidecar\server\main.py
+:: 3. Launch standalone
 build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 ```
 
@@ -77,8 +62,7 @@ build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 
 ### Prerequisites
 
-- Python sidecar running on port 17432 (see [Python Sidecar](#python-sidecar))
-- Plugin launched (standalone or loaded in DAW as VST3/AU)
+- Plugin built and launched (standalone or loaded in DAW as VST3/AU)
 - Audio file ready (WAV, AIFF, FLAC, MP3, OGG, M4A)
 
 ### The Interface
@@ -87,7 +71,7 @@ The plugin window is **960 × 600 px**. It has three persistent zones and a cent
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │  ← header
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │  ← header
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │                         [ current screen content ]                                  │
@@ -98,7 +82,7 @@ The plugin window is **960 × 600 px**. It has three persistent zones and a cent
 ```
 
 - **Separator combo** (header): choose stem separator before processing
-- **Health dot** (top-right): green = sidecar connected, amber = checking, red = unreachable
+- **MODEL indicator** (top-right): shows Demucs model download status when using ML separation
 - **Status bar** (footer): shows current operation and messages
 
 ---
@@ -109,7 +93,7 @@ The plugin window is **960 × 600 px**. It has three persistent zones and a cent
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │                                                                                     │
@@ -136,7 +120,7 @@ After loading, the plugin analyses the file (BPM detection, key detection) and s
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                     │
 │   ▒▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░▒▒▒▒▓▓▒░░▒▒▓▒░▒▒▓▓░                          │
@@ -154,7 +138,7 @@ After loading, the plugin analyses the file (BPM detection, key detection) and s
 
 **Before separating**, choose your stem separator in the header combo:
 - **Algorithmic FFT** — fast, always available, rough stems (band-split)
-- **Demucs (ML)** — slow on CPU (~1-5 min), professional-quality isolation (requires `uv pip install demucs`)
+- **Demucs (ML)** — professional-quality isolation using the htdemucs neural network. On first use, the plugin automatically downloads the htdemucs model (~353 MB). Subsequent launches use the cached model from your app data directory.
 
 Click **Separate Stems** to proceed.
 
@@ -166,7 +150,7 @@ Click **Separate Stems** to proceed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                          SEPARATING                                                 │
 │                                                                                     │
@@ -183,7 +167,7 @@ Click **Separate Stems** to proceed.
 
 > `[SCREENSHOT: 02-separating.png — 4 stem progress rows with elapsed time counter]`
 
-The plugin sends the audio to the Python sidecar, which runs the selected separator and writes 4 stem WAV files to a temp directory. Progress is shown per-stem with an elapsed timer. This screen navigates automatically to Stems Ready when complete.
+The plugin runs the selected separator natively. Algorithmic FFT is instant; Demucs ML inference may take 30–120 s on CPU. Progress is shown per-stem with an elapsed timer. This screen navigates automatically to Stems Ready when complete.
 
 ---
 
@@ -193,7 +177,7 @@ The plugin sends the audio to the Python sidecar, which runs the selected separa
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  STEMS                                                                              │
 │                                                                                     │
@@ -231,7 +215,7 @@ When satisfied with the stem balance, click **Choose Style →** to proceed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  STYLE                                                                              │
 │  [ Chop & Screw ▼──────────────────────────────────────── ] [ Save as Preset ]      │
@@ -280,7 +264,7 @@ When satisfied with the stem balance, click **Choose Style →** to proceed.
 | Mode | Description |
 |------|-------------|
 | Fixed (ms) | Fixed-interval chop in milliseconds |
-| Beat-Aligned | Cuts at beat positions detected by librosa |
+| Beat-Aligned | Cuts at beat positions |
 | Onset-Triggered | Cuts at transient onsets (drum hits, note attacks) |
 | Bar-Locked | Cuts every N beats (default 4 = one bar) |
 | Energy Gate | Silences low-energy regions below threshold |
@@ -298,11 +282,11 @@ Click **Remix →** to start rendering.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │                           RENDERING...                                              │
 │                              42 s                                                   │
-│  ████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░             │
+│  ████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░             │
 │                                                                                     │
 │                           [ Cancel ]                                                │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
@@ -312,13 +296,13 @@ Click **Remix →** to start rendering.
 
 > `[SCREENSHOT: 05a-rendering.png — progress bar and elapsed timer while remix runs]`
 
-The plugin sends stems + parameters to the sidecar for processing. A Cancel button aborts and returns to Mode Params.
+A Cancel button aborts and returns to Mode Params.
 
 **Screen: Render — done**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  DONE                                                                               │
 │                                                                                     │
@@ -369,7 +353,7 @@ mashup screen.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│  AutoRemix   [Algorithmic FFT ▼]                                                  ● │
+│  AutoRemix   [Algorithmic FFT ▼]                                              MODEL │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  MASHUP   TEMPLATE [ Vocal Acapella ▼ ]                          [ Advanced ▾ ]    │
 │                                                                                     │
@@ -410,8 +394,8 @@ slider and the Advanced section. 8 built-ins ship with AutoRemix:
 | Frankenstein | Balanced split: A vox + other, B drums + bass |
 
 Custom user templates: drop your own JSON files in `~/.config/autoremix/mashup/`
-(Linux/macOS) or `%APPDATA%\autoremix\mashup\` (Windows) — they appear in the
-combo after restarting the sidecar.
+(Linux/macOS) or `%APPDATA%\autoremix\mashup\` (Windows). User mashup templates
+are loaded at startup alongside the 8 built-in templates.
 
 **Advanced ▾ (5 feel knobs)**: click to reveal extra sliders for finer
 sonic control. All five start at no-op defaults, so collapsed = same as
@@ -421,7 +405,7 @@ the simple mixer.
 |------|-------|--------|
 | Tempo Mod | 0.5–1.5× | Multiplier on top of the anchored BPM. 0.75 = slowed, 1.3 = nightcore |
 | Master Pitch | −12 to +12 semi | Extra pitch shift on the final mix, on top of key matching |
-| Reverb Mix | 0–1 | Master reverb wet level (Pedalboard) |
+| Reverb Mix | 0–1 | Master reverb wet level |
 | Reverb Room | 0–1 | Master reverb room size |
 | HPF Track B | 0–400 Hz | High-pass filter on track B before mixing — solves the "two bass lines clashing" problem in layered mashups |
 
@@ -435,10 +419,10 @@ the simple mixer.
 7. Applies master pitch + reverb if non-zero
 8. LUFS-normalizes and writes the output WAV
 
-A rendering screen with elapsed seconds appears while the sidecar works
-(can take 30s–5min depending on separator choice). Result lands on the
-ScreenRender Done state, where you can play the mashup, save it, or
-return to start a new one.
+A rendering screen with elapsed seconds appears while the engine works
+(can take 15–120 s depending on separator choice and track length). Result
+lands on the ScreenRender Done state, where you can play the mashup, save
+it, or return to start a new one.
 
 ---
 
@@ -447,19 +431,16 @@ return to start a new one.
 ### Linux
 - CMake ≥ 3.22, Ninja
 - GCC 12+ or Clang 14+ (C++20)
-- Python 3.12, [uv](https://github.com/astral-sh/uv)
-- `libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev libxinerama-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev libcurl4-openssl-dev libgtk-3-dev`
+- `libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev libxinerama-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev libcurl4-openssl-dev`
 
 ### macOS
 - Xcode 14+ (Command Line Tools sufficient)
 - CMake ≥ 3.22, Ninja (`brew install cmake ninja`)
-- Python 3.12, [uv](https://github.com/astral-sh/uv)
 
 ### Windows
 - Visual Studio 2022 with C++ workload
 - CMake ≥ 3.22 (included with VS or from cmake.org)
-- Python 3.12, [uv](https://pypi.org/project/uv/)
-- No extra system libs required (WinHTTP used automatically)
+- No extra system libs required
 
 ---
 
@@ -499,48 +480,20 @@ build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3\
 
 ---
 
-## Python Sidecar
-
-The plugin communicates with a local Python FastAPI server on port **17432**.
-
-```bash
-cd sidecar
-uv venv
-source .venv/bin/activate     # Linux / macOS
-# .venv\Scripts\activate      # Windows
-
-uv pip install -r requirements.txt
-python -m server.main         # starts on http://127.0.0.1:17432
-```
-
-**Auto-start**: set `AUTOREMIX_SERVER_PATH` to the path of `server/main.py` and the plugin will fork the sidecar automatically on launch and shut it down on exit:
-
-```bash
-# Linux / macOS
-export AUTOREMIX_SERVER_PATH=/path/to/autoremix/sidecar/server/main.py
-./build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix
-
-# Windows
-set AUTOREMIX_SERVER_PATH=C:\path\to\autoremix\sidecar\server\main.py
-build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
-```
-
-**Optional — Demucs ML separator** (high-quality stem isolation, ~2 GB download):
-
-```bash
-uv pip install demucs
-```
-
-Without demucs, the algorithmic FFT separator is always available. With demucs installed, `DemucsSeparator` appears automatically in the sidecar's `/health` response and in the plugin's separator combo.
-
----
-
 ## Stem Separators
 
 | ID | Method | Quality | Speed |
 |----|--------|---------|-------|
-| `algorithmic` | FFT band-split | Low (leaky, bleeding) | Instant |
-| `demucs` | Demucs `htdemucs` ML | High (clean isolation) | ~1–5 min CPU / ~30 s GPU |
+| `algorithmic` | FFT band-split (native IIR) | Low (leaky, bleeding) | Instant |
+| `demucs` | htdemucs ONNX via ORT 1.17.0 | High (clean isolation) | ~30–120 s CPU |
+
+**Demucs model download**: on first use, the plugin downloads `htdemucs.onnx`
+(~353 MB) and caches it in your app data directory:
+- Linux: `~/.config/autoremix/models/htdemucs.onnx`
+- macOS: `~/Library/Application Support/autoremix/models/htdemucs.onnx`
+- Windows: `%APPDATA%\autoremix\models\htdemucs.onnx`
+
+Subsequent launches skip the download. No manual installation needed.
 
 ---
 
@@ -569,7 +522,7 @@ Without demucs, the algorithmic FFT separator is always available. With demucs i
 
 ## Custom Presets
 
-Presets are JSON files. Drop them in `~/.config/autoremix/modes/` (Linux/macOS) or `%APPDATA%\autoremix\modes\` (Windows), then restart the sidecar.
+Presets are JSON files. Drop them in `~/.config/autoremix/modes/` (Linux/macOS) or `%APPDATA%\autoremix\modes\` (Windows). User presets are loaded at startup alongside the 9 built-in presets.
 
 **Engine-based preset (v1.0):**
 ```json
@@ -625,47 +578,32 @@ Presets are JSON files. Drop them in `~/.config/autoremix/modes/` (Linux/macOS) 
 
 ---
 
-## Running Tests
-
-```bash
-cd sidecar
-source .venv/bin/activate
-python -m pytest tests/ -v
-```
-
-54 tests: health, separation (algorithmic + demucs), 3 engines, 11 effect ops, 5 musical analysis functions, chain interpreter, preset loading, error paths.
-
----
-
 ## Architecture
 
 ```
-┌─────────────────────────────────┐     HTTP/JSON       ┌──────────────────────────────┐
-│  JUCE Plugin (C++20)            │ ◄─────────────────► │  Python Sidecar (FastAPI)    │
-│                                 │   port 17432        │                              │
-│  PluginProcessor                │                     │  POST /api/v1/separate       │
-│  ├─ AudioBridge (HTTP IPC)      │                     │  POST /api/v1/remix          │
-│  ├─ MixerAudioSource            │                     │  POST /api/v1/mashup         │
-│  │   ├─ StemPlayer[4]           │                     │  GET  /api/v1/health         │
-│  │   └─ preview transport       │                     │  GET  /api/v1/presets        │
-│  └─ SidecarHealthDot            │                     │  GET  /api/v1/mashup_presets │
-│                                 │                     │  GET  /api/v1/analyze        │
-│  PluginEditor (6-screen flow)   │                     │  POST /api/v1/presets        │
-│  ├─ ScreenEmpty                 │                     │                              │
-│  ├─ ScreenSeparating            │                     │  AlgorithmicSeparator        │
-│  ├─ ScreenStemsReady            │                     │  DemucsSeparator             │
-│  ├─ ScreenModeParams            │                     │  ChoppedAndScrewedEngine     │
-│  ├─ ScreenRender                │                     │  SlowedReverbEngine          │
-│  └─ ScreenMashup                │                     │  DrumAndBassEngine           │
-│                                 │                     │  EffectChainEngine (DSL)     │
-│                                 │                     │  MashupEngine (pairwise)     │
-└─────────────────────────────────┘                     └──────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  AutoRemix — Native C++ Plugin (JUCE 7, C++20)                         │
+│                                                                        │
+│  PluginProcessor                                                        │
+│  ├─ NativeAnalysis        (BPM, key, LUFS — juce::dsp)                 │
+│  ├─ NativeAlgorithmicSeparator  (4-band IIR cascade)                   │
+│  ├─ NativeDemucsSeparator       (htdemucs ONNX, ORT 1.17.0)           │
+│  │   └─ ModelDownloader   (DOD + SHA256 + retry × 3)                   │
+│  ├─ NativeRemixEngines    (ChoppedAndScrewed, SlowedReverb, DnB)       │
+│  ├─ NativeEffectChainEngine  (11-op DSL interpreter)                   │
+│  ├─ NativeMashupEngine    (BPM/key align + per-stem RubberBand)        │
+│  ├─ NativePresetLoaders   (binary-embedded JSONs + user dir override)  │
+│  ├─ TimePitchStretcher    (RubberBand offline)                         │
+│  └─ MixerAudioSource (StemPlayer[4] + preview transport)              │
+│                                                                        │
+│  PluginEditor (6-screen flow)                                          │
+│  ├─ ScreenEmpty → ScreenSeparating → ScreenStemsReady                  │
+│  ├─ ScreenModeParams → ScreenRender                                    │
+│  └─ ScreenMashup                                                       │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Sidecar lifecycle:**
-- Auto-started via `fork()` + `execl("python3", ...)` (Linux/macOS) or `CreateProcess` (Windows) when `AUTOREMIX_SERVER_PATH` is set
-- Auto-stopped on plugin unload via `SIGTERM` / `TerminateProcess`
-- All ML/IO runs in `asyncio.to_thread()` — health endpoint always responsive
+All processing is native C++. No HTTP IPC, no child processes.
 
 **Pluggability:** implement `IStemSeparator` or `IRemixEngine`, register in the respective registry — no changes to existing code.
 
@@ -673,11 +611,11 @@ python -m pytest tests/ -v
 
 ## Known Limitations
 
-- Algorithmic FFT separator: rough stems (band-split only). Use demucs for production.
+- Algorithmic FFT separator: rough stems (band-split only). Use Demucs for production.
 - No real-time processing — offline batch only.
-- Demucs CPU inference: ~1–5 min per track. GPU requires CUDA-enabled torch.
-- AudioBridge separation timeout: 300 s.
+- Demucs ML: native ONNX inference via ORT 1.17.0 (CPU only). ~30–120 s per track on CPU. GPU (CUDA/DirectML) deferred to v4.1.
 - AU format (macOS): not code-signed — requires user to manually allow in System Settings > Privacy & Security on macOS 13+.
+- Linux: `libcurl4-openssl-dev` required at runtime for the Demucs model download.
 
 ---
 

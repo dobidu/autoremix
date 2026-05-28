@@ -56,6 +56,10 @@ target_include_directories(rubberband PUBLIC
 target_compile_features(rubberband PUBLIC cxx_std_17)
 if(NOT WIN32)
   set_target_properties(rubberband PROPERTIES POSITION_INDEPENDENT_CODE ON)
+else()
+  # NOMINMAX prevents <windows.h> min/max macros from clobbering std::numeric_limits<T>::max()
+  # inside RubberBand source files (single-file build includes all TUs in one unit).
+  target_compile_definitions(rubberband PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 
 # ONNX Runtime — pre-built per platform (Phase 26-02). Microsoft ships

@@ -551,25 +551,39 @@ AutoRemixAudioProcessorEditor::separateNative(const std::filesystem::path& in,
     autoremix::dsp::separators::NativeStems stems;
 
     if (sep_id == "demucs") {
-        // 1. Ensure model is cached.
-        if (ctx_.set_status)
-            juce::MessageManager::callAsync([this] {
-                ctx_.set_status("Demucs: checking model cache...");
-            });
-        health_dot_.setState(ModelStatusDot::State::downloading);
+        // Snapshot cancel token at the top — guards all callbacks for this invocation.
+        // cancel_snap keeps the atomic alive even after the screen is destroyed.
+        auto cancel_snap = ctx_.separation_cancel_token;
+        auto cancelled = [&cancel_snap] {
+            return cancel_snap && cancel_snap->load(std::memory_order_relaxed);
+        };
 
-        auto progress_cb = [this](double frac) {
+        // 1. Ensure model is cached.
+        if (!cancelled()) {
+            if (ctx_.set_status)
+                juce::MessageManager::callAsync([this, cancel_snap] {
+                    if (cancel_snap && cancel_snap->load()) return;
+                    ctx_.set_status("Demucs: checking model cache...");
+                });
+            health_dot_.setState(ModelStatusDot::State::downloading);
+        }
+
+        auto progress_cb = [this, cancel_snap](double frac) {
+            if (cancel_snap && cancel_snap->load(std::memory_order_relaxed)) return;
             const int pct = static_cast<int>(frac * 100.0);
-            juce::MessageManager::callAsync([this, pct] {
+            juce::MessageManager::callAsync([this, pct, cancel_snap] {
+                if (cancel_snap && cancel_snap->load()) return;
                 if (ctx_.set_status)
                     ctx_.set_status("Demucs: downloading model... "
                                     + juce::String(pct) + "%");
             });
         };
         auto download = autoremix::dsp::models::ensure_htdemucs(progress_cb);
+        if (cancelled()) return empty;
         if (!download.ok) {
             health_dot_.setState(ModelStatusDot::State::error);
-            juce::MessageManager::callAsync([this, err = download.error] {
+            juce::MessageManager::callAsync([this, err = download.error, cancel_snap] {
+                if (cancel_snap && cancel_snap->load()) return;
                 if (ctx_.set_status)
                     ctx_.set_status("Demucs model download failed: " + err);
             });
@@ -579,34 +593,36 @@ AutoRemixAudioProcessorEditor::separateNative(const std::filesystem::path& in,
 
         // 2. Run separation (44.1 kHz required by the model).
         if (std::abs(sr - 44100.0) > 0.5) {
-            juce::MessageManager::callAsync([this, sr] {
+            juce::MessageManager::callAsync([this, sr, cancel_snap] {
+                if (cancel_snap && cancel_snap->load()) return;
                 if (ctx_.set_status)
                     ctx_.set_status("Demucs needs 44.1 kHz, got "
                                     + juce::String(sr) + " Hz");
             });
             return empty;
         }
-        juce::MessageManager::callAsync([this] {
+        juce::MessageManager::callAsync([this, cancel_snap] {
+            if (cancel_snap && cancel_snap->load()) return;
             if (ctx_.set_status) ctx_.set_status("Separating (demucs)...");
         });
 
-        auto sep_progress = [this](double frac) {
+        auto sep_progress = [this, cancel_snap](double frac) {
+            if (cancel_snap && cancel_snap->load(std::memory_order_relaxed)) return;
             const int pct = static_cast<int>(frac * 100.0);
-            juce::MessageManager::callAsync([this, pct] {
+            juce::MessageManager::callAsync([this, pct, cancel_snap] {
+                if (cancel_snap && cancel_snap->load()) return;
                 if (ctx_.set_status)
                     ctx_.set_status("Demucs: separating... "
                                     + juce::String(pct) + "%");
             });
         };
-        // Snapshot the shared_ptr so the atomic stays alive for the full
-        // inference even if onExit() resets ctx_.separation_cancel_token.
-        auto cancel_snap = ctx_.separation_cancel_token;
         auto res = autoremix::dsp::separators::separate_demucs(
             buf, sr, download.path, sep_progress,
             cancel_snap.get());
-        if (res.cancelled) return empty;
+        if (res.cancelled || cancelled()) return empty;
         if (!res.ok) {
-            juce::MessageManager::callAsync([this, err = res.error] {
+            juce::MessageManager::callAsync([this, err = res.error, cancel_snap] {
+                if (cancel_snap && cancel_snap->load()) return;
                 if (ctx_.set_status)
                     ctx_.set_status("Demucs separation failed: " + err);
             });

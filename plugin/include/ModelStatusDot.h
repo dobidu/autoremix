@@ -39,8 +39,8 @@ public:
 
     void setState(State s)
     {
-        state_ = s;
-        juce::MessageManager::callAsync([this] { repaint(); });
+        // Always write state_ on the message thread — called from background threads.
+        juce::MessageManager::callAsync([this, s] { state_ = s; repaint(); });
     }
 
     void paint(juce::Graphics& g) override

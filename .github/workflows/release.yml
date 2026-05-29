@@ -39,6 +39,8 @@ jobs:
           mkdir -p dist/AutoRemix-linux
           cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
                 dist/AutoRemix-linux/
+          cp -r build/plugin/AutoRemix_artefacts/Release/LV2/AutoRemix.lv2 \
+                dist/AutoRemix-linux/
           cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
                 dist/AutoRemix-linux/
           cp    README.md LICENSE dist/AutoRemix-linux/
@@ -73,6 +75,8 @@ jobs:
           cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
                 dist/AutoRemix-macos/
           cp -r build/plugin/AutoRemix_artefacts/Release/AU/AutoRemix.component \
+                dist/AutoRemix-macos/
+          cp -r build/plugin/AutoRemix_artefacts/Release/LV2/AutoRemix.lv2 \
                 dist/AutoRemix-macos/
           cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
                 dist/AutoRemix-macos/
@@ -151,6 +155,8 @@ jobs:
           mkdir -p dist/AutoRemix-linux-gpu
           cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
                 dist/AutoRemix-linux-gpu/
+          cp -r build/plugin/AutoRemix_artefacts/Release/LV2/AutoRemix.lv2 \
+                dist/AutoRemix-linux-gpu/
           cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
                 dist/AutoRemix-linux-gpu/
           cp    README.md LICENSE dist/AutoRemix-linux-gpu/
@@ -222,6 +228,8 @@ jobs:
           cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
                 dist/AutoRemix-macos-gpu/
           cp -r build/plugin/AutoRemix_artefacts/Release/AU/AutoRemix.component \
+                dist/AutoRemix-macos-gpu/
+          cp -r build/plugin/AutoRemix_artefacts/Release/LV2/AutoRemix.lv2 \
                 dist/AutoRemix-macos-gpu/
           cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
                 dist/AutoRemix-macos-gpu/

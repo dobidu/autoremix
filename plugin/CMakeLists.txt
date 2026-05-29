@@ -43,7 +43,8 @@ juce_add_plugin(AutoRemix
   COPY_PLUGIN_AFTER_BUILD FALSE
   PLUGIN_MANUFACTURER_CODE Lavd
   PLUGIN_CODE Armx
-  FORMATS VST3 AU Standalone
+  FORMATS VST3 AU LV2 Standalone
+  LV2URI "https://github.com/dobidu/autoremix"
   PRODUCT_NAME "AutoRemix"
 )
 

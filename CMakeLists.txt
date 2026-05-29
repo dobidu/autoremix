@@ -70,28 +70,29 @@ endif()
 #   macOS:   CoreML EP deferred to Phase 29 — same CPU tarball used.
 option(AUTOREMIX_GPU "Build with GPU EP (CUDA on Linux, DirectML on Windows)" OFF)
 
-set(ORT_VERSION "1.17.0")
+set(ORT_VERSION "1.21.0")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   if(AUTOREMIX_GPU)
     set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-gpu-${ORT_VERSION}.tgz")
-    set(ORT_SHA "")  # pin SHA after first successful GPU build
+    set(ORT_SHA "ef37a33ba75e457aebfd0d7b342ab20424aa6126bc5f565d247f1201b66996cf")
   else()
     set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz")
-    set(ORT_SHA "efc344d54d1969446ff5d3e55b54e205c6579c06333ecf1d34a04215eefae7c6")
+    set(ORT_SHA "7485c7e7aac6501b27e353dcbe068e45c61ab51fbaf598d13970dfae669d20bf")
   endif()
   set(ORT_LIB_SUBPATH "lib/libonnxruntime.so.${ORT_VERSION}")
   set(ORT_INCLUDE_SUBPATH "include")
 elseif(APPLE)
   set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-osx-universal2-${ORT_VERSION}.tgz")
-  set(ORT_SHA "")
+  set(ORT_SHA "3c3cfc71e538e592192c14d9bad88ec5d5d8d5d698ebc2c6b3119be8c90b4670")
   set(ORT_LIB_SUBPATH "lib/libonnxruntime.${ORT_VERSION}.dylib")
   set(ORT_INCLUDE_SUBPATH "include")
 elseif(WIN32)
   if(AUTOREMIX_GPU)
-    # DirectML-enabled ORT from NuGet (.nupkg = zip). Headers + DML provider
+    # DirectML-enabled ORT from NuGet v3 flatcontainer. Headers + DML provider
     # factory header live under build/native/include inside the package.
-    set(ORT_URL "https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime.DirectML/${ORT_VERSION}")
-    set(ORT_SHA "")  # pin SHA after first successful GPU build
+    # Note: NuGet v3 URL used (v2 API returns 404 for this package).
+    set(ORT_URL "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/${ORT_VERSION}/microsoft.ml.onnxruntime.directml.${ORT_VERSION}.nupkg")
+    set(ORT_SHA "12bed6e1e870f30e0150e039ebb6853da32eba381eda1c373faeeb17168785e6")
     set(ORT_LIB_SUBPATH "runtimes/win-x64/native/onnxruntime.dll")
     set(ORT_IMPLIB_SUBPATH "runtimes/win-x64/native/onnxruntime.lib")
     set(ORT_INCLUDE_SUBPATH "build/native/include")
@@ -99,7 +100,7 @@ elseif(WIN32)
     # System32 via LoadLibrary — no bundling needed.
   else()
     set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-win-x64-${ORT_VERSION}.zip")
-    set(ORT_SHA "")
+    set(ORT_SHA "5c07bb2805cd666dda75fa9bfa60e75f2f90d478b952298dd9d55c00740d81bf")
     set(ORT_LIB_SUBPATH "lib/onnxruntime.dll")
     set(ORT_IMPLIB_SUBPATH "lib/onnxruntime.lib")
     set(ORT_INCLUDE_SUBPATH "include")

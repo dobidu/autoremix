@@ -14,7 +14,8 @@
 //   - Model window is fixed at 343,980 samples (7.8 s @ 44.1 kHz).
 //     Inputs longer than one window are chunked with 25% overlap and
 //     stitched with a raised-cosine cross-fade.
-//   - CPU execution provider only. CUDA / DirectML deferred to v4.1.
+//   - EP: CPU by default; CUDA (Linux) or DirectML (Windows) via -DAUTOREMIX_GPU=ON.
+//     GPU EP failure at session creation falls back to CPU transparently.
 //   - Single Ort::Session is reused across chunks of one call.
 //
 // Public API:
@@ -30,6 +31,9 @@
 #include <vector>
 
 #include <onnxruntime_cxx_api.h>
+#if defined(AUTOREMIX_GPU) && defined(_WIN32)
+#include <dml_provider_factory.h>
+#endif
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
@@ -186,18 +190,56 @@ separate_demucs(const juce::AudioBuffer<float>& input,
 
     try {
         Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "autoremix-demucs");
-        Ort::SessionOptions opts;
-        opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-        opts.SetIntraOpNumThreads(0);     // ORT picks a sensible default
 
-        // ORT on Windows only provides wchar_t* path overload.
-        Ort::Session session(env,
-#ifdef _WIN32
-            model_path.getFullPathName().toWideCharPointer(),
-#else
-            model_path.getFullPathName().toRawUTF8(),
+        // Returns a session using GPU EP if available, CPU EP as fallback.
+        // Each separate_demucs() call creates a fresh session; GPU EP failure
+        // is caught and retried with CPU EP rather than propagated as an error.
+        auto make_session = [&](bool try_gpu) -> Ort::Session {
+#if defined(AUTOREMIX_GPU)
+            if (try_gpu) {
+                try {
+                    Ort::SessionOptions gpu_opts;
+                    gpu_opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+                    gpu_opts.SetIntraOpNumThreads(1);
+#if defined(_WIN32)
+                    Ort::ThrowOnError(
+                        OrtSessionOptionsAppendExecutionProvider_DML(gpu_opts, 0));
+#elif defined(__linux__)
+                    OrtCUDAProviderOptions cuda_opts{};
+                    cuda_opts.device_id = 0;
+                    gpu_opts.AppendExecutionProvider_CUDA(cuda_opts);
 #endif
-            opts);
+                    auto s = Ort::Session(env,
+#ifdef _WIN32
+                        model_path.getFullPathName().toWideCharPointer(),
+#else
+                        model_path.getFullPathName().toRawUTF8(),
+#endif
+                        gpu_opts);
+                    juce::Logger::writeToLog("[Demucs] GPU EP session — OK");
+                    return s;
+                } catch (const Ort::Exception& e) {
+                    juce::Logger::writeToLog(
+                        juce::String("[Demucs] GPU EP failed (") + e.what()
+                        + "), falling back to CPU");
+                }
+            }
+#else
+            juce::ignoreUnused(try_gpu);
+#endif
+            Ort::SessionOptions cpu_opts;
+            cpu_opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+            cpu_opts.SetIntraOpNumThreads(0);
+            juce::Logger::writeToLog("[Demucs] CPU EP session");
+            return Ort::Session(env,
+#ifdef _WIN32
+                model_path.getFullPathName().toWideCharPointer(),
+#else
+                model_path.getFullPathName().toRawUTF8(),
+#endif
+                cpu_opts);
+        };
+        Ort::Session session = make_session(true);
 
         Ort::MemoryInfo mem_info = Ort::MemoryInfo::CreateCpu(
             OrtArenaAllocator, OrtMemTypeDefault);

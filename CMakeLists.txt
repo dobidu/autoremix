@@ -64,22 +64,45 @@ endif()
 
 # ONNX Runtime — pre-built per platform (Phase 26-02). Microsoft ships
 # tarballs only; we fetch the right one and import as a SHARED library.
+# GPU EP support added in Phase 28-01: -DAUTOREMIX_GPU=ON selects GPU packages.
+#   Linux:   onnxruntime-linux-x64-gpu (CUDA 11.8 EP)
+#   Windows: Microsoft.ML.OnnxRuntime.DirectML NuGet (DirectML EP, DX12)
+#   macOS:   CoreML EP deferred to Phase 29 — same CPU tarball used.
+option(AUTOREMIX_GPU "Build with GPU EP (CUDA on Linux, DirectML on Windows)" OFF)
+
 set(ORT_VERSION "1.17.0")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz")
-  set(ORT_SHA "efc344d54d1969446ff5d3e55b54e205c6579c06333ecf1d34a04215eefae7c6")
+  if(AUTOREMIX_GPU)
+    set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-gpu-${ORT_VERSION}.tgz")
+    set(ORT_SHA "")  # pin SHA after first successful GPU build
+  else()
+    set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz")
+    set(ORT_SHA "efc344d54d1969446ff5d3e55b54e205c6579c06333ecf1d34a04215eefae7c6")
+  endif()
   set(ORT_LIB_SUBPATH "lib/libonnxruntime.so.${ORT_VERSION}")
+  set(ORT_INCLUDE_SUBPATH "include")
 elseif(APPLE)
   set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-osx-universal2-${ORT_VERSION}.tgz")
-  # SHA pinned on first macOS build — see CMakeLists.txt comment in plan 26-02.
   set(ORT_SHA "")
   set(ORT_LIB_SUBPATH "lib/libonnxruntime.${ORT_VERSION}.dylib")
+  set(ORT_INCLUDE_SUBPATH "include")
 elseif(WIN32)
-  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-win-x64-${ORT_VERSION}.zip")
-  # SHA pinned on first Windows build.
-  set(ORT_SHA "")
-  set(ORT_LIB_SUBPATH "lib/onnxruntime.dll")
-  set(ORT_IMPLIB_SUBPATH "lib/onnxruntime.lib")
+  if(AUTOREMIX_GPU)
+    # DirectML-enabled ORT from NuGet (.nupkg = zip). Headers + DML provider
+    # factory header live under build/native/include inside the package.
+    set(ORT_URL "https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime.DirectML/${ORT_VERSION}")
+    set(ORT_SHA "")  # pin SHA after first successful GPU build
+    set(ORT_LIB_SUBPATH "runtimes/win-x64/native/onnxruntime.dll")
+    set(ORT_IMPLIB_SUBPATH "runtimes/win-x64/native/onnxruntime.lib")
+    set(ORT_INCLUDE_SUBPATH "build/native/include")
+    set(ORT_DML_LIB_SUBPATH "runtimes/win-x64/native/DirectML.dll")
+  else()
+    set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-win-x64-${ORT_VERSION}.zip")
+    set(ORT_SHA "")
+    set(ORT_LIB_SUBPATH "lib/onnxruntime.dll")
+    set(ORT_IMPLIB_SUBPATH "lib/onnxruntime.lib")
+    set(ORT_INCLUDE_SUBPATH "include")
+  endif()
 endif()
 
 if(ORT_SHA)
@@ -97,11 +120,18 @@ FetchContent_MakeAvailable(onnxruntime)
 add_library(onnxruntime SHARED IMPORTED GLOBAL)
 set_target_properties(onnxruntime PROPERTIES
   IMPORTED_LOCATION             "${onnxruntime_SOURCE_DIR}/${ORT_LIB_SUBPATH}"
-  INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include")
+  INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/${ORT_INCLUDE_SUBPATH}")
 if(WIN32)
   # MSVC multi-config generators require IMPORTED_IMPLIB for SHARED IMPORTED targets.
   set_target_properties(onnxruntime PROPERTIES
     IMPORTED_IMPLIB "${onnxruntime_SOURCE_DIR}/${ORT_IMPLIB_SUBPATH}")
+  if(AUTOREMIX_GPU)
+    # DirectML.dll must ship alongside onnxruntime.dll. ORT loads it via
+    # LoadLibrary internally — we don't link against it, just deploy it.
+    add_library(directml SHARED IMPORTED GLOBAL)
+    set_target_properties(directml PROPERTIES
+      IMPORTED_LOCATION "${onnxruntime_SOURCE_DIR}/${ORT_DML_LIB_SUBPATH}")
+  endif()
 endif()
 
 # Workaround async file chooser

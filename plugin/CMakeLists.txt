@@ -68,6 +68,7 @@ target_compile_definitions(AutoRemix PUBLIC
   JUCE_VST3_CAN_REPLACE_VST2=0
   JUCE_USE_MP3AUDIOFORMAT=1
   $<$<PLATFORM_ID:Windows>:NOMINMAX WIN32_LEAN_AND_MEAN>
+  $<$<BOOL:${AUTOREMIX_GPU}>:AUTOREMIX_GPU=1>
 )
 
 target_link_libraries(AutoRemix PRIVATE
@@ -86,3 +87,28 @@ target_link_libraries(AutoRemix PRIVATE
   juce::juce_recommended_lto_flags
   juce::juce_recommended_warning_flags
 )
+
+if(AUTOREMIX_GPU)
+  if(WIN32)
+    # DirectML.dll deployed alongside onnxruntime.dll; ORT loads it via
+    # LoadLibrary — we don't link against it directly, just copy on build.
+    add_custom_command(TARGET AutoRemix POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:directml>"
+        "$<TARGET_FILE_DIR:AutoRemix>"
+      COMMENT "Copying DirectML.dll to output")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # CUDA EP providers are loaded via dlopen by ORT at runtime.
+    # Copy them next to the built plugin so ORT's default search path finds them.
+    foreach(_ep_lib
+        "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime_providers_shared.so"
+        "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime_providers_cuda.so")
+      if(EXISTS "${_ep_lib}")
+        add_custom_command(TARGET AutoRemix POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_ep_lib}" "$<TARGET_FILE_DIR:AutoRemix>"
+          COMMENT "Copying CUDA EP provider: ${_ep_lib}")
+      endif()
+    endforeach()
+  endif()
+endif()

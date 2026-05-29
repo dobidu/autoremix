@@ -95,7 +95,8 @@ elseif(WIN32)
     set(ORT_LIB_SUBPATH "runtimes/win-x64/native/onnxruntime.dll")
     set(ORT_IMPLIB_SUBPATH "runtimes/win-x64/native/onnxruntime.lib")
     set(ORT_INCLUDE_SUBPATH "build/native/include")
-    set(ORT_DML_LIB_SUBPATH "runtimes/win-x64/native/DirectML.dll")
+    # DirectML.dll is a Windows OS component (Win10 1903+); ORT loads it from
+    # System32 via LoadLibrary — no bundling needed.
   else()
     set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-win-x64-${ORT_VERSION}.zip")
     set(ORT_SHA "")
@@ -125,13 +126,6 @@ if(WIN32)
   # MSVC multi-config generators require IMPORTED_IMPLIB for SHARED IMPORTED targets.
   set_target_properties(onnxruntime PROPERTIES
     IMPORTED_IMPLIB "${onnxruntime_SOURCE_DIR}/${ORT_IMPLIB_SUBPATH}")
-  if(AUTOREMIX_GPU)
-    # DirectML.dll must ship alongside onnxruntime.dll. ORT loads it via
-    # LoadLibrary internally — we don't link against it, just deploy it.
-    add_library(directml SHARED IMPORTED GLOBAL)
-    set_target_properties(directml PROPERTIES
-      IMPORTED_LOCATION "${onnxruntime_SOURCE_DIR}/${ORT_DML_LIB_SUBPATH}")
-  endif()
 endif()
 
 # Workaround async file chooser

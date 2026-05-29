@@ -89,15 +89,7 @@ target_link_libraries(AutoRemix PRIVATE
 )
 
 if(AUTOREMIX_GPU)
-  if(WIN32)
-    # DirectML.dll deployed alongside onnxruntime.dll; ORT loads it via
-    # LoadLibrary — we don't link against it directly, just copy on build.
-    add_custom_command(TARGET AutoRemix POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:directml>"
-        "$<TARGET_FILE_DIR:AutoRemix>"
-      COMMENT "Copying DirectML.dll to output")
-  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # CUDA EP providers are loaded via dlopen by ORT at runtime.
     # Copy them next to the built plugin so ORT's default search path finds them.
     foreach(_ep_lib

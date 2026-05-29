@@ -189,9 +189,7 @@ jobs:
           Copy-Item `
             build\_deps\onnxruntime-src\runtimes\win-x64\native\onnxruntime.dll `
             dist\AutoRemix-windows-gpu\
-          Copy-Item `
-            build\_deps\onnxruntime-src\runtimes\win-x64\native\DirectML.dll `
-            dist\AutoRemix-windows-gpu\
+          # DirectML.dll is a Windows OS component — no bundling needed.
           Copy-Item README.md, LICENSE dist\AutoRemix-windows-gpu\
           Compress-Archive -Path dist\AutoRemix-windows-gpu `
             -DestinationPath dist\AutoRemix-windows-gpu-${{ github.ref_name }}.zip

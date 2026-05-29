@@ -1,6 +1,8 @@
 #pragma once
 #include <juce_core/juce_core.h>
+#include <atomic>
 #include <functional>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 #include "PluginTypes.h"
@@ -114,4 +116,9 @@ struct ScreenContext {
     // Invoked by ScreenStemsReady to open the track-B file picker and
     // run the analyze+separate pipeline for the second track.
     std::function<void()> start_mashup_flow;
+
+    // Cancellation token for in-progress Demucs separation.
+    // ScreenSeparating creates and owns the atomic; sets this shared_ptr in onEnter,
+    // clears it in onExit. AutoRemixEditor::separateNative reads it for the demucs path.
+    std::shared_ptr<std::atomic<bool>> separation_cancel_token;
 };

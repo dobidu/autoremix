@@ -51,8 +51,9 @@ inline constexpr int   kSources            = 4;         // vocals/drums/bass/oth
 inline constexpr int   kModelChannels      = 2;
 
 struct DemucsResult {
-    bool         ok       = false;
-    bool         gpu_used = false;
+    bool         ok        = false;
+    bool         gpu_used  = false;
+    bool         cancelled = false;
     juce::String error;
     NativeStems  stems;
 };
@@ -141,7 +142,8 @@ inline DemucsResult
 separate_demucs(const juce::AudioBuffer<float>& input,
                 double                          sample_rate,
                 const juce::File&               model_path,
-                std::function<void(double)>     progress_cb = {})
+                std::function<void(double)>     progress_cb = {},
+                const std::atomic<bool>*        cancel      = nullptr)
 {
     DemucsResult result;
 
@@ -267,6 +269,11 @@ separate_demucs(const juce::AudioBuffer<float>& input,
         std::vector<float> chunk_buf;  // reusable, [2, kModelWindowSamples]
 
         for (int idx = 0; idx < num_chunks; ++idx) {
+            if (cancel && cancel->load(std::memory_order_relaxed)) {
+                result.cancelled = true;
+                result.error = "Cancelled";
+                return result;
+            }
             const int start = idx * hop;
 
             chunk_buf = detail::pack_chunk(input, start);

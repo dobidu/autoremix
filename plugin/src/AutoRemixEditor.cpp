@@ -599,7 +599,9 @@ AutoRemixAudioProcessorEditor::separateNative(const std::filesystem::path& in,
             });
         };
         auto res = autoremix::dsp::separators::separate_demucs(
-            buf, sr, download.path, sep_progress);
+            buf, sr, download.path, sep_progress,
+            ctx_.separation_cancel_token.get());
+        if (res.cancelled) return empty;
         if (!res.ok) {
             juce::MessageManager::callAsync([this, err = res.error] {
                 if (ctx_.set_status)

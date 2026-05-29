@@ -55,6 +55,8 @@ public:
     {
         elapsed_secs_ = 0;
         cancel_requested_.store(false);
+        ctx_.separation_cancel_token = std::shared_ptr<std::atomic<bool>>(
+            &cancel_requested_, [](auto*){});   // non-owning: lifetime = this screen
         mashup_mode_  = ctx_.mashup_mode_separating;
         header_lbl_.setText(mashup_mode_ ? "SEPARATING TRACK B" : "SEPARATING STEMS",
                             juce::dontSendNotification);
@@ -64,7 +66,11 @@ public:
         repaint();
     }
 
-    void onExit() override { stopTimer(); }
+    void onExit() override
+    {
+        stopTimer();
+        ctx_.separation_cancel_token.reset();
+    }
 
     void timerCallback() override
     {

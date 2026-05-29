@@ -2,15 +2,17 @@
 
 ## Current Position
 
-Milestone: v12 (v4-native) — COMPLETE ✅
+Milestone: v13 (v4.1 GPU Demucs) — In progress
 Branch: native
-Phase: 27 — Wire-up + release v4.0.0 — COMPLETE
-Status: 27-04 PLAN ✓ APPLY ✓ UNIFY ✓. v4.0.0 released. Phase 27 complete. v12 milestone complete.
-Last activity: 2026-05-28
+Phase: 28 — GPU Demucs — Planning
+Plan: 28-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-05-28 — Created .paul/phases/28-gpu-demucs/28-01-PLAN.md
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
+- Milestone v13 (v4.1 GPU): [░░░░░░░░░░] 0% — Phase 28 in progress.
 
 ## Loop Position
 
@@ -49,14 +51,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [27-02 complete] Delete AudioBridge; scrub PluginProcessor; CI + release.yml v4-ready (4b40bfc)
   ✓        ✓        ✓     [27-03 complete] Full regression test — 0 regressions, v4 cleared for release
   ✓        ✓        ✓     [27-04 complete] README v4 + VERSION 4.0.0 + tag v4.0.0 pushed → RELEASED
+
+═══ v4.1 GPU DEMUCS ═══
+  ✓        ○        ○     [28-01] CMake GPU ORT + NativeDemucsSeparator EP selection — PLAN created
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: v4.0.0 released. All phases complete.
-Next action: monitor GitHub Actions release build at github.com/dobidu/autoremix/actions
-Resume file: none — v12 milestone complete. Next work = v4.1 planning.
+Stopped at: Plan 28-01 created. Decision checkpoint pending (CoreML scope).
+Next action: Review 28-01-PLAN.md, answer CoreML decision, then /paul:apply 28-01
+Resume file: .paul/phases/28-gpu-demucs/28-01-PLAN.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

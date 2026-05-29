@@ -2,19 +2,19 @@
 
 ## Current Position
 
-Milestone: v15 (v4.3 ORT upgrade + LV2 + cancellation) — In progress
+Milestone: v15 (v4.3 ORT upgrade + LV2 + cancellation) — COMPLETE
 Branch: main
-Phase: 30 — ORT upgrade + LV2 + cancellation — Planning
-Plan: 30-01, 30-02, 30-03 created (wave 1 parallel); awaiting approval
-Status: PLANs created, ready for APPLY
-Last activity: 2026-05-29 — Created 30-01/02/03-PLAN.md
+Phase: 30 — ORT upgrade + LV2 + cancellation — COMPLETE
+Plan: all plans closed
+Status: Phase 30 UNIFY complete. Milestone v4.3 COMPLETE.
+Last activity: 2026-05-29 — v4.3.0 ready for tag
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
 - Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 released 2026-05-29.
 - Milestone v14 (v4.2 CoreML): [██████████] 100% — COMPLETE. v4.2.0 released 2026-05-29.
-- Milestone v15 (v4.3 ORT+LV2+cancel): [░░░░░░░░░░] 0% — Phase 30 in progress.
+- Milestone v15 (v4.3 ORT+LV2+cancel): [██████████] 100% — COMPLETE. v4.3.0 ready for tag.
 
 ## Loop Position
 
@@ -62,17 +62,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [29-01 complete] CMake CoreML define + NativeDemucsSeparator CoreML path + CI macOS-gpu + v4.2.0
 
 ═══ v4.3 ORT + LV2 + CANCEL ═══
-  ✓        ○        ○     [30-01] ORT 1.17 → 1.21 + SHA256 pinning
-  ✓        ○        ○     [30-02] LV2 format + CI packaging
-  ✓        ○        ○     [30-03] Demucs cancellation button + cancel token
+  ✓        ✓        ✓     [30-01 complete] ORT 1.17→1.21 + SHA256 pin (all 5 packages)
+  ✓        ✓        ✓     [30-02 complete] LV2 format + CI packaging
+  ✓        ✓        ✓     [30-03 complete] Demucs cancel + thread-safety (5 bugs fixed)
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Phase 30 plans created (3 plans, wave 1 parallel).
-Next action: Review plans, approve, then /paul:apply 30-01 (and 30-02, 30-03 in parallel)
-Resume file: .paul/phases/30-ort-lv2-cancel/30-01-PLAN.md
+Stopped at: Phase 30 UNIFY complete. Tag v4.3.0 pending.
+Next action: git tag v4.3.0 && git push origin v4.3.0
+Resume file: .paul/phases/30-ort-lv2-cancel/30-03-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

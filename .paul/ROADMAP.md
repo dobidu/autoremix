@@ -2,16 +2,15 @@
 
 ---
 
-## v4.3 — ORT upgrade + LV2 + cancellation — In progress
+## v4.3 — ORT upgrade + LV2 + cancellation ✅ COMPLETE (2026-05-29)
 
-Maintenance + UX release: upgrade ORT 1.17→1.21 with SHA256 pinning, add LV2 format
-for Linux DAW compatibility (Ardour, Bitwig), and Demucs cancellation UX.
+Maintenance + UX release: ORT 1.17→1.21 + SHA256 pinning, LV2 format, Demucs cancel.
 
-### Phase 30 — ORT upgrade + LV2 + cancellation — Planning ✏️
+### Phase 30 — ORT upgrade + LV2 + cancellation ✅ COMPLETE (2026-05-29)
 
-- **30-01**: ORT 1.17 → 1.21 + SHA256 pinning for all packages (wave 1)
-- **30-02**: LV2 plugin format + CI packaging (wave 1)
-- **30-03**: Demucs separation cancellation button + cancel token (wave 1)
+- **30-01**: ORT 1.17→1.21 + SHA256 pinning (all 5 packages) ✅
+- **30-02**: LV2 format (Ardour/Bitwig) + CI packaging ✅
+- **30-03**: Demucs cancel + 5 thread-safety fixes ✅
 
 ---
 

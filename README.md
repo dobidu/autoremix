@@ -478,7 +478,7 @@ build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3\
 ```
 
-### GPU Acceleration (v4.1+)
+### GPU Acceleration (v4.1+ / CoreML v4.2+)
 
 Build with `-DAUTOREMIX_GPU=ON` to enable GPU-accelerated Demucs inference (~3–10× faster than CPU).
 
@@ -638,7 +638,7 @@ All processing is native C++. No HTTP IPC, no child processes.
 
 - Algorithmic FFT separator: rough stems (band-split only). Use Demucs for production.
 - No real-time processing — offline batch only.
-- Demucs ML: native ONNX inference via ORT 1.17.0. ~30–120 s on CPU; GPU EP (CUDA/DirectML) via `-DAUTOREMIX_GPU=ON` (v4.1+).
+- Demucs ML: native ONNX inference via ORT 1.17.0. ~30–120 s on CPU; GPU EP (CUDA/DirectML/CoreML) via `-DAUTOREMIX_GPU=ON` (v4.1+).
 - AU format (macOS): not code-signed — requires user to manually allow in System Settings > Privacy & Security on macOS 13+.
 - Linux: `libcurl4` required at runtime for the Demucs model download (pre-installed on most distros).
 

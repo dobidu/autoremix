@@ -7,13 +7,13 @@ Branch: main
 Phase: 29 — macOS CoreML EP — COMPLETE
 Plan: all plans closed
 Status: Phase 29 UNIFY complete. Milestone v4.2 COMPLETE.
-Last activity: 2026-05-29 — v4.2.0 ready for tag
+Last activity: 2026-05-29 — v4.2.0 tagged and released
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
 - Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 released 2026-05-29.
-- Milestone v14 (v4.2 CoreML): [██████████] 100% — COMPLETE. v4.2.0 ready for tag.
+- Milestone v14 (v4.2 CoreML): [██████████] 100% — COMPLETE. v4.2.0 released 2026-05-29.
 
 ## Loop Position
 
@@ -64,8 +64,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Phase 29 UNIFY complete. Tag v4.2.0 pending.
-Next action: git tag v4.2.0 && git push origin v4.2.0
+Stopped at: v4.2.0 released. GPU EP complete across all 3 platforms.
+Next action: Plan next milestone (SHA256 pinning, signing/notarization, or new feature).
 Resume file: .paul/phases/29-coreml/29-01-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)

@@ -69,6 +69,7 @@ target_compile_definitions(AutoRemix PUBLIC
   JUCE_USE_MP3AUDIOFORMAT=1
   $<$<PLATFORM_ID:Windows>:NOMINMAX WIN32_LEAN_AND_MEAN>
   $<$<BOOL:${AUTOREMIX_GPU}>:AUTOREMIX_GPU=1>
+  $<$<AND:$<BOOL:${AUTOREMIX_GPU}>,$<PLATFORM_ID:Darwin>>:AUTOREMIX_COREML=1>
 )
 
 target_link_libraries(AutoRemix PRIVATE

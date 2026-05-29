@@ -34,6 +34,9 @@
 #if defined(AUTOREMIX_GPU) && defined(_WIN32)
 #include <dml_provider_factory.h>
 #endif
+#if defined(AUTOREMIX_GPU) && defined(__APPLE__) && defined(AUTOREMIX_COREML)
+#include <coreml_provider_factory.h>
+#endif
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
@@ -211,6 +214,9 @@ separate_demucs(const juce::AudioBuffer<float>& input,
                     OrtCUDAProviderOptions cuda_opts{};
                     cuda_opts.device_id = 0;
                     gpu_opts.AppendExecutionProvider_CUDA(cuda_opts);
+#elif defined(__APPLE__) && defined(AUTOREMIX_COREML)
+                    Ort::ThrowOnError(
+                        OrtSessionOptionsAppendExecutionProvider_CoreML(gpu_opts, 0));
 #endif
                     auto s = Ort::Session(env,
 #ifdef _WIN32

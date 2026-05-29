@@ -598,9 +598,12 @@ AutoRemixAudioProcessorEditor::separateNative(const std::filesystem::path& in,
                                     + juce::String(pct) + "%");
             });
         };
+        // Snapshot the shared_ptr so the atomic stays alive for the full
+        // inference even if onExit() resets ctx_.separation_cancel_token.
+        auto cancel_snap = ctx_.separation_cancel_token;
         auto res = autoremix::dsp::separators::separate_demucs(
             buf, sr, download.path, sep_progress,
-            ctx_.separation_cancel_token.get());
+            cancel_snap.get());
         if (res.cancelled) return empty;
         if (!res.ok) {
             juce::MessageManager::callAsync([this, err = res.error] {

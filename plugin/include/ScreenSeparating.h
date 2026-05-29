@@ -48,15 +48,14 @@ public:
     ~ScreenSeparating() override
     {
         stopTimer();
-        cancel_requested_.store(true);
+        if (cancel_token_) cancel_token_->store(true);
     }
 
     void onEnter() override
     {
         elapsed_secs_ = 0;
-        cancel_requested_.store(false);
-        ctx_.separation_cancel_token = std::shared_ptr<std::atomic<bool>>(
-            &cancel_requested_, [](auto*){});   // non-owning: lifetime = this screen
+        cancel_token_ = std::make_shared<std::atomic<bool>>(false);
+        ctx_.separation_cancel_token = cancel_token_;  // shared ownership keeps atomic alive
         mashup_mode_  = ctx_.mashup_mode_separating;
         header_lbl_.setText(mashup_mode_ ? "SEPARATING TRACK B" : "SEPARATING STEMS",
                             juce::dontSendNotification);
@@ -184,7 +183,7 @@ private:
                 separator_id
             );
 
-            if (cancel_requested_.load()) return;
+            if (cancel_token_ && cancel_token_->load()) return;
 
             juce::MessageManager::callAsync([this, result]() mutable {
                 if (result.valid) {
@@ -213,7 +212,7 @@ private:
 
     void requestCancel()
     {
-        cancel_requested_.store(true);
+        if (cancel_token_) cancel_token_->store(true);
         if (mashup_mode_) {
             ctx_.stems_b = {};
             ctx_.mashup_mode_separating = false;
@@ -233,9 +232,9 @@ private:
     juce::ProgressBar progress_bar_{progress_value_};
     juce::TextButton  cancel_btn_;
 
-    int               elapsed_secs_ = 0;
-    std::atomic<bool> cancel_requested_{false};
-    bool              mashup_mode_     = false;
+    int  elapsed_secs_ = 0;
+    bool mashup_mode_  = false;
+    std::shared_ptr<std::atomic<bool>> cancel_token_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenSeparating)
 };

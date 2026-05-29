@@ -2,6 +2,19 @@
 
 ---
 
+## v4.3 — ORT upgrade + LV2 + cancellation — In progress
+
+Maintenance + UX release: upgrade ORT 1.17→1.21 with SHA256 pinning, add LV2 format
+for Linux DAW compatibility (Ardour, Bitwig), and Demucs cancellation UX.
+
+### Phase 30 — ORT upgrade + LV2 + cancellation — Planning ✏️
+
+- **30-01**: ORT 1.17 → 1.21 + SHA256 pinning for all packages (wave 1)
+- **30-02**: LV2 plugin format + CI packaging (wave 1)
+- **30-03**: Demucs separation cancellation button + cancel token (wave 1)
+
+---
+
 ## v4.2 — macOS CoreML EP ✅ COMPLETE (2026-05-29)
 
 Extend GPU acceleration to Apple Silicon (M1/M2/M3) via CoreML EP in ONNX Runtime.

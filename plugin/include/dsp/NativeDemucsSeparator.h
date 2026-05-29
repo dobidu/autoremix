@@ -190,8 +190,14 @@ separate_demucs(const juce::AudioBuffer<float>& input,
         opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         opts.SetIntraOpNumThreads(0);     // ORT picks a sensible default
 
-        Ort::Session session(
-            env, model_path.getFullPathName().toRawUTF8(), opts);
+        // ORT on Windows only provides wchar_t* path overload.
+        Ort::Session session(env,
+#ifdef _WIN32
+            model_path.getFullPathName().toWideCharPointer(),
+#else
+            model_path.getFullPathName().toRawUTF8(),
+#endif
+            opts);
 
         Ort::MemoryInfo mem_info = Ort::MemoryInfo::CreateCpu(
             OrtArenaAllocator, OrtMemTypeDefault);

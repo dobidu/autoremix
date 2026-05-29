@@ -169,10 +169,15 @@ private:
             ? "algorithmic"
             : ctx_.separators[(size_t)ctx_.selected_separator_idx].id;
 
-        std::thread([this,
+        // Capture cancel_token_ by value — keeps atomic alive past screen destruction.
+        // Thread must NOT access `this` after separate_fn_ returns; use `cancel` instead.
+        auto cancel = cancel_token_;
+
+        std::thread([this, cancel,
                      inputPath = inputPathStr.toStdString(),
                      outputDir, separator_id]() mutable {
-            juce::MessageManager::callAsync([this] {
+            juce::MessageManager::callAsync([this, cancel] {
+                if (cancel->load()) return;
                 for (auto& s : stems_) s.status = StemStatus::Separating;
                 repaint();
             });
@@ -183,9 +188,13 @@ private:
                 separator_id
             );
 
-            if (cancel_token_ && cancel_token_->load()) return;
+            // If cancelled: cancel->load() is true → screen already destroyed → stop.
+            // If not cancelled: screen is still alive (cancel happens synchronously on
+            // the message thread, setting the flag before any navigation).
+            if (cancel->load()) return;
 
-            juce::MessageManager::callAsync([this, result]() mutable {
+            juce::MessageManager::callAsync([this, cancel, result]() mutable {
+                if (cancel->load()) return;  // guard against race before callAsync fired
                 if (result.valid) {
                     for (auto& s : stems_) s.status = StemStatus::Done;
                     repaint();

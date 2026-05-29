@@ -121,9 +121,89 @@ jobs:
           name: AutoRemix-windows
           path: dist/AutoRemix-windows-${{ github.ref_name }}.zip
 
+  # ── Linux VST3 + Standalone (GPU / CUDA EP) ─────────────────────────────────
+  build-linux-gpu:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            cmake ninja-build \
+            libasound2-dev libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxcursor-dev libxrandr-dev \
+            libxcomposite-dev libxext-dev \
+            libgl1-mesa-dev libglu1-mesa-dev \
+            libcurl4-openssl-dev
+
+      - name: Configure (GPU)
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAUTOREMIX_GPU=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/AutoRemix-linux-gpu
+          cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
+                dist/AutoRemix-linux-gpu/
+          cp    build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix \
+                dist/AutoRemix-linux-gpu/
+          cp    README.md LICENSE dist/AutoRemix-linux-gpu/
+          cd dist
+          zip -r AutoRemix-linux-gpu-${{ github.ref_name }}.zip AutoRemix-linux-gpu/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-linux-gpu
+          path: dist/AutoRemix-linux-gpu-${{ github.ref_name }}.zip
+
+  # ── Windows VST3 + Standalone (GPU / DirectML EP) ───────────────────────────
+  build-windows-gpu:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure (GPU)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DAUTOREMIX_GPU=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist\AutoRemix-windows-gpu | Out-Null
+          Copy-Item -Recurse `
+            build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3 `
+            dist\AutoRemix-windows-gpu\
+          Copy-Item `
+            build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe `
+            dist\AutoRemix-windows-gpu\
+          Copy-Item `
+            build\_deps\onnxruntime-src\runtimes\win-x64\native\onnxruntime.dll `
+            dist\AutoRemix-windows-gpu\
+          Copy-Item `
+            build\_deps\onnxruntime-src\runtimes\win-x64\native\DirectML.dll `
+            dist\AutoRemix-windows-gpu\
+          Copy-Item README.md, LICENSE dist\AutoRemix-windows-gpu\
+          Compress-Archive -Path dist\AutoRemix-windows-gpu `
+            -DestinationPath dist\AutoRemix-windows-gpu-${{ github.ref_name }}.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-windows-gpu
+          path: dist/AutoRemix-windows-gpu-${{ github.ref_name }}.zip
+
   # ── Publish GitHub Release ───────────────────────────────────────────────────
   publish-release:
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-linux, build-macos, build-windows, build-linux-gpu, build-windows-gpu]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -170,3 +250,5 @@ jobs:
             artifacts/AutoRemix-linux/AutoRemix-linux-${{ github.ref_name }}.zip
             artifacts/AutoRemix-macos/AutoRemix-macos-${{ github.ref_name }}.zip
             artifacts/AutoRemix-windows/AutoRemix-windows-${{ github.ref_name }}.zip
+            artifacts/AutoRemix-linux-gpu/AutoRemix-linux-gpu-${{ github.ref_name }}.zip
+            artifacts/AutoRemix-windows-gpu/AutoRemix-windows-gpu-${{ github.ref_name }}.zip

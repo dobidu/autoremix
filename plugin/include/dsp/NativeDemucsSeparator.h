@@ -48,7 +48,8 @@ inline constexpr int   kSources            = 4;         // vocals/drums/bass/oth
 inline constexpr int   kModelChannels      = 2;
 
 struct DemucsResult {
-    bool         ok = false;
+    bool         ok       = false;
+    bool         gpu_used = false;
     juce::String error;
     NativeStems  stems;
 };
@@ -188,6 +189,8 @@ separate_demucs(const juce::AudioBuffer<float>& input,
 
     const auto fade = detail::raised_cosine_fade_in(overlap_n);
 
+    bool gpu_used_ = false;
+
     try {
         Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "autoremix-demucs");
 
@@ -217,6 +220,7 @@ separate_demucs(const juce::AudioBuffer<float>& input,
 #endif
                         gpu_opts);
                     juce::Logger::writeToLog("[Demucs] GPU EP session — OK");
+                    gpu_used_ = true;
                     return s;
                 } catch (const Ort::Exception& e) {
                     juce::Logger::writeToLog(
@@ -313,6 +317,7 @@ separate_demucs(const juce::AudioBuffer<float>& input,
     result.stems.drums  = std::move(drums);
     result.stems.bass   = std::move(bass);
     result.stems.other  = std::move(other);
+    result.gpu_used = gpu_used_;
     result.ok = true;
     return result;
 }

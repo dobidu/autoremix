@@ -607,6 +607,8 @@ AutoRemixAudioProcessorEditor::separateNative(const std::filesystem::path& in,
             });
             return empty;
         }
+        if (res.gpu_used)
+            health_dot_.setState(ModelStatusDot::State::gpu_active);
         stems = std::move(res.stems);
     }
     else {

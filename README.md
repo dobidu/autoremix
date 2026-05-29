@@ -615,7 +615,7 @@ All processing is native C++. No HTTP IPC, no child processes.
 - No real-time processing — offline batch only.
 - Demucs ML: native ONNX inference via ORT 1.17.0 (CPU only). ~30–120 s per track on CPU. GPU (CUDA/DirectML) deferred to v4.1.
 - AU format (macOS): not code-signed — requires user to manually allow in System Settings > Privacy & Security on macOS 13+.
-- Linux: `libcurl4-openssl-dev` required at runtime for the Demucs model download.
+- Linux: `libcurl4` required at runtime for the Demucs model download (pre-installed on most distros).
 
 ---
 

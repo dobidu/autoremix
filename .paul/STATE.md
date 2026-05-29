@@ -2,18 +2,18 @@
 
 ## Current Position
 
-Milestone: v14 (v4.2 macOS CoreML EP) — In progress
+Milestone: v14 (v4.2 macOS CoreML EP) — COMPLETE
 Branch: main
-Phase: 29 — macOS CoreML EP — Planning
-Plan: 29-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-05-29 — Created .paul/phases/29-coreml/29-01-PLAN.md
+Phase: 29 — macOS CoreML EP — COMPLETE
+Plan: all plans closed
+Status: Phase 29 UNIFY complete. Milestone v4.2 COMPLETE.
+Last activity: 2026-05-29 — v4.2.0 ready for tag
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
 - Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 released 2026-05-29.
-- Milestone v14 (v4.2 CoreML): [░░░░░░░░░░] 0% — Phase 29 in progress.
+- Milestone v14 (v4.2 CoreML): [██████████] 100% — COMPLETE. v4.2.0 ready for tag.
 
 ## Loop Position
 
@@ -58,15 +58,15 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [28-02 complete] CI GPU matrix + ModelStatusDot GPU indicator + README + v4.1.0
 
 ═══ v4.2 COREML (macOS) ═══
-  ✓        ○        ○     [29-01] CMake CoreML define + NativeDemucsSeparator CoreML path + CI macOS-gpu + v4.2.0
+  ✓        ✓        ✓     [29-01 complete] CMake CoreML define + NativeDemucsSeparator CoreML path + CI macOS-gpu + v4.2.0
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Plan 29-01 created.
-Next action: Review plan, approve, then /paul:apply 29-01
-Resume file: .paul/phases/29-coreml/29-01-PLAN.md
+Stopped at: Phase 29 UNIFY complete. Tag v4.2.0 pending.
+Next action: git tag v4.2.0 && git push origin v4.2.0
+Resume file: .paul/phases/29-coreml/29-01-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

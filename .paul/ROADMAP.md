@@ -2,6 +2,20 @@
 
 ---
 
+## v4.2 — macOS CoreML EP — In progress
+
+Extend GPU acceleration to Apple Silicon (M1/M2/M3) via CoreML EP in ONNX Runtime.
+Same `-DAUTOREMIX_GPU=ON` flag; macOS builds get `AUTOREMIX_COREML=1` compile definition.
+`coreml_provider_factory.h` already ships in the standard `onnxruntime-osx-universal2` tarball.
+
+**Target**: macOS 12+ on Apple Silicon (CoreML) + Intel fallback to CPU EP.
+
+### Phase 29 — macOS CoreML EP — Planning ✏️
+
+- **29-01**: CMake CoreML define + NativeDemucsSeparator CoreML path + CI build-macos-gpu + v4.2.0
+
+---
+
 ## v4.1 — GPU Demucs ✅ COMPLETE (2026-05-29)
 
 Accelerate ML stem separation via GPU execution providers in ONNX Runtime.

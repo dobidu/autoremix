@@ -2,17 +2,18 @@
 
 ## Current Position
 
-Milestone: v13 (v4.1 GPU Demucs) — In progress
-Branch: native
-Phase: 28 — GPU Demucs — COMPLETE
-Plan: all plans closed
-Status: Phase 28 UNIFY complete. Milestone v4.1 COMPLETE.
-Last activity: 2026-05-29 — Tagged v4.1.0; release CI running
+Milestone: v14 (v4.2 macOS CoreML EP) — In progress
+Branch: main
+Phase: 29 — macOS CoreML EP — Planning
+Plan: 29-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-05-29 — Created .paul/phases/29-coreml/29-01-PLAN.md
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
 - Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 released 2026-05-29.
+- Milestone v14 (v4.2 CoreML): [░░░░░░░░░░] 0% — Phase 29 in progress.
 
 ## Loop Position
 
@@ -55,14 +56,17 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ═══ v4.1 GPU DEMUCS ═══
   ✓        ✓        ✓     [28-01 complete] CMake GPU ORT + NativeDemucsSeparator EP selection
   ✓        ✓        ✓     [28-02 complete] CI GPU matrix + ModelStatusDot GPU indicator + README + v4.1.0
+
+═══ v4.2 COREML (macOS) ═══
+  ✓        ○        ○     [29-01] CMake CoreML define + NativeDemucsSeparator CoreML path + CI macOS-gpu + v4.2.0
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: v4.1.0 tagged and pushed. Release CI in progress.
-Next action: Plan next milestone (v4.2 — macOS CoreML EP, or other).
-Resume file: .paul/phases/28-gpu-demucs/28-02-SUMMARY.md
+Stopped at: Plan 29-01 created.
+Next action: Review plan, approve, then /paul:apply 29-01
+Resume file: .paul/phases/29-coreml/29-01-PLAN.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)

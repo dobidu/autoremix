@@ -4,15 +4,15 @@
 
 Milestone: v13 (v4.1 GPU Demucs) — In progress
 Branch: native
-Phase: 28 — GPU Demucs — Planning
-Plan: 28-01 created, awaiting approval
-Status: PLAN created, ready for APPLY
-Last activity: 2026-05-28 — Created .paul/phases/28-gpu-demucs/28-01-PLAN.md
+Phase: 28 — GPU Demucs — COMPLETE
+Plan: all plans closed
+Status: Phase 28 UNIFY complete. Milestone v4.1 COMPLETE.
+Last activity: 2026-05-29 — Closed 28-02 UNIFY; created 28-02-SUMMARY.md
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
-- Milestone v13 (v4.1 GPU): [░░░░░░░░░░] 0% — Phase 28 in progress.
+- Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 ready for tag.
 
 ## Loop Position
 
@@ -53,15 +53,16 @@ PLAN ──▶ APPLY ──▶ UNIFY
   ✓        ✓        ✓     [27-04 complete] README v4 + VERSION 4.0.0 + tag v4.0.0 pushed → RELEASED
 
 ═══ v4.1 GPU DEMUCS ═══
-  ✓        ○        ○     [28-01] CMake GPU ORT + NativeDemucsSeparator EP selection — PLAN created
+  ✓        ✓        ✓     [28-01 complete] CMake GPU ORT + NativeDemucsSeparator EP selection
+  ✓        ✓        ✓     [28-02 complete] CI GPU matrix + ModelStatusDot GPU indicator + README + v4.1.0
 ```
 
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Plan 28-01 created. Decision checkpoint pending (CoreML scope).
-Next action: Review 28-01-PLAN.md, answer CoreML decision, then /paul:apply 28-01
-Resume file: .paul/phases/28-gpu-demucs/28-01-PLAN.md
+Stopped at: Phase 28 complete. v4.1 milestone complete.
+Next action: Tag v4.1.0 (clean tag on main), then plan next milestone.
+Resume file: .paul/phases/28-gpu-demucs/28-02-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)
 - fix: waveform display (setBufferedToImage removed, callAsync repaint)
@@ -75,6 +76,7 @@ Resume file: .paul/phases/28-gpu-demucs/28-01-PLAN.md
 - add: pyloudnorm>=0.1.1 to requirements
 
 ## Decisions
+- 2026-05-28: Phase 28-01 CoreML EP scope → defer-coreml. macOS CoreML deferred to Phase 29; v4.1 ships CUDA (Linux) + DirectML (Windows) only.
 - Python sidecar port: 17432
 - Temp dir: /tmp/autoremix/
 - Stem format: WAV 44100 Hz stereo, final format tracks input

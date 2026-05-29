@@ -222,6 +222,7 @@ private:
     void requestCancel()
     {
         if (cancel_token_) cancel_token_->store(true);
+        if (ctx_.set_status) ctx_.set_status("Ready");
         if (mashup_mode_) {
             ctx_.stems_b = {};
             ctx_.mashup_mode_separating = false;

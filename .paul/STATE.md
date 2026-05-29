@@ -7,12 +7,12 @@ Branch: native
 Phase: 28 — GPU Demucs — COMPLETE
 Plan: all plans closed
 Status: Phase 28 UNIFY complete. Milestone v4.1 COMPLETE.
-Last activity: 2026-05-29 — Closed 28-02 UNIFY; created 28-02-SUMMARY.md
+Last activity: 2026-05-29 — Tagged v4.1.0; release CI running
 
 Progress:
 - v3 main: FROZEN at v3.2.0
 - Milestone v12 (v4-native): [██████████] 100% — COMPLETE. v4.0.0 released 2026-05-28.
-- Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 ready for tag.
+- Milestone v13 (v4.1 GPU): [██████████] 100% — COMPLETE. v4.1.0 released 2026-05-29.
 
 ## Loop Position
 
@@ -60,8 +60,8 @@ PLAN ──▶ APPLY ──▶ UNIFY
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Phase 28 complete. v4.1 milestone complete.
-Next action: Tag v4.1.0 (clean tag on main), then plan next milestone.
+Stopped at: v4.1.0 tagged and pushed. Release CI in progress.
+Next action: Plan next milestone (v4.2 — macOS CoreML EP, or other).
 Resume file: .paul/phases/28-gpu-demucs/28-02-SUMMARY.md
 
 ## Untracked work (2026-05-16 hotfix session)

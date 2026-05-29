@@ -37,6 +37,7 @@ and ML backends coexist behind stable interfaces.
 - [x] Pairwise mashup: load 2 files, two-column 8-stem mixer with per-stem volume, 8 built-in templates, 5 feel knobs (tempo mod, master pitch, reverb mix + room, HPF B); auto BPM + key alignment — Phase 21
 - [x] Native preset loading: 17 JSONs (9 remix + 8 mashup) embedded in plugin binary via `juce_add_binary_data`; user JSONs read from `~/.config/autoremix/{modes,mashup}` (or platform equivalent) override built-ins — Phase 25
 - [x] Native ML separation foundation: `htdemucs` model exported to ONNX (352.9 MB) via offline tooling under `tools/`; ONNX Runtime 1.17.0 linked into the plugin; `ModelDownloader` provides first-launch SHA256-verified DOD; `NativeDemucsSeparator` runs chunked inference via `Ort::Session` — Phase 26 (smoke includes only; screen wiring lands in 27-01)
+- [x] GPU EP acceleration: CUDA on Linux, DirectML on Windows via `-DAUTOREMIX_GPU=ON`; CPU fallback transparent; blue model-status dot when GPU active; separate GPU release artifacts — Phase 28 (v4.1.0)
 
 ## Constraints
 - GPL-3.0 compatible deps only (Spleeter=MIT, librosa=ISC, JUCE=GPL ok)
@@ -76,9 +77,18 @@ and ML backends coexist behind stable interfaces.
 - Static `n_fft` is mandatory through the export path. Threaded as Python int from `self.nfft` (HTDemucs attribute) through patched_ispec → conv_istft so `torch.arange(n_fft)` builds static-shape Conv kernels at trace time.
 - Trace-time window length (343,980 samples @ 44.1 kHz × 7.8 s) is baked into the ONNX graph despite `dynamic_axes=samples`. Plugin must feed exactly window-sized chunks at runtime; chunking + 25 % overlap + raised-cosine crossfade live in the C++ `NativeDemucsSeparator`.
 - Shipping strategy: **download-on-demand**. 352.9 MB file too large to bundle into 3 plugin formats (~1 GB total otherwise). Cache: `juce::File::userApplicationDataDirectory/autoremix/models/htdemucs.onnx`. SHA256 pinned compile-time. Hosting at github.com release tag `v4.0.0-models`.
-- ONNX Runtime 1.17.0 CPU EP only; CUDA / DirectML deferred to v4.1. Linked as SHARED IMPORTED via FetchContent per-platform tarball.
+- ONNX Runtime 1.17.0: CPU EP default; CUDA EP (Linux) + DirectML EP (Windows) via `-DAUTOREMIX_GPU=ON` (v4.1). macOS CoreML deferred to v4.2. Linked as SHARED IMPORTED via FetchContent per-platform tarball. GPU EP selection propagated via `DemucsResult.gpu_used`; UI dot shows blue when active.
 - `NativeDemucsSeparator` requires 44.1 kHz input (hard error otherwise). Resampling lives in screens (caller knows DAW rate). Simpler + cleaner than embedding a resampler in the separator.
 - One `Ort::Session` per `separate_demucs` call, destroyed at end of scope. If usage profile warrants, Phase 27-01 may move the session to the processor.
 
+## Phase 28 Key Decisions (v4.1 — GPU EP)
+- `AUTOREMIX_GPU=ON` flag selects GPU ORT package per platform at configure time
+- Linux GPU: `onnxruntime-linux-x64-gpu-1.17.0.tgz` (CUDA 11.8 EP). CUDA EP .so libs copied into VST3 bundle via POST_BUILD so ORT can dlopen them.
+- Windows GPU: `Microsoft.ML.OnnxRuntime.DirectML` NuGet. DirectML.dll is a Windows OS component (Win10 1903+) — NOT bundled; ORT loads from System32 via LoadLibrary.
+- macOS: same CPU tarball regardless of flag. CoreML deferred to Phase 29 (ORT 1.17 CoreML EP compatibility with patched ONNX export ops uncertain).
+- `DemucsResult.gpu_used` bool: captured by ref in `make_session` lambda, set on GPU EP success, propagated to caller. `health_dot_.setState(gpu_active)` in `separateNative()`.
+- `ModelStatusDot::State::gpu_active` (blue `#4A9EDB`): poll guard prevents 3s timer overwrite.
+- SHA256 for GPU ORT packages left empty (`ORT_SHA ""`); pin after confirming no breaking changes.
+
 ---
-*Last updated: 2026-05-22 after Phase 26 (Native Demucs / ONNX foundation)*
+*Last updated: 2026-05-29 after Phase 28 (GPU EP — v4.1.0 released)*

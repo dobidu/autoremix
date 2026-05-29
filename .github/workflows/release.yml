@@ -199,9 +199,44 @@ jobs:
           name: AutoRemix-windows-gpu
           path: dist/AutoRemix-windows-gpu-${{ github.ref_name }}.zip
 
+  # ── macOS VST3 + AU + Standalone (GPU / CoreML EP) ──────────────────────────
+  build-macos-gpu:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: brew install cmake ninja
+
+      - name: Configure (GPU / CoreML)
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAUTOREMIX_GPU=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/AutoRemix-macos-gpu
+          cp -r build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3 \
+                dist/AutoRemix-macos-gpu/
+          cp -r build/plugin/AutoRemix_artefacts/Release/AU/AutoRemix.component \
+                dist/AutoRemix-macos-gpu/
+          cp -r build/plugin/AutoRemix_artefacts/Release/Standalone/AutoRemix.app \
+                dist/AutoRemix-macos-gpu/
+          cp    README.md LICENSE dist/AutoRemix-macos-gpu/
+          cd dist
+          zip -r AutoRemix-macos-gpu-${{ github.ref_name }}.zip AutoRemix-macos-gpu/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoRemix-macos-gpu
+          path: dist/AutoRemix-macos-gpu-${{ github.ref_name }}.zip
+
   # ── Publish GitHub Release ───────────────────────────────────────────────────
   publish-release:
-    needs: [build-linux, build-macos, build-windows, build-linux-gpu, build-windows-gpu]
+    needs: [build-linux, build-macos, build-windows, build-linux-gpu, build-windows-gpu, build-macos-gpu]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -250,3 +285,4 @@ jobs:
             artifacts/AutoRemix-windows/AutoRemix-windows-${{ github.ref_name }}.zip
             artifacts/AutoRemix-linux-gpu/AutoRemix-linux-gpu-${{ github.ref_name }}.zip
             artifacts/AutoRemix-windows-gpu/AutoRemix-windows-gpu-${{ github.ref_name }}.zip
+            artifacts/AutoRemix-macos-gpu/AutoRemix-macos-gpu-${{ github.ref_name }}.zip

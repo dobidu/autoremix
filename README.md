@@ -486,7 +486,7 @@ Build with `-DAUTOREMIX_GPU=ON` to enable GPU-accelerated Demucs inference (~3â€
 |----------|---------|-------------------|
 | Linux    | CUDA EP (ORT 1.17) | CUDA 11.8+ runtime installed |
 | Windows  | DirectML EP (DX12) | Windows 10 1903+ (any modern GPU) |
-| macOS    | CPU (CoreML planned v4.2) | â€” |
+| macOS    | CoreML EP (Neural Engine) | macOS 12+ on Apple Silicon |
 
 ```bash
 # Linux (CUDA)
@@ -499,7 +499,7 @@ cmake --build build --config Release --parallel
 ```
 
 Pre-built GPU binaries are on the [Releases](https://github.com/dobidu/autoremix/releases) page
-(`AutoRemix-linux-gpu-vX.Y.Z.zip`, `AutoRemix-windows-gpu-vX.Y.Z.zip`).
+(`AutoRemix-linux-gpu-vX.Y.Z.zip`, `AutoRemix-windows-gpu-vX.Y.Z.zip`, `AutoRemix-macos-gpu-vX.Y.Z.zip`).
 The plugin falls back to CPU automatically if no compatible GPU is found at runtime.
 The model status dot turns **blue** when GPU EP is active.
 

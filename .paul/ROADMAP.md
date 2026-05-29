@@ -2,23 +2,24 @@
 
 ---
 
-## v4.1 — GPU Demucs (branch: `native`) — In progress
+## v4.1 — GPU Demucs ✅ COMPLETE (2026-05-29)
 
 Accelerate ML stem separation via GPU execution providers in ONNX Runtime.
 Controlled by `-DAUTOREMIX_GPU=ON` CMake flag. CPU path unchanged (default).
 
 **Targets**:
-- Linux: CUDA EP (onnxruntime-linux-x64-gpu, requires CUDA 11.8+)
-- Windows: DirectML EP (Microsoft.ML.OnnxRuntime.DirectML, DX12 GPU)
-- macOS: CoreML EP (TBD — decision pending Phase 28-01)
+- Linux: CUDA EP (onnxruntime-linux-x64-gpu, requires CUDA 11.8+) ✅
+- Windows: DirectML EP (Microsoft.ML.OnnxRuntime.DirectML, DX12 GPU) ✅
+- macOS: CoreML EP deferred to v4.2 (Phase 29)
 
-**Shipping**: separate GPU build artifacts (`AutoRemix-linux-gpu-v4.1.0.zip` etc.)
-alongside existing CPU builds. GPU binary falls back to CPU EP transparently.
+**Shipping**: separate GPU artifacts (`AutoRemix-linux-gpu-v4.1.0.zip` etc.)
+alongside CPU builds. GPU binary falls back to CPU EP transparently.
+Model status dot shows **blue** when GPU EP is active.
 
-### Phase 28 — GPU Demucs — In progress
+### Phase 28 — GPU Demucs ✅ COMPLETE (2026-05-29)
 
-- **28-01**: CMake GPU ORT FetchContent + NativeDemucsSeparator EP selection — Planning ✏️
-- **28-02**: CI GPU build matrix + ModelStatusDot GPU indicator + README + release v4.1.0
+- **28-01**: CMake GPU ORT FetchContent + NativeDemucsSeparator EP selection ✅
+- **28-02**: CI GPU build matrix + ModelStatusDot GPU indicator + README + release v4.1.0 ✅
 
 ---
 

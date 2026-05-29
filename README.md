@@ -478,6 +478,31 @@ build\plugin\AutoRemix_artefacts\Release\Standalone\AutoRemix.exe
 build\plugin\AutoRemix_artefacts\Release\VST3\AutoRemix.vst3\
 ```
 
+### GPU Acceleration (v4.1+)
+
+Build with `-DAUTOREMIX_GPU=ON` to enable GPU-accelerated Demucs inference (~3–10× faster than CPU).
+
+| Platform | Backend | System requirement |
+|----------|---------|-------------------|
+| Linux    | CUDA EP (ORT 1.17) | CUDA 11.8+ runtime installed |
+| Windows  | DirectML EP (DX12) | Windows 10 1903+ (any modern GPU) |
+| macOS    | CPU (CoreML planned v4.2) | — |
+
+```bash
+# Linux (CUDA)
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAUTOREMIX_GPU=ON
+cmake --build build --parallel
+
+# Windows (DirectML) — in MSVC Developer Command Prompt
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DAUTOREMIX_GPU=ON
+cmake --build build --config Release --parallel
+```
+
+Pre-built GPU binaries are on the [Releases](https://github.com/dobidu/autoremix/releases) page
+(`AutoRemix-linux-gpu-vX.Y.Z.zip`, `AutoRemix-windows-gpu-vX.Y.Z.zip`).
+The plugin falls back to CPU automatically if no compatible GPU is found at runtime.
+The model status dot turns **blue** when GPU EP is active.
+
 ---
 
 ## Stem Separators
@@ -613,7 +638,7 @@ All processing is native C++. No HTTP IPC, no child processes.
 
 - Algorithmic FFT separator: rough stems (band-split only). Use Demucs for production.
 - No real-time processing — offline batch only.
-- Demucs ML: native ONNX inference via ORT 1.17.0 (CPU only). ~30–120 s per track on CPU. GPU (CUDA/DirectML) deferred to v4.1.
+- Demucs ML: native ONNX inference via ORT 1.17.0. ~30–120 s on CPU; GPU EP (CUDA/DirectML) via `-DAUTOREMIX_GPU=ON` (v4.1+).
 - AU format (macOS): not code-signed — requires user to manually allow in System Settings > Privacy & Security on macOS 13+.
 - Linux: `libcurl4` required at runtime for the Demucs model download (pre-installed on most distros).
 

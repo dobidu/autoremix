@@ -118,14 +118,14 @@ public:
         b_thumb_  .removeChangeListener(this);
         out_thumb_.removeChangeListener(this);
         stopTimer();
-        cancel_requested_.store(true);
+        if (cancel_token_) cancel_token_->store(true);
     }
 
     void onEnter() override
     {
         elapsed_secs_ = 0;
         preview_mode_ = PreviewMode::None;
-        cancel_requested_.store(false);
+        cancel_token_ = std::make_shared<std::atomic<bool>>(false);
         timer_lbl_.setText("0 s", juce::dontSendNotification);
 
         in_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.file_path)));
@@ -155,7 +155,7 @@ public:
     void onExit() override
     {
         stopTimer();
-        cancel_requested_.store(true);
+        if (cancel_token_) cancel_token_->store(true);
         if (ctx_.stop_preview) ctx_.stop_preview();
     }
 
@@ -416,11 +416,13 @@ private:
         auto stems  = ctx_.stems;
         auto render = render_fn_;
 
-        std::thread([this, params, stems, outputPath, render]() mutable {
+        auto cancel = cancel_token_;  // shared_ptr keeps atomic alive past screen destruction
+        std::thread([this, cancel, params, stems, outputPath, render]() mutable {
             auto result = render(stems, params, outputPath);
-            if (cancel_requested_.load()) return;
+            if (cancel->load()) return;
 
-            juce::MessageManager::callAsync([this, result, outputPath]() mutable {
+            juce::MessageManager::callAsync([this, cancel, result, outputPath]() mutable {
+                if (cancel->load()) return;
                 stopTimer();
                 if (result.success) {
                     ctx_.output_path = juce::String(outputPath.string());
@@ -443,8 +445,9 @@ private:
 
     void requestCancel()
     {
-        cancel_requested_.store(true);
+        if (cancel_token_) cancel_token_->store(true);
         stopTimer();
+        if (ctx_.set_status) ctx_.set_status("Ready");
         ctx_.navigate(ScreenId::ModeParams);
     }
 
@@ -561,8 +564,8 @@ private:
     int         elapsed_secs_ = 0;
     double      preview_position_    = 0.0;
     bool        was_preview_playing_ = false;
-    std::atomic<bool> cancel_requested_{false};
-    RenderFn          render_fn_;
+    std::shared_ptr<std::atomic<bool>> cancel_token_;
+    RenderFn                           render_fn_;
 
     juce::AudioFormatManager  format_manager_;
     juce::AudioThumbnailCache thumbnail_cache_;

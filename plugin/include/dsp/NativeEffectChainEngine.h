@@ -58,6 +58,13 @@ dispatch_op(const std::string& name,
     if (name == "delay_tape")     return delay_tape(in, sr, p);
     if (name == "delay_reverse")  return delay_reverse(in, sr, p);
     if (name == "delay_dotted")   return delay_dotted(in, sr, p);
+    // Phase 32-02: creative reverbs + filter sweep + vinyl sim + sidechain
+    if (name == "reverb_plate")   return reverb_plate(in, sr, p);
+    if (name == "reverb_gated")   return reverb_gated(in, sr, p);
+    if (name == "reverb_reverse") return reverb_reverse(in, sr, p);
+    if (name == "filter_sweep")   return filter_sweep(in, sr, p);
+    if (name == "vinyl_sim")      return vinyl_sim(in, sr, p);
+    if (name == "sidechain")      return sidechain(in, sr, p);
     juce::AudioBuffer<float> out; out.makeCopyOf(in); return out;
 }
 

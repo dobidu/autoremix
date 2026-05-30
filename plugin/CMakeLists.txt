@@ -23,6 +23,7 @@ juce_add_binary_data(AutoRemixPresetsData
     ../sidecar/server/presets/jersey_club.json
     ../sidecar/server/presets/nightcore.json
     ../sidecar/server/presets/trap_banger_structured.json
+    ../sidecar/server/presets/lo_fi_banger.json
     ../sidecar/server/mashup_presets/vocal_acapella.json
     ../sidecar/server/mashup_presets/drum_swap.json
     ../sidecar/server/mashup_presets/slowed_mashup.json

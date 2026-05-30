@@ -1,0 +1,27 @@
+{
+  "id": "lo_fi_banger",
+  "version": "2.0",
+  "name": "Lo-Fi Banger",
+  "description": "Vintage lo-fi hip-hop: tape warmth, vinyl crackle, bitcrushed texture, sidechain pump",
+  "author": "AutoRemix",
+  "tags": ["lo-fi", "hip-hop", "vintage", "chill", "beats"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.85,
+    "pitch_shift_semi": -2.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 3.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 0.9, "drums": 1.0, "bass": 1.0, "other": 0.8 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["all"],    "params": { "factor": 0.85 } },
+    { "op": "saturation",   "stems": ["all"],    "params": { "drive": 0.35 } },
+    { "op": "bitcrusher",   "stems": ["other"],  "params": { "bit_depth": 12 } },
+    { "op": "delay_tape",   "stems": ["vocals"], "params": { "delay_ms": 320, "feedback": 0.3, "wow_depth": 0.004, "flutter_rate": 5.0 } },
+    { "op": "vinyl_sim",    "stems": ["all"],    "params": { "crackle_amount": 0.02, "wow_rate": 0.4, "wow_depth": 0.002 } },
+    { "op": "sidechain",    "stems": ["all"],    "params": { "duck_depth_db": -8.0, "duck_attack_ms": 8.0, "duck_release_ms": 80.0, "duck_rate_hz": 2.0 } },
+    { "op": "reverb_plate", "stems": ["vocals"], "params": { "mix": 0.25 } }
+  ]
+}

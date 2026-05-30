@@ -51,6 +51,13 @@ dispatch_op(const std::string& name,
     if (name == "chop_bars")      return chop_bars(in, sr, p);
     if (name == "gate_energy")    return gate_energy(in, sr, p);
     if (name == "structural_cut") return structural_cut(in, sr, p);
+    // Phase 32-01: distortion + delay ops
+    if (name == "saturation")     return saturation(in, sr, p);
+    if (name == "bitcrusher")     return bitcrusher(in, sr, p);
+    if (name == "delay_pingpong") return delay_pingpong(in, sr, p);
+    if (name == "delay_tape")     return delay_tape(in, sr, p);
+    if (name == "delay_reverse")  return delay_reverse(in, sr, p);
+    if (name == "delay_dotted")   return delay_dotted(in, sr, p);
     juce::AudioBuffer<float> out; out.makeCopyOf(in); return out;
 }
 

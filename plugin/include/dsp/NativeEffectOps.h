@@ -45,6 +45,15 @@ struct OpParams {
     int    n_segments    = 8;       // structural_cut
     std::string mode     = "repeat_first";  // structural_cut
     int    repeat        = 2;       // chop_*
+    // Phase 32-01 additions
+    double drive         = 0.5;    // saturation: 0=clean, 1=heavy clip
+    int    bit_depth     = 8;      // bitcrusher: target bit depth (4-16)
+    double delay_ms      = 250.0;  // delay ops: delay time in ms
+    double feedback      = 0.35;   // delay ops: feedback ratio (0-0.95)
+    double stereo_width  = 1.0;    // delay_pingpong: L/R alternation depth
+    double wow_depth     = 0.003;  // delay_tape: wow modulation depth (fraction of sr)
+    double flutter_rate  = 6.0;    // delay_tape: flutter LFO rate (Hz)
+    double delay_division = 0.375; // delay_dotted: note division (3/8 = dotted 1/8)
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -316,6 +325,175 @@ structural_cut(const juce::AudioBuffer<float>& in, double /*sr*/, const OpParams
         for (int c = 0; c < ch; ++c)
             out.copyFrom(c, pos, in, c, s, n);
         pos += n;
+    }
+    return out;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Phase 32-01: distortion + delay ops
+// ───────────────────────────────────────────────────────────────────────────
+
+// Tube saturation via tanh soft-clip with drive. Output normalized to [-1, 1].
+inline juce::AudioBuffer<float>
+saturation(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
+{
+    juce::AudioBuffer<float> out;
+    out.makeCopyOf(in);
+    if (p.drive < 0.01) return out;
+
+    const double drive_gain = std::pow(10.0, p.drive * 2.0);
+    const double norm       = std::tanh(drive_gain);
+    if (norm < 1e-9) return out;
+
+    for (int c = 0; c < out.getNumChannels(); ++c) {
+        float* d = out.getWritePointer(c);
+        for (int i = 0; i < out.getNumSamples(); ++i)
+            d[i] = (float) (std::tanh((double)d[i] * drive_gain) / norm);
+    }
+    analysis::normalize_lufs(out, sr, -14.0);
+    return out;
+}
+
+// Bit-depth reduction (quantization distortion). bit_depth clamped to [1, 16].
+inline juce::AudioBuffer<float>
+bitcrusher(const juce::AudioBuffer<float>& in, double /*sr*/, const OpParams& p)
+{
+    juce::AudioBuffer<float> out;
+    out.makeCopyOf(in);
+    const double levels = std::pow(2.0, (double) std::clamp(p.bit_depth, 1, 16)) - 1.0;
+    if (levels < 1.0) return out;
+
+    for (int c = 0; c < out.getNumChannels(); ++c) {
+        float* d = out.getWritePointer(c);
+        for (int i = 0; i < out.getNumSamples(); ++i)
+            d[i] = (float) (std::round((double)d[i] * levels) / levels);
+    }
+    return out;
+}
+
+// Stereo ping-pong delay: L echoes on R and R echoes on L alternately.
+inline juce::AudioBuffer<float>
+delay_pingpong(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
+{
+    const int N    = in.getNumSamples();
+    const int dly  = std::max(1, std::min((int)std::round(p.delay_ms / 1000.0 * sr), (int)(sr * 2.0)));
+    const float fb = (float) std::clamp(p.feedback, 0.0, 0.95);
+    const float sw = (float) std::clamp(p.stereo_width, 0.0, 1.0);
+
+    // Ensure stereo
+    juce::AudioBuffer<float> src(std::max(2, in.getNumChannels()), N);
+    src.clear();
+    for (int c = 0; c < in.getNumChannels(); ++c)
+        src.copyFrom(c, 0, in, c, 0, N);
+    if (in.getNumChannels() == 1)
+        src.copyFrom(1, 0, src, 0, 0, N);
+
+    juce::AudioBuffer<float> out(2, N);
+    std::vector<float> delL(static_cast<size_t>(dly), 0.0f);
+    std::vector<float> delR(static_cast<size_t>(dly), 0.0f);
+
+    for (int i = 0; i < N; ++i) {
+        const int idx = i % dly;
+        const float dL = delL[static_cast<size_t>(idx)];
+        const float dR = delR[static_cast<size_t>(idx)];
+        const float inL = src.getSample(0, i);
+        const float inR = src.getSample(1, i);
+
+        out.setSample(0, i, juce::jlimit(-1.0f, 1.0f, inL + sw * dR));
+        out.setSample(1, i, juce::jlimit(-1.0f, 1.0f, inR + sw * dL));
+
+        delL[static_cast<size_t>(idx)] = inL + fb * dL;
+        delR[static_cast<size_t>(idx)] = inR + fb * dR;
+    }
+    return out;
+}
+
+// Tape delay with wow/flutter LFO modulation.
+inline juce::AudioBuffer<float>
+delay_tape(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
+{
+    const int N    = in.getNumSamples();
+    const int ch   = in.getNumChannels();
+    const int base = std::max(1, std::min((int)std::round(p.delay_ms / 1000.0 * sr), (int)(sr * 2.0)));
+    const int buf_size = base * 2 + 4;
+    const float fb  = (float) std::clamp(p.feedback, 0.0, 0.95);
+    const double wow_amp = p.wow_depth * sr;
+    const double flutter_hz = p.flutter_rate;
+
+    juce::AudioBuffer<float> out;
+    out.makeCopyOf(in);
+
+    for (int c = 0; c < ch; ++c) {
+        std::vector<float> buf(static_cast<size_t>(buf_size), 0.0f);
+        int write_pos = 0;
+        float* d = out.getWritePointer(c);
+
+        for (int i = 0; i < N; ++i) {
+            const double mod = wow_amp * std::sin(2.0 * juce::MathConstants<double>::pi * flutter_hz * i / sr);
+            const int read_offset = base + (int)mod;
+            const int read_pos    = ((write_pos - read_offset) % buf_size + buf_size) % buf_size;
+
+            const float delayed = buf[static_cast<size_t>(read_pos)];
+            buf[static_cast<size_t>(write_pos)] = d[i] + fb * delayed;
+            d[i] = juce::jlimit(-1.0f, 1.0f, d[i] + delayed);
+            write_pos = (write_pos + 1) % buf_size;
+        }
+    }
+    return out;
+}
+
+// Reverse delay: reverses windows then applies feedback echo.
+inline juce::AudioBuffer<float>
+delay_reverse(const juce::AudioBuffer<float>& in, double /*sr*/, const OpParams& p)
+{
+    juce::AudioBuffer<float> out;
+    out.makeCopyOf(in);
+    const int N  = out.getNumSamples();
+    const int ch = out.getNumChannels();
+    // window_samples: use delay_ms rounded to input samples (no sr conversion needed if 0)
+    const int win = std::max(1, std::min((int)(p.delay_ms * 44.1), N));  // rough: delay_ms * samples_per_ms
+    const float fb = (float) std::clamp(p.feedback, 0.0, 0.95);
+
+    for (int c = 0; c < ch; ++c) {
+        float* d = out.getWritePointer(c);
+        std::vector<float> prev(static_cast<size_t>(win), 0.0f);
+        for (int s = 0; s < N; s += win) {
+            const int end = std::min(s + win, N);
+            const int len = end - s;
+            std::vector<float> chunk(d + s, d + end);
+            std::reverse(chunk.begin(), chunk.end());
+            for (int k = 0; k < len; ++k)
+                d[s + k] = juce::jlimit(-1.0f, 1.0f, chunk[static_cast<size_t>(k)] + fb * prev[static_cast<size_t>(k)]);
+            prev.assign(d + s, d + end);
+            prev.resize(static_cast<size_t>(win), 0.0f);
+        }
+    }
+    return out;
+}
+
+// Dotted-note delay: delay time = beat * delay_division (default 3/8 = dotted 1/8).
+inline juce::AudioBuffer<float>
+delay_dotted(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
+{
+    const int N  = in.getNumSamples();
+    const int ch = in.getNumChannels();
+    double bpm = analysis::detect_bpm(in, sr);
+    if (bpm < 20.0) bpm = 120.0;
+    const double beat_samples = sr * 60.0 / bpm;
+    const int dly = std::max(1, std::min((int)(beat_samples * p.delay_division), (int)(sr * 2.0)));
+    const float fb = (float) std::clamp(p.feedback, 0.0, 0.95);
+
+    juce::AudioBuffer<float> out;
+    out.makeCopyOf(in);
+    for (int c = 0; c < ch; ++c) {
+        std::vector<float> buf(static_cast<size_t>(dly), 0.0f);
+        float* d = out.getWritePointer(c);
+        for (int i = 0; i < N; ++i) {
+            const int idx = i % dly;
+            const float delayed = buf[static_cast<size_t>(idx)];
+            buf[static_cast<size_t>(idx)] = d[i] + fb * delayed;
+            d[i] = juce::jlimit(-1.0f, 1.0f, d[i] + delayed);
+        }
     }
     return out;
 }

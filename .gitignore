@@ -38,3 +38,5 @@ __pycache__/
 build/
 graphify-out/
 sidecar/.venv/
+.claude/
+.paul/

@@ -13,6 +13,7 @@
 #include "dsp/NativeDemucsSeparator.h"
 #include "dsp/NativeRemixEngines.h"
 #include "dsp/NativeEffectChainEngine.h"
+#include "dsp/NativeStructuredRemixEngine.h"
 #include "dsp/NativeMashupEngine.h"
 #include "dsp/NativePresetTypes.h"
 #include "dsp/NativePresetLoaders.h"
@@ -697,6 +698,9 @@ AutoRemixAudioProcessorEditor::renderRemixNative(const autoremix::StemPaths& ste
         else if (engine == "effect_chain" && preset) {
             out_buf = eng::process_effect_chain(
                 native_stems, preset->effects, preset->stem_mix, sr);
+        }
+        else if (engine == "structured_remix" && preset) {
+            out_buf = eng::structured_remix(native_stems, sr, ep, *preset);
         }
         else {
             // Default fallback: equal-mix of stems (algorithmic remix).

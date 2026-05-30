@@ -1,0 +1,50 @@
+{
+  "id": "trap_banger_structured",
+  "version": "2.0",
+  "name": "Trap Banger (Structured)",
+  "description": "Structure-aware trap remix: sparse intro, full verse, heavy drop, filtered outro. Uses SongStructure analysis to anchor sections to the actual music.",
+  "author": "AutoRemix",
+  "tags": ["trap", "hip-hop", "structured", "bass"],
+  "engine": "structured_remix",
+  "params": {
+    "tempo_factor": 0.95,
+    "pitch_shift_semi": -1.0,
+    "reverb_mix": 0.08,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 1.0 },
+  "effects": [],
+  "structure": {
+    "enabled": true,
+    "arrangement": [
+      {
+        "section": "intro",
+        "length_bars": 4,
+        "anchor": "first",
+        "layer": { "vocals": 0.3, "drums": 0.8, "bass": 0.8, "other": 0.5 }
+      },
+      {
+        "section": "verse",
+        "length_bars": 8,
+        "anchor": "second",
+        "layer": { "vocals": 1.0, "drums": 1.0, "bass": 1.0, "other": 0.8 }
+      },
+      {
+        "section": "drop",
+        "length_bars": 8,
+        "anchor": "energy_peak",
+        "layer": { "vocals": 0.5, "drums": 1.5, "bass": 1.5, "other": 0.7 }
+      },
+      {
+        "section": "outro",
+        "length_bars": 4,
+        "anchor": "last",
+        "layer": { "vocals": 0.5, "drums": 0.6, "bass": 0.6, "other": 0.4 }
+      }
+    ],
+    "scratch": { "enabled": false },
+    "build_up": { "enabled": false }
+  }
+}

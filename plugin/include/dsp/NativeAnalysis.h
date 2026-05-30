@@ -646,24 +646,175 @@ phrase_times(const std::vector<double>& bar_times, int phrase_bars = 4)
     return phrases;
 }
 
-// Entry point: produce a SongStructure from an audio buffer.
-// brightness_per_bar, vocal_presence_per_bar, section_boundaries filled in 31-02.
+// Spectral centroid (brightness) per bar, normalized to [0, 1].
+// Center of mass of the FFT spectrum, averaged across frames in each bar.
+inline std::vector<float>
+spectral_centroid_per_bar(const juce::AudioBuffer<float>& audio, double sr,
+                           const std::vector<double>& bar_times)
+{
+    std::vector<float> result;
+    result.reserve(bar_times.size());
+    if (bar_times.empty() || audio.getNumSamples() == 0) return result;
+
+    auto mono = to_mono(audio);
+    const int N = (int) mono.size();
+    const int bins = kFftSize / 2 + 1;
+
+    for (size_t i = 0; i < bar_times.size(); ++i) {
+        const int start = std::min(N - 1, (int) std::round(bar_times[i] * sr));
+        const int end   = (i + 1 < bar_times.size())
+            ? std::min(N, (int) std::round(bar_times[i + 1] * sr))
+            : N;
+
+        if (end - start < kFftSize) { result.push_back(0.0f); continue; }
+
+        // Slice mono samples for this bar
+        std::vector<float> slice(mono.begin() + start, mono.begin() + end);
+        auto mag = stft_magnitudes(slice, kFftSize, kHop);
+
+        if (mag.empty()) { result.push_back(0.0f); continue; }
+
+        float centroid_sum = 0.0f;
+        int   frame_count  = 0;
+        for (const auto& frame : mag) {
+            float num = 0.0f, den = 0.0f;
+            for (int b = 1; b < bins; ++b) {
+                const float freq = (float) b * (float) sr / (float) kFftSize;
+                num += freq * frame[(size_t) b];
+                den += frame[(size_t) b];
+            }
+            if (den > 1e-9f) { centroid_sum += num / den; ++frame_count; }
+        }
+        result.push_back(frame_count > 0 ? centroid_sum / (float) frame_count : 0.0f);
+    }
+
+    // Normalize to [0, 1]
+    const float maxv = result.empty() ? 0.0f : *std::max_element(result.begin(), result.end());
+    if (maxv > 1e-9f)
+        for (auto& v : result) v /= maxv;
+    return result;
+}
+
+// Vocal presence heuristic per bar: ratio of 1–4 kHz band energy to total energy.
+// Higher value = more likely to contain vocals.
+inline std::vector<float>
+vocal_presence_per_bar(const juce::AudioBuffer<float>& audio, double sr,
+                        const std::vector<double>& bar_times)
+{
+    std::vector<float> result;
+    result.reserve(bar_times.size());
+    if (bar_times.empty() || audio.getNumSamples() == 0) return result;
+
+    // Bandpass around 1000–4000 Hz: HPF at 1kHz then LPF at 4kHz
+    auto apply_iir = [](const std::vector<float>& in,
+                        juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> coefs)
+    {
+        std::vector<float> out = in;
+        juce::dsp::IIR::Filter<float> filt;
+        filt.coefficients = coefs;
+        filt.reset();
+        for (auto& s : out) s = filt.processSample(s);
+        return out;
+    };
+
+    auto mono = to_mono(audio);
+    const auto hpf_coefs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sr, 1000.0f, 0.7f);
+    const auto lpf_coefs = juce::dsp::IIR::Coefficients<float>::makeLowPass (sr, 4000.0f, 0.7f);
+    auto band = apply_iir(apply_iir(mono, hpf_coefs), lpf_coefs);
+
+    const int N = (int) mono.size();
+    for (size_t i = 0; i < bar_times.size(); ++i) {
+        const int start = std::min(N - 1, (int) std::round(bar_times[i] * sr));
+        const int end   = (i + 1 < bar_times.size())
+            ? std::min(N, (int) std::round(bar_times[i + 1] * sr))
+            : N;
+        const int len = std::max(1, end - start);
+
+        if (len < 512) { result.push_back(0.5f); continue; }
+
+        float full_sq = 0.0f, band_sq = 0.0f;
+        for (int s = start; s < end; ++s) {
+            full_sq += mono[(size_t) s] * mono[(size_t) s];
+            band_sq += band[(size_t) s] * band[(size_t) s];
+        }
+        const float ratio = full_sq > 1e-12f
+            ? std::sqrt(band_sq / full_sq)
+            : 0.0f;
+        result.push_back(juce::jlimit(0.0f, 1.0f, ratio));
+    }
+
+    // Normalize relative to max (keeps proportions, maps to [0,1])
+    const float maxv = result.empty() ? 0.0f : *std::max_element(result.begin(), result.end());
+    if (maxv > 1e-9f)
+        for (auto& v : result) v /= maxv;
+    return result;
+}
+
+// Section boundaries via simplified novelty function.
+// Detects structural transitions as peaks in |Δenergy| + |Δbrightness|.
+inline std::vector<int>
+section_boundaries(const std::vector<float>& energy,
+                   const std::vector<float>& brightness,
+                   int min_sep_bars = 4)
+{
+    const int N = (int) std::min(energy.size(), brightness.size());
+    if (N < 3) return {};
+
+    // Novelty = frame-to-frame change in energy + brightness
+    std::vector<float> novelty((size_t) N, 0.0f);
+    for (int i = 1; i < N; ++i) {
+        novelty[(size_t) i] = std::abs(energy[(size_t) i]     - energy[(size_t) (i - 1)])
+                            + std::abs(brightness[(size_t) i] - brightness[(size_t) (i - 1)]);
+    }
+
+    // 3-point moving average to reduce jitter
+    std::vector<float> smooth = novelty;
+    for (int i = 1; i < N - 1; ++i)
+        smooth[(size_t) i] = (novelty[(size_t) (i - 1)] + novelty[(size_t) i]
+                              + novelty[(size_t) (i + 1)]) / 3.0f;
+
+    // Threshold: only peaks above mean * 1.2
+    float mean = 0.0f;
+    for (float v : smooth) mean += v;
+    mean /= (float) N;
+    const float threshold = mean * 1.2f;
+
+    // Peak pick with minimum separation
+    std::vector<int> bounds;
+    int last = -1000;
+    for (int i = 1; i < N - 1; ++i) {
+        if (smooth[(size_t) i] > threshold
+            && smooth[(size_t) i] > smooth[(size_t) (i - 1)]
+            && smooth[(size_t) i] > smooth[(size_t) (i + 1)]
+            && (i - last) >= min_sep_bars)
+        {
+            bounds.push_back(i);
+            last = i;
+        }
+    }
+    return bounds;
+}
+
+// Complete entry point — all SongStructure fields populated.
 inline SongStructure
 analyze_structure(const juce::AudioBuffer<float>& audio, double sr)
 {
     SongStructure s;
     if (audio.getNumSamples() == 0 || sr <= 0.0) return s;
 
-    s.duration_seconds = audio.getNumSamples() / sr;
-    s.bpm              = detect_bpm(audio, sr);
-    s.key              = detect_key(audio, sr);
-    s.beat_times       = detect_beats(audio, sr);
-    s.bar_times        = detect_bars(audio, sr, 4);
-    s.phrase_times     = phrase_times(s.bar_times, 4);
-    s.num_bars         = (int) s.bar_times.size();
-    s.energy_per_bar   = energy_per_bar(audio, sr, s.bar_times);
-    s.energy_peaks     = energy_peaks(s.energy_per_bar, 4);
-    // brightness_per_bar, vocal_presence_per_bar, section_boundaries: 31-02
+    s.duration_seconds       = audio.getNumSamples() / sr;
+    s.bpm                    = detect_bpm(audio, sr);
+    s.key                    = detect_key(audio, sr);
+    s.beat_times             = detect_beats(audio, sr);
+    s.bar_times              = detect_bars(audio, sr, 4);
+    s.phrase_times           = phrase_times(s.bar_times, 4);
+    s.num_bars               = (int) s.bar_times.size();
+    s.energy_per_bar         = energy_per_bar(audio, sr, s.bar_times);
+    s.energy_peaks           = energy_peaks(s.energy_per_bar, 4);
+    s.brightness_per_bar     = spectral_centroid_per_bar(audio, sr, s.bar_times);
+    s.vocal_presence_per_bar = vocal_presence_per_bar(audio, sr, s.bar_times);
+    s.section_boundaries     = section_boundaries(s.energy_per_bar,
+                                                   s.brightness_per_bar, 4);
     return s;
 }
 

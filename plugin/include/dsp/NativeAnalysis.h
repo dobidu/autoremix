@@ -61,6 +61,53 @@ inline constexpr std::array<double, 5> kKRlb = {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
+// SongStructure — Phase 31-01
+// Runtime structural description of a song produced by analyze_structure().
+// Used by the template engine to map arrangement slots to concrete bar indices.
+// ───────────────────────────────────────────────────────────────────────────
+
+struct SongStructure {
+    // ── Rhythm ────────────────────────────────────────────────────────────
+    double              bpm          = 0.0;
+    std::vector<double> beat_times;    // seconds at each detected beat
+    std::vector<double> bar_times;     // seconds at each bar (every 4 beats)
+    std::vector<double> phrase_times;  // seconds at each phrase (every 4 bars)
+
+    // ── Energy (parallel to bar_times) ────────────────────────────────────
+    std::vector<float>  energy_per_bar;  // RMS energy per bar, normalized [0, 1]
+    std::vector<int>    energy_peaks;    // indices into bar_times of local maxima
+
+    // ── Tonal ─────────────────────────────────────────────────────────────
+    std::string key;
+
+    // ── Timbre (parallel to bar_times, filled in 31-02) ───────────────────
+    std::vector<float>  brightness_per_bar;       // spectral centroid, [0, 1]
+    std::vector<float>  vocal_presence_per_bar;   // 0=instrumental, 1=vocal
+
+    // ── Sections (filled in 31-02) ────────────────────────────────────────
+    std::vector<int>    section_boundaries;  // bar indices of structural transitions
+
+    // ── Meta ──────────────────────────────────────────────────────────────
+    double duration_seconds = 0.0;
+    int    num_bars         = 0;
+
+    // Helpers
+    int bar_index_at(double time_sec) const noexcept
+    {
+        if (bar_times.empty()) return -1;
+        auto it = std::lower_bound(bar_times.begin(), bar_times.end(), time_sec);
+        if (it == bar_times.end()) return (int) bar_times.size() - 1;
+        return (int) std::distance(bar_times.begin(), it);
+    }
+
+    double bar_time_at(int bar_idx) const noexcept
+    {
+        if (bar_idx < 0 || bar_idx >= (int) bar_times.size()) return -1.0;
+        return bar_times[(size_t) bar_idx];
+    }
+};
+
+// ───────────────────────────────────────────────────────────────────────────
 // Private helpers (anonymous-namespace via static inline)
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -528,6 +575,96 @@ normalize_lufs(juce::AudioBuffer<float>& audio, double sr,
     const float peakLimit = std::pow(10.0f, -0.5f / 20.0f);
     if (peak > peakLimit && peak > 1e-9f)
         audio.applyGain(peakLimit / peak);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Public API — structural analysis (Phase 31-01)
+// ───────────────────────────────────────────────────────────────────────────
+
+// RMS energy per bar window, normalized to [0, 1].
+inline std::vector<float>
+energy_per_bar(const juce::AudioBuffer<float>& audio, double sr,
+               const std::vector<double>& bar_times)
+{
+    const int N = audio.getNumSamples();
+    const int ch = audio.getNumChannels();
+    std::vector<float> result;
+    result.reserve(bar_times.size());
+    if (bar_times.empty() || N == 0 || ch == 0) return result;
+
+    auto mono = to_mono(audio);
+
+    for (size_t i = 0; i < bar_times.size(); ++i) {
+        const int start = std::min(N - 1, (int) std::round(bar_times[i] * sr));
+        const int end   = (i + 1 < bar_times.size())
+            ? std::min(N, (int) std::round(bar_times[i + 1] * sr))
+            : N;
+        const int len = std::max(1, end - start);
+
+        float sumSq = 0.0f;
+        for (int s = start; s < end; ++s)
+            sumSq += mono[(size_t) s] * mono[(size_t) s];
+        result.push_back(std::sqrt(sumSq / (float) len));
+    }
+
+    // Normalize to [0, 1]
+    const float maxv = *std::max_element(result.begin(), result.end());
+    if (maxv > 1e-9f)
+        for (auto& v : result) v /= maxv;
+    return result;
+}
+
+// Local energy maxima separated by at least min_sep_bars.
+inline std::vector<int>
+energy_peaks(const std::vector<float>& energy, int min_sep_bars = 4)
+{
+    std::vector<int> peaks;
+    const int N = (int) energy.size();
+    if (N < 3) return peaks;
+
+    int last = -1000;
+    for (int i = 1; i < N - 1; ++i) {
+        if (energy[(size_t) i] > energy[(size_t) (i - 1)]
+            && energy[(size_t) i] > energy[(size_t) (i + 1)]
+            && (i - last) >= min_sep_bars)
+        {
+            peaks.push_back(i);
+            last = i;
+        }
+    }
+    return peaks;
+}
+
+// Phrase positions: every phrase_bars bars starting at bar 0.
+inline std::vector<double>
+phrase_times(const std::vector<double>& bar_times, int phrase_bars = 4)
+{
+    std::vector<double> phrases;
+    if (bar_times.empty() || phrase_bars < 1) return phrases;
+    for (size_t i = 0; i < bar_times.size(); i += (size_t) phrase_bars)
+        phrases.push_back(bar_times[i]);
+    return phrases;
+}
+
+// Entry point: produce a SongStructure from an audio buffer.
+// brightness_per_bar, vocal_presence_per_bar, section_boundaries filled in 31-02.
+inline SongStructure
+analyze_structure(const juce::AudioBuffer<float>& audio, double sr)
+{
+    SongStructure s;
+    if (audio.getNumSamples() == 0 || sr <= 0.0) return s;
+
+    s.duration_seconds = audio.getNumSamples() / sr;
+    s.bpm              = detect_bpm(audio, sr);
+    s.key              = detect_key(audio, sr);
+    s.beat_times       = detect_beats(audio, sr);
+    s.bar_times        = detect_bars(audio, sr, 4);
+    s.phrase_times     = phrase_times(s.bar_times, 4);
+    s.num_bars         = (int) s.bar_times.size();
+    s.energy_per_bar   = energy_per_bar(audio, sr, s.bar_times);
+    s.energy_peaks     = energy_peaks(s.energy_per_bar, 4);
+    // brightness_per_bar, vocal_presence_per_bar, section_boundaries: 31-02
+    return s;
 }
 
 } // namespace autoremix::dsp::analysis

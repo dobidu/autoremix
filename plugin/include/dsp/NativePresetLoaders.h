@@ -129,6 +129,51 @@ parse_remix_preset(const nlohmann::json& j)
             out.effects.push_back(std::move(step));
         }
     }
+
+    // ── Structure config (Phase 31-03) — optional block ─────────────────────
+    if (j.contains("structure") && j["structure"].is_object()) {
+        const auto& s = j["structure"];
+        out.structure.enabled = s.value("enabled", false);
+
+        if (s.contains("arrangement") && s["arrangement"].is_array()) {
+            for (const auto& slot_j : s["arrangement"]) {
+                ArrangementSlot slot;
+                slot.section_type  = slot_j.value("section",     std::string{});
+                slot.length_bars   = slot_j.value("length_bars", 0);
+                slot.source_anchor = slot_j.value("anchor",      std::string{"first"});
+                slot.loop_count    = slot_j.value("loop",        1);
+                if (slot_j.contains("effects") && slot_j["effects"].is_array())
+                    for (const auto& e : slot_j["effects"])
+                        slot.effects.push_back(e.get<std::string>());
+                if (slot_j.contains("layer") && slot_j["layer"].is_object()) {
+                    const auto& ly = slot_j["layer"];
+                    slot.layer.vocals = ly.value("vocals", 1.0f);
+                    slot.layer.drums  = ly.value("drums",  1.0f);
+                    slot.layer.bass   = ly.value("bass",   1.0f);
+                    slot.layer.other  = ly.value("other",  1.0f);
+                }
+                out.structure.arrangement.push_back(std::move(slot));
+            }
+        }
+
+        if (s.contains("scratch") && s["scratch"].is_object()) {
+            const auto& sc = s["scratch"];
+            out.structure.scratch.enabled       = sc.value("enabled",       false);
+            out.structure.scratch.position      = sc.value("position",      std::string{"pre_drop"});
+            out.structure.scratch.style         = sc.value("style",         std::string{"baby"});
+            out.structure.scratch.duration_bars = sc.value("duration_bars", 1);
+            out.structure.scratch.stem          = sc.value("stem",          std::string{"mix"});
+        }
+
+        if (s.contains("build_up") && s["build_up"].is_object()) {
+            const auto& bu = s["build_up"];
+            out.structure.build_up.enabled      = bu.value("enabled",      false);
+            out.structure.build_up.length_bars  = bu.value("length_bars",  4);
+            out.structure.build_up.add_riser    = bu.value("add_riser",    true);
+            out.structure.build_up.filter_sweep = bu.value("filter_sweep", true);
+        }
+    }
+
     return out;
 }
 

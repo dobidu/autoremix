@@ -16,6 +16,63 @@
 
 namespace autoremix::dsp::presets {
 
+// ── Structure-aware template types (Phase 31-03) ─────────────────────────────
+
+// Per-section stem layer: which stems are active + optional effect ops.
+struct SectionLayer {
+    float vocals = 1.0f, drums = 1.0f, bass = 1.0f, other = 1.0f;
+    std::vector<std::string> ops;   // effect_chain op ids to apply in this section
+};
+
+// One slot in the arrangement sequence.
+struct ArrangementSlot {
+    // Section type label (informational): "intro", "verse", "chorus", etc.
+    std::string section_type;
+
+    // Desired length in bars. 0 = auto-detect from section_boundaries.
+    int length_bars = 0;
+
+    // Source anchor — which part of the song to extract:
+    // "first" | "second" | "last" | "energy_peak" | "bar:N"
+    std::string source_anchor = "first";
+
+    // Stem layer for this slot (overrides top-level stem_mix for this section)
+    SectionLayer layer;
+
+    // Per-slot effect ops (applied after layer gain)
+    std::vector<std::string> effects;
+
+    // Loop this slot N times before advancing to next slot
+    int loop_count = 1;
+};
+
+// Top-level structure configuration embedded in NativeRemixPreset.
+struct StructureConfig {
+    bool enabled = false;
+
+    // Ordered sequence of sections to assemble
+    std::vector<ArrangementSlot> arrangement;
+
+    // Scratch config (Phase 34 implementation; parsed here for schema completeness)
+    struct ScratchConfig {
+        bool        enabled       = false;
+        std::string position      = "pre_drop"; // "bar:N" | "phrase:N" | anchor name
+        std::string style         = "baby";     // baby|transformer|chirp|forward
+        int         duration_bars = 1;
+        std::string stem          = "mix";      // mix|vocals|drums|bass|other
+    } scratch;
+
+    // Build-up config (Phase 35 implementation)
+    struct BuildUpConfig {
+        bool enabled      = false;
+        int  length_bars  = 4;
+        bool add_riser    = true;
+        bool filter_sweep = true;
+    } build_up;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 struct NativeRemixPreset {
     std::string id;
     std::string version     = "1.0";
@@ -28,6 +85,9 @@ struct NativeRemixPreset {
     engines::RemixParams              params;
     engines::StemMix                  stem_mix;
     std::vector<engines::EffectStep>  effects;
+
+    // Structure-aware config (Phase 31-03). Optional — empty = legacy behaviour.
+    StructureConfig structure;
 };
 
 struct NativeMashupPreset {

@@ -167,10 +167,13 @@ stutter_chop(const juce::AudioBuffer<float>& in, double sr,
         }
     }
 
-    const int outN = std::min(writePos, N);
-    juce::AudioBuffer<float> out(ch, outN);
+    // Do NOT trim back to N: each stutter legitimately extends the track.
+    // Trimming caused every stutter to silently drop a chunk from later in the
+    // song, making the beat drift after each repeat. Authentic C&S extends
+    // duration by n_stutters * chunk_size.
+    juce::AudioBuffer<float> out(ch, writePos);
     for (int c = 0; c < ch; ++c)
-        out.copyFrom(c, 0, tmp, c, 0, outN);
+        out.copyFrom(c, 0, tmp, c, 0, writePos);
     return out;
 }
 

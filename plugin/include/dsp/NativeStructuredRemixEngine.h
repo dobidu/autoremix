@@ -25,6 +25,8 @@
 #include "NativeAnalysis.h"
 #include "NativePresetTypes.h"
 #include "NativeRemixEngines.h"     // chopped_and_screwed, mix_stems_equal, TimePitchStretcher
+#include "NativeSampleLibrary.h"
+#include "NativeSampleEngine.h"
 #include "TimePitchStretcher.h"
 
 namespace autoremix::dsp::engines {
@@ -117,7 +119,8 @@ append_buffer(juce::AudioBuffer<float>& dst,
 inline juce::AudioBuffer<float>
 structured_remix(const separators::NativeStems& stems, double sr,
                  const RemixParams& p,
-                 const presets::NativeRemixPreset& preset)
+                 const presets::NativeRemixPreset& preset,
+                 juce::AudioFormatManager& fmt)
 {
     // Fallback when structure is disabled or arrangement is empty
     if (!preset.structure.enabled || preset.structure.arrangement.empty())
@@ -162,6 +165,52 @@ structured_remix(const separators::NativeStems& stems, double sr,
 
     if (output.getNumSamples() == 0)
         return chopped_and_screwed(stems, sr, p);
+
+    // 3b. Apply samples from user library
+    if (!preset.structure.samples.empty()) {
+        samples::SampleLibrary lib;
+        lib.scan(samples::SampleLibrary::user_sample_dir(), fmt);
+        juce::Logger::writeToLog("[SampleEngine] library size: "
+            + juce::String((int)lib.size()));
+
+        const double bpm = song.bpm > 0.0 ? song.bpm
+                                           : (double)p.tempo_factor * 120.0;
+
+        std::vector<samples::SamplePlacement> placements;
+        for (const auto& spec : preset.structure.samples) {
+            samples::SampleEntry explicit_entry;
+            const samples::SampleEntry* entry = nullptr;
+
+            if (!spec.path_or_auto.empty()) {
+                samples::SampleLibrary single;
+                single.add(juce::File(juce::String(spec.path_or_auto)), fmt,
+                           spec.category);
+                if (!single.entries().empty()) {
+                    explicit_entry = single.entries().front();
+                    entry = &explicit_entry;
+                }
+            } else {
+                entry = lib.find_nearest_bpm(bpm, spec.category);
+            }
+
+            if (!entry) {
+                juce::Logger::writeToLog("[SampleEngine] no sample for: "
+                    + juce::String(spec.category));
+                continue;
+            }
+
+            samples::SamplePlacement pl;
+            pl.entry        = *entry;
+            pl.position_sec = samples::resolve_placement(spec.placement, song, *entry);
+            pl.gain         = spec.gain;
+            pl.fade_ms      = spec.fade_ms;
+            placements.push_back(std::move(pl));
+        }
+
+        juce::Logger::writeToLog("[SampleEngine] applying "
+            + juce::String((int)placements.size()) + " samples");
+        samples::apply_samples(output, sr, bpm, song, placements, fmt);
+    }
 
     // 4. Global time-stretch + pitch-shift
     if (std::abs(p.tempo_factor - 1.0f) > 1e-3f

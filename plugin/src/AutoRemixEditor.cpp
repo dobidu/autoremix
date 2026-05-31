@@ -702,7 +702,8 @@ AutoRemixAudioProcessorEditor::renderRemixNative(const autoremix::StemPaths& ste
                 native_stems, preset->effects, preset->stem_mix, sr);
         }
         else if (engine == "structured_remix" && preset) {
-            out_buf = eng::structured_remix(native_stems, sr, ep, *preset);
+            out_buf = eng::structured_remix(native_stems, sr, ep, *preset,
+                                            audioProcessor.getFormatManager());
         }
         else {
             // Default fallback: equal-mix of stems (algorithmic remix).

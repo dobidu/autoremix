@@ -172,6 +172,18 @@ parse_remix_preset(const nlohmann::json& j)
             out.structure.build_up.add_riser    = bu.value("add_riser",    true);
             out.structure.build_up.filter_sweep = bu.value("filter_sweep", true);
         }
+
+        if (s.contains("samples") && s["samples"].is_array()) {
+            for (const auto& sp : s["samples"]) {
+                StructureConfig::SampleSpec spec;
+                spec.path_or_auto = sp.value("path",      std::string{});
+                spec.placement    = sp.value("placement", std::string{"pre_drop"});
+                spec.category     = sp.value("category",  std::string{"unknown"});
+                spec.gain         = sp.value("gain",      1.0f);
+                spec.fade_ms      = sp.value("fade_ms",   10.0f);
+                out.structure.samples.push_back(std::move(spec));
+            }
+        }
     }
 
     return out;

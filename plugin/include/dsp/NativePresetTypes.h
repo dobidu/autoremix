@@ -69,6 +69,16 @@ struct StructureConfig {
         bool add_riser    = true;
         bool filter_sweep = true;
     } build_up;
+
+    // Sample specs (Phase 33-03): auto-place samples from user library
+    struct SampleSpec {
+        std::string path_or_auto; // explicit path OR empty (auto-select from library)
+        std::string placement;    // "pre_drop"|"drop"|"vocal_gap"|"bar:N"|"phrase:N"|"end"
+        std::string category;     // "riser"|"impact"|"loop"|"adlib"|"fx"|"one_shot"
+        float       gain    = 1.0f;
+        float       fade_ms = 10.0f;
+    };
+    std::vector<SampleSpec> samples;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

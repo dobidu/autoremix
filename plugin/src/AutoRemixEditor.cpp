@@ -203,6 +203,8 @@ AutoRemixAudioProcessorEditor::AutoRemixAudioProcessorEditor(AutoRemixAudioProce
     ctx_.stop_all_stems      = [this] { audioProcessor.stopAllStems(); };
     ctx_.get_preview_position = [this] { return audioProcessor.getPreviewPosition(); };
     ctx_.get_stem_position    = [this](int idx) { return audioProcessor.getStemPosition(idx); };
+    ctx_.seek_stem            = [this](int idx, double ratio) { audioProcessor.seekStem(idx, ratio); };
+    ctx_.seek_preview         = [this](double ratio) { audioProcessor.seekPreview(ratio); };
 
     ctx_.run_mashup = [this](autoremix::MashupParams params,
                              std::function<void(autoremix::MashupResult)> on_complete) {

@@ -83,6 +83,10 @@ struct ScreenContext {
     std::function<double()>    get_preview_position;
     std::function<double(int)> get_stem_position;
 
+    // Seek (ratio 0.0–1.0) — click-to-seek on waveforms
+    std::function<void(int, double)> seek_stem;    // (stem_idx, ratio)
+    std::function<void(double)>      seek_preview; // (ratio)
+
     // ── Track B + mashup state (populated by mashup flow; see Phase 21) ──────
     juce::String         file_path_b;
     float                detected_bpm_b = 120.0f;

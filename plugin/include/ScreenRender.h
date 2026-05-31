@@ -284,6 +284,40 @@ public:
         }
     }
 
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        if (state_ != State::Done) return;
+        const bool playing = ctx_.is_preview_playing && ctx_.is_preview_playing();
+        if (!playing) return;
+
+        // Replicate paint() bounds logic to find which waveform was clicked.
+        auto b = getLocalBounds();
+        b.removeFromBottom(72);   // actionBar
+        b.removeFromTop(80);      // headerArea
+        // b is now the waveform content area (same as fullContent in paint)
+
+        const bool is_mashup = ctx_.render_is_mashup;
+        if (!is_mashup) {
+            // Standard: orig (top half) + remix (bottom half)
+            int halfH = b.getHeight() / 2;
+            auto origArea  = b.removeFromTop(halfH).reduced(32, 6);
+            origArea.removeFromTop(14);   // "ORIGINAL" label
+            auto remixArea = b.reduced(32, 6);
+            remixArea.removeFromTop(14);  // "REMIX" label
+
+            if (origArea.contains(e.getPosition())
+                && preview_mode_ == PreviewMode::Original) {
+                const double ratio = (double)(e.x - origArea.getX()) / origArea.getWidth();
+                if (ctx_.seek_preview) ctx_.seek_preview(ratio);
+            } else if (remixArea.contains(e.getPosition())
+                       && preview_mode_ == PreviewMode::Remix) {
+                const double ratio = (double)(e.x - remixArea.getX()) / remixArea.getWidth();
+                if (ctx_.seek_preview) ctx_.seek_preview(ratio);
+            }
+        }
+        // Mashup Done state has 3 waveforms — seek deferred to Phase 38 redesign.
+    }
+
     void resized() override
     {
         auto b = getLocalBounds();

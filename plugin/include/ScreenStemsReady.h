@@ -103,6 +103,17 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override
     {
+        // Click-to-seek: if click lands on the waveform of a playing stem, seek it.
+        const int stem_idx = stemRowAtY(e.y);
+        if (stem_idx >= 0 && ctx_.is_stem_playing && ctx_.is_stem_playing(stem_idx)) {
+            const int wave_x0 = LEFT_COL_W;
+            const int wave_x1 = getWidth() - RIGHT_COL_W;
+            if (e.x >= wave_x0 && e.x <= wave_x1 && wave_x1 > wave_x0) {
+                const double ratio = (double)(e.x - wave_x0) / (double)(wave_x1 - wave_x0);
+                if (ctx_.seek_stem) ctx_.seek_stem(stem_idx, ratio);
+                return;  // don't initiate drag on seek click
+            }
+        }
         drag_stem_idx_  = stemRowAtY(e.y);
         mouse_down_pos_ = e.getPosition();
     }

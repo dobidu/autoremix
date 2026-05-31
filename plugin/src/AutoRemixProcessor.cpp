@@ -114,6 +114,22 @@ double AutoRemixAudioProcessor::getStemPosition(int idx) const
     return (len > 0.0) ? stem_players_[idx].transport.getCurrentPosition() / len : 0.0;
 }
 
+void AutoRemixAudioProcessor::seekStem(int idx, double ratio)
+{
+    if (idx < 0 || idx >= 4) return;
+    auto& t = stem_players_[(size_t)idx].transport;
+    const double len = t.getLengthInSeconds();
+    if (len > 0.0)
+        t.setPosition(std::clamp(ratio, 0.0, 1.0) * len);
+}
+
+void AutoRemixAudioProcessor::seekPreview(double ratio)
+{
+    const double len = preview_transport_.getLengthInSeconds();
+    if (len > 0.0)
+        preview_transport_.setPosition(std::clamp(ratio, 0.0, 1.0) * len);
+}
+
 //==============================================================================
 const juce::String AutoRemixAudioProcessor::getName() const { return JucePlugin_Name; }
 

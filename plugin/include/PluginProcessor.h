@@ -50,6 +50,10 @@ public:
     double getPreviewPosition() const;
     double getStemPosition(int idx) const;
 
+    // Seek (ratio 0.0–1.0)
+    void seekStem(int idx, double ratio_0_to_1);
+    void seekPreview(double ratio_0_to_1);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessor)
 
 private:

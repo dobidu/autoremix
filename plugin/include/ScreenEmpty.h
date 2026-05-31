@@ -42,7 +42,7 @@ public:
     ~ScreenEmpty() override
     {
         thumbnail_.removeChangeListener(this);
-        cancel_analysis_.store(true);
+        if (cancel_analysis_token_) cancel_analysis_token_->store(true);
     }
 
     void onEnter() override
@@ -61,7 +61,7 @@ public:
 
     void onExit() override
     {
-        cancel_analysis_.store(true);
+        if (cancel_analysis_token_) cancel_analysis_token_->store(true);
     }
 
     void fileWasSelected(const juce::File& f)
@@ -179,14 +179,16 @@ private:
 
     void runAnalysis()
     {
-        cancel_analysis_.store(false);
+        cancel_analysis_token_ = std::make_shared<std::atomic<bool>>(false);
+        auto cancel = cancel_analysis_token_;
         auto path = ctx_.file_path;
-        std::thread([this, path]() {
+        std::thread([this, cancel, path]() {
             auto info = analyze_fn_(path);
-            if (cancel_analysis_.load()) return;
-            float       bpm = info.valid() ? info.bpm  : 120.0f;
+            if (cancel->load()) return;
+            float        bpm = info.valid() ? info.bpm  : 120.0f;
             juce::String key = info.valid() ? juce::String(info.key) : "";
-            juce::MessageManager::callAsync([this, bpm, key]() {
+            juce::MessageManager::callAsync([this, cancel, bpm, key]() {
+                if (cancel->load()) return;
                 ctx_.detected_bpm = bpm;
                 ctx_.detected_key = key;
                 updateAnalysisLabel();
@@ -207,7 +209,7 @@ private:
 
     juce::String       analysis_text_;
     bool               drag_over_ = false;
-    std::atomic<bool>  cancel_analysis_{false};
+    std::shared_ptr<std::atomic<bool>> cancel_analysis_token_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenEmpty)
 };

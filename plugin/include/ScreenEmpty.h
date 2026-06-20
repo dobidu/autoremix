@@ -1,11 +1,15 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <algorithm>
+#include <cmath>
 #include <thread>
 #include <atomic>
 #include "ScreenBase.h"
 #include "AutoRemixLookAndFeel.h"
 #include "PluginTypes.h"
+#include "dsp/NativeCueReader.h"
+#include "dsp/NativeCueSidecar.h"
 
 class ScreenEmpty : public ScreenBase,
                     public juce::FileDragAndDropTarget,
@@ -142,6 +146,19 @@ public:
             if (thumbnail_.getTotalLength() > 0.0) {
                 g.setColour(juce::Colour(AR::ACCENT).withAlpha(0.8f));
                 thumbnail_.drawChannels(g, waveArea, 0.0, thumbnail_.getTotalLength(), 1.0f);
+
+                // Cue point overlays
+                const double dur = thumbnail_.getTotalLength();
+                for (const auto& cue : ctx_.cue_points) {
+                    const float x = (float)(cue.position_sec / dur) * waveArea.getWidth()
+                                    + waveArea.getX();
+                    const float alpha = (cue.source == "auto") ? 0.45f : 1.0f;
+                    g.setColour(juce::Colour((juce::uint32)cue.color_rgb).withAlpha(alpha));
+                    g.drawLine(x, (float)waveArea.getY(), x, (float)waveArea.getBottom(), 1.0f);
+                    g.setFont(AR::font(AR::FontRole::secondary));
+                    g.drawText(juce::String(cue.name), (int)x + 2, waveArea.getY(), 60, 12,
+                               juce::Justification::left, true);
+                }
             }
 
             if (analysis_text_.isNotEmpty()) {
@@ -156,6 +173,92 @@ public:
         if (drag_over_) {
             g.setColour(juce::Colour(AR::ACCENT));
             g.drawRect(bounds.toFloat(), 2.0f);
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        if (ctx_.file_path.isEmpty() || thumbnail_.getTotalLength() <= 0.0) return;
+
+        namespace an = autoremix::dsp::analysis;
+        auto bounds      = getLocalBounds();
+        auto contentArea = bounds.withTrimmedBottom(72);
+        auto waveArea    = contentArea.reduced(0, 16);
+
+        // Ctrl+click → place new cue
+        if (e.mods.isCtrlDown() && waveArea.contains(e.getPosition())) {
+            const double ratio = std::clamp(
+                (e.x - waveArea.getX()) / (double)waveArea.getWidth(), 0.0, 1.0);
+            const double pos = ratio * thumbnail_.getTotalLength();
+            const int n = (int)std::count_if(ctx_.cue_points.begin(), ctx_.cue_points.end(),
+                              [](const an::CuePoint& c){ return c.source == "user"; }) + 1;
+
+            juce::AlertWindow aw("Place Cue", "Name:", juce::MessageBoxIconType::NoIcon);
+            aw.addTextEditor("name", "cue_" + juce::String(n), "Cue name:");
+            aw.addButton("OK",     1, juce::KeyPress(juce::KeyPress::returnKey));
+            aw.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+            if (aw.runModalLoop() != 1) return;
+
+            const auto name = aw.getTextEditorContents("name").trim();
+            if (name.isEmpty()) return;
+
+            an::CuePoint c;
+            c.name         = name.toStdString();
+            c.position_sec = pos;
+            c.color_rgb    = 0xFFD4652Au;
+            c.source       = "user";
+            ctx_.cue_points.push_back(c);
+            std::sort(ctx_.cue_points.begin(), ctx_.cue_points.end(),
+                [](const an::CuePoint& a, const an::CuePoint& b){
+                    return a.position_sec < b.position_sec; });
+            save_user_cues(juce::File(ctx_.file_path.toStdString()), ctx_.cue_points);
+            if (ctx_.on_cues_changed) ctx_.on_cues_changed();
+            repaint();
+            return;
+        }
+
+        // Right-click near existing cue marker → rename / delete
+        if (e.mods.isRightButtonDown()) {
+            const double dur = thumbnail_.getTotalLength();
+            for (size_t i = 0; i < ctx_.cue_points.size(); ++i) {
+                const float cx = (float)(ctx_.cue_points[i].position_sec / dur)
+                                 * waveArea.getWidth() + waveArea.getX();
+                if (std::abs((float)e.x - cx) <= 6.0f) {
+                    juce::PopupMenu menu;
+                    menu.addItem(1, "Rename...");
+                    menu.addItem(2, "Delete");
+                    menu.showMenuAsync(juce::PopupMenu::Options{},
+                        [this, i](int result) {
+                            if (result == 1) {
+                                if (i >= ctx_.cue_points.size()) return;
+                                juce::AlertWindow aw2("Rename Cue", "New name:",
+                                                      juce::MessageBoxIconType::NoIcon);
+                                aw2.addTextEditor("name",
+                                    juce::String(ctx_.cue_points[i].name), "Name:");
+                                aw2.addButton("OK",     1, juce::KeyPress(juce::KeyPress::returnKey));
+                                aw2.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+                                if (aw2.runModalLoop() == 1) {
+                                    const auto nm = aw2.getTextEditorContents("name").trim();
+                                    if (nm.isNotEmpty()) {
+                                        ctx_.cue_points[i].name = nm.toStdString();
+                                        save_user_cues(juce::File(ctx_.file_path.toStdString()),
+                                                       ctx_.cue_points);
+                                        if (ctx_.on_cues_changed) ctx_.on_cues_changed();
+                                        repaint();
+                                    }
+                                }
+                            } else if (result == 2) {
+                                if (i >= ctx_.cue_points.size()) return;
+                                ctx_.cue_points.erase(ctx_.cue_points.begin() + (ptrdiff_t)i);
+                                save_user_cues(juce::File(ctx_.file_path.toStdString()),
+                                               ctx_.cue_points);
+                                if (ctx_.on_cues_changed) ctx_.on_cues_changed();
+                                repaint();
+                            }
+                        });
+                    return;
+                }
+            }
         }
     }
 
@@ -177,6 +280,31 @@ private:
         analysis_text_ = txt;
     }
 
+    void loadAndMergeCues()
+    {
+        namespace an = autoremix::dsp::analysis;
+        const juce::File f(ctx_.file_path.toStdString());
+        auto file_cues = load_cues_for_file(f);
+        auto user_cues = load_user_cues(f);
+
+        ctx_.cue_points = ctx_.song_structure.cue_points;
+
+        auto mergeCue = [this](an::CuePoint c) {
+            auto it = std::find_if(ctx_.cue_points.begin(), ctx_.cue_points.end(),
+                [&](const an::CuePoint& x){
+                    return std::abs(x.position_sec - c.position_sec) < 0.1; });
+            if (it != ctx_.cue_points.end()) *it = std::move(c);
+            else ctx_.cue_points.push_back(std::move(c));
+        };
+        for (auto& c : file_cues) mergeCue(std::move(c));
+        for (auto& c : user_cues) mergeCue(std::move(c));
+
+        std::sort(ctx_.cue_points.begin(), ctx_.cue_points.end(),
+            [](const an::CuePoint& a, const an::CuePoint& b){
+                return a.position_sec < b.position_sec; });
+        if (ctx_.on_cues_changed) ctx_.on_cues_changed();
+    }
+
     void runAnalysis()
     {
         cancel_analysis_token_ = std::make_shared<std::atomic<bool>>(false);
@@ -185,15 +313,43 @@ private:
         std::thread([this, cancel, path]() {
             auto info = analyze_fn_(path);
             if (cancel->load()) return;
+
+            // Full structure analysis for cue point auto-detection
+            namespace an = autoremix::dsp::analysis;
+            an::SongStructure song_struct;
+            {
+                std::unique_ptr<juce::AudioFormatReader> reader(
+                    format_manager_.createReaderFor(juce::File(path)));
+                if (reader && reader->lengthInSamples > 0) {
+                    const int    n  = static_cast<int>(reader->lengthInSamples);
+                    const double sr = reader->sampleRate;
+                    const int    ch = static_cast<int>(reader->numChannels);
+                    juce::AudioBuffer<float> buf(std::max(ch, 2), n);
+                    buf.clear();
+                    reader->read(&buf, 0, n, 0, true, true);
+                    juce::AudioBuffer<float> mono(1, n);
+                    mono.clear();
+                    const float gain = 1.0f / static_cast<float>(buf.getNumChannels());
+                    for (int c = 0; c < buf.getNumChannels(); ++c)
+                        mono.addFrom(0, 0, buf, c, 0, n, gain);
+                    if (!cancel->load())
+                        song_struct = an::analyze_structure(mono, sr);
+                }
+            }
+            if (cancel->load()) return;
+
             float        bpm = info.valid() ? info.bpm  : 120.0f;
             juce::String key = info.valid() ? juce::String(info.key) : "";
-            juce::MessageManager::callAsync([this, cancel, bpm, key]() {
-                if (cancel->load()) return;
-                ctx_.detected_bpm = bpm;
-                ctx_.detected_key = key;
-                updateAnalysisLabel();
-                repaint();
-            });
+            juce::MessageManager::callAsync(
+                [this, cancel, bpm, key, ss = std::move(song_struct)]() mutable {
+                    if (cancel->load()) return;
+                    ctx_.detected_bpm   = bpm;
+                    ctx_.detected_key   = key;
+                    ctx_.song_structure = std::move(ss);
+                    loadAndMergeCues();
+                    updateAnalysisLabel();
+                    repaint();
+                });
         }).detach();
     }
 

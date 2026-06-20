@@ -60,6 +60,14 @@ inline constexpr std::array<double, 5> kKRlb = {
    -1.99004745483398, 0.99007225036621
 };
 
+// ── CuePoint — Phase 34 ─────────────────────────────────────────────────────
+struct CuePoint {
+    std::string name;               // "drop", "intro_end", "chorus", "A", etc.
+    double      position_sec = 0.0;
+    uint32_t    color_rgb    = 0xFF4A9EDB; // default: blue (ARGB)
+    std::string source;             // "auto" | "user" | "serato" | "cue_sheet"
+};
+
 // ───────────────────────────────────────────────────────────────────────────
 // SongStructure — Phase 31-01
 // Runtime structural description of a song produced by analyze_structure().
@@ -86,6 +94,9 @@ struct SongStructure {
 
     // ── Sections (filled in 31-02) ────────────────────────────────────────
     std::vector<int>    section_boundaries;  // bar indices of structural transitions
+
+    // ── Cue Points (filled in 34-01) ──────────────────────────────────────
+    std::vector<CuePoint> cue_points;        // named structural markers (Phase 34)
 
     // ── Meta ──────────────────────────────────────────────────────────────
     double duration_seconds = 0.0;
@@ -795,6 +806,63 @@ section_boundaries(const std::vector<float>& energy,
     return bounds;
 }
 
+// auto_detect_cues — derive named CuePoints from section_boundaries + energy_peaks.
+// Naming heuristic:
+//   first boundary  → "intro_end"
+//   last boundary   → "outro_start"
+//   boundary bar with highest mean energy in ±2 bar window → "drop"
+//   remaining       → "section_2", "section_3", ...
+inline std::vector<CuePoint>
+auto_detect_cues(const SongStructure& s)
+{
+    std::vector<CuePoint> cues;
+    const auto& bounds = s.section_boundaries;
+    if (bounds.empty() || s.bar_times.empty()) return cues;
+
+    // Find which boundary bar has the highest nearby energy → "drop"
+    int drop_idx = bounds[0];
+    float best = 0.0f;
+    for (int b : bounds) {
+        float e = 0.0f;
+        int count = 0;
+        for (int d = -2; d <= 2; ++d) {
+            int idx = b + d;
+            if (idx >= 0 && idx < (int) s.energy_per_bar.size()) {
+                e += s.energy_per_bar[(size_t) idx];
+                ++count;
+            }
+        }
+        if (count > 0 && (e / count) > best) {
+            best = e / count;
+            drop_idx = b;
+        }
+    }
+
+    int section_counter = 2;
+    for (size_t i = 0; i < bounds.size(); ++i) {
+        int b = bounds[i];
+        double pos = (b < (int) s.bar_times.size()) ? s.bar_times[(size_t) b] : -1.0;
+        if (pos < 0.0) continue;
+
+        CuePoint cp;
+        cp.position_sec = pos;
+        cp.source       = "auto";
+        cp.color_rgb    = 0xFF888888u; // grey for auto cues
+
+        if (i == 0)
+            cp.name = "intro_end";
+        else if (i == bounds.size() - 1)
+            cp.name = "outro_start";
+        else if (b == drop_idx)
+            cp.name = "drop";
+        else
+            cp.name = "section_" + std::to_string(section_counter++);
+
+        cues.push_back(std::move(cp));
+    }
+    return cues;
+}
+
 // Complete entry point — all SongStructure fields populated.
 inline SongStructure
 analyze_structure(const juce::AudioBuffer<float>& audio, double sr)
@@ -815,6 +883,7 @@ analyze_structure(const juce::AudioBuffer<float>& audio, double sr)
     s.vocal_presence_per_bar = vocal_presence_per_bar(audio, sr, s.bar_times);
     s.section_boundaries     = section_boundaries(s.energy_per_bar,
                                                    s.brightness_per_bar, 4);
+    s.cue_points             = auto_detect_cues(s);
     return s;
 }
 

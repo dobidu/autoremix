@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include "PluginTypes.h"
+#include "dsp/NativeAnalysis.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ScreenId — identifies which screen is currently displayed in the main area.
@@ -125,4 +126,9 @@ struct ScreenContext {
     // ScreenSeparating creates and owns the atomic; sets this shared_ptr in onEnter,
     // clears it in onExit. AutoRemixEditor::separateNative reads it for the demucs path.
     std::shared_ptr<std::atomic<bool>> separation_cancel_token;
+
+    // ── Structural analysis + cue points (Phase 34) ───────────────────────────
+    autoremix::dsp::analysis::SongStructure              song_structure;
+    std::vector<autoremix::dsp::analysis::CuePoint>      cue_points;
+    std::function<void()>                                on_cues_changed;
 };

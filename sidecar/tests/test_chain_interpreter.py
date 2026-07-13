@@ -71,12 +71,19 @@ def test_individual_stem_targeting(stem_wavs, tmp_path):
     assert out.stat().st_size > 0
 
 
-def test_unknown_op_raises(stem_wavs, tmp_path):
+def test_unknown_op_skipped(stem_wavs, tmp_path, caplog):
+    # Native-only ops (v5 plugin) may appear in shared preset JSONs — the
+    # sidecar must skip them with a warning, not fail the whole render.
+    out = tmp_path / "out.wav"
     preset = make_preset([
         {"op": "nonexistent", "stems": "all", "params": {}},
+        {"op": "bass_boost", "stems": ["bass"], "params": {"db": 3.0}},
     ])
-    with pytest.raises(ValueError, match="nonexistent"):
-        EffectChainEngine().process(stem_wavs, preset, tmp_path / "out.wav")
+    with caplog.at_level("WARNING"):
+        EffectChainEngine().process(stem_wavs, preset, out)
+    assert out.exists()
+    assert out.stat().st_size > 0
+    assert any("nonexistent" in r.message for r in caplog.records)
 
 
 async def test_dispatch_chain_via_http(client, stem_wavs, tmp_path, monkeypatch):

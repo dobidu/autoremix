@@ -5,9 +5,9 @@
 // Header-only loaders for remix + mashup presets.
 //
 // Built-in presets are embedded in the plugin binary via
-// juce_add_binary_data(AutoRemixPresetsData ...) — 9 remix JSONs +
-// 8 mashup JSONs. The loaders iterate PresetData::namedResourceList
-// to surface them at runtime.
+// juce_add_binary_data(AutoRemixPresetsData ...) — every JSON listed in
+// plugin/CMakeLists.txt. The loaders iterate PresetData::namedResourceList
+// and route each JSON to remix vs mashup by content (see is_mashup_json).
 //
 // User presets are read from the cross-platform user config dir:
 //   Linux:   ~/.config/autoremix/{modes,mashup}
@@ -58,14 +58,106 @@ inline juce::File user_mashup_dir()
 
 // ───────────────────────────────────────────────────────────────────────────
 // JSON → struct parsers (permissive: unknown keys ignored, missing keys
-// fall back to NativeRemixPreset / NativeMashupPreset defaults)
+// fall back to NativeRemixPreset / NativeMashupPreset defaults).
+// A missing/empty "id" throws — callers catch, log, and skip the file.
+// Effect steps with unknown op names are dropped with a log line so the
+// rest of the chain still runs.
 // ───────────────────────────────────────────────────────────────────────────
+
+namespace detail {
+
+template <typename T>
+inline T clamped(T v, T lo, T hi) { return std::min(hi, std::max(lo, v)); }
+
+// Every OpParams field, keyed by its JSON name. New ops only need a row
+// here — forgetting one no longer silently drops the param at load time.
+struct OpParamKeys {
+    static constexpr std::array<std::pair<const char*, double ops::OpParams::*>, 29>
+    doubles() {
+        using P = ops::OpParams;
+        return {{
+            { "factor",            &P::factor            },
+            { "semitones",         &P::semitones         },
+            { "mix",               &P::mix               },
+            { "room_size",         &P::room_size         },
+            { "interval_ms",       &P::interval_ms       },
+            { "db",                &P::db                },
+            { "cutoff_hz",         &P::cutoff_hz         },
+            { "division",          &P::division          },
+            { "min_gap_ms",        &P::min_gap_ms        },
+            { "threshold",         &P::threshold         },
+            { "threshold_db",      &P::threshold_db      },
+            { "hold_ms",           &P::hold_ms           },
+            { "drive",             &P::drive             },
+            { "delay_ms",          &P::delay_ms          },
+            { "feedback",          &P::feedback          },
+            { "stereo_width",      &P::stereo_width      },
+            { "wow_depth",         &P::wow_depth         },
+            { "flutter_rate",      &P::flutter_rate      },
+            { "delay_division",    &P::delay_division    },
+            { "sweep_start_hz",    &P::sweep_start_hz    },
+            { "sweep_end_hz",      &P::sweep_end_hz      },
+            { "crackle_amount",    &P::crackle_amount    },
+            { "wow_rate",          &P::wow_rate          },
+            { "duck_depth_db",     &P::duck_depth_db     },
+            { "duck_attack_ms",    &P::duck_attack_ms    },
+            { "duck_release_ms",   &P::duck_release_ms   },
+            { "duck_rate_hz",      &P::duck_rate_hz      },
+            { "gate_threshold_db", &P::gate_threshold_db },
+            { "gate_hold_ms",      &P::gate_hold_ms      },
+        }};
+    }
+    static constexpr std::array<std::pair<const char*, int ops::OpParams::*>, 6>
+    ints() {
+        using P = ops::OpParams;
+        return {{
+            { "offset_beats",  &P::offset_beats  },
+            { "beats_per_bar", &P::beats_per_bar },
+            { "n_segments",    &P::n_segments    },
+            { "repeat",        &P::repeat        },
+            { "bit_depth",     &P::bit_depth     },
+            { "sweep_bars",    &P::sweep_bars    },
+        }};
+    }
+    static constexpr std::array<std::pair<const char*, std::string ops::OpParams::*>, 2>
+    strings() {
+        using P = ops::OpParams;
+        return {{
+            { "mode",       &P::mode       },
+            { "sweep_type", &P::sweep_type },
+        }};
+    }
+};
+
+inline void parse_op_params(const nlohmann::json& q, ops::OpParams& p)
+{
+    auto read = [&](const auto& table, auto caster) {
+        for (const auto& [key, member] : table)
+            if (q.contains(key)) caster(q[key], p.*member);
+    };
+    auto asDouble = [](const nlohmann::json& v, double& dst) {
+        if (v.is_number()) dst = v.get<double>();
+    };
+    auto asInt = [](const nlohmann::json& v, int& dst) {
+        if (v.is_number()) dst = v.get<int>();
+    };
+    auto asString = [](const nlohmann::json& v, std::string& dst) {
+        if (v.is_string()) dst = v.get<std::string>();
+    };
+    read(OpParamKeys::doubles(), asDouble);
+    read(OpParamKeys::ints(),    asInt);
+    read(OpParamKeys::strings(), asString);
+}
+
+} // namespace detail
 
 inline NativeRemixPreset
 parse_remix_preset(const nlohmann::json& j)
 {
     NativeRemixPreset out;
     out.id          = j.value("id",          std::string{});
+    if (out.id.empty())
+        throw std::runtime_error("preset is missing required \"id\"");
     out.version     = j.value("version",     std::string{"1.0"});
     out.name        = j.value("name",        out.id);
     out.description = j.value("description", std::string{});
@@ -76,28 +168,38 @@ parse_remix_preset(const nlohmann::json& j)
 
     if (j.contains("params") && j["params"].is_object()) {
         const auto& p = j["params"];
-        out.params.tempo_factor       = p.value("tempo_factor",
-                                         p.value("tempo", 1.0f));
-        out.params.pitch_shift_semi   = p.value("pitch_shift_semi",
-                                         p.value("pitch", 0.0f));
-        out.params.reverb_mix         = p.value("reverb_mix",
-                                         p.value("reverb", 0.0f));
-        out.params.chop_interval_ms   = p.value("chop_interval_ms",
-                                         p.value("chop_ms", 0.0f));
-        out.params.bass_boost_db      = p.value("bass_boost_db", 0.0f);
-        out.params.drums_tempo_factor = p.value("drums_tempo_factor", 1.0f);
+        using detail::clamped;
+        out.params.tempo_factor       = clamped(p.value("tempo_factor",
+                                         p.value("tempo", 1.0f)), 0.1f, 4.0f);
+        out.params.pitch_shift_semi   = clamped(p.value("pitch_shift_semi",
+                                         p.value("pitch", 0.0f)), -24.0f, 24.0f);
+        out.params.reverb_mix         = clamped(p.value("reverb_mix",
+                                         p.value("reverb", 0.0f)), 0.0f, 1.0f);
+        out.params.chop_interval_ms   = clamped(p.value("chop_interval_ms",
+                                         p.value("chop_ms", 0.0f)), 0.0f, 10000.0f);
+        out.params.bass_boost_db      = clamped(p.value("bass_boost_db", 0.0f),
+                                                -24.0f, 24.0f);
+        out.params.drums_tempo_factor = clamped(p.value("drums_tempo_factor", 1.0f),
+                                                0.1f, 4.0f);
     }
     if (j.contains("stem_mix") && j["stem_mix"].is_object()) {
         const auto& s = j["stem_mix"];
-        out.stem_mix.vocals = s.value("vocals", 1.0f);
-        out.stem_mix.drums  = s.value("drums",  1.0f);
-        out.stem_mix.bass   = s.value("bass",   1.0f);
-        out.stem_mix.other  = s.value("other",  1.0f);
+        using detail::clamped;
+        out.stem_mix.vocals = clamped(s.value("vocals", 1.0f), 0.0f, 2.0f);
+        out.stem_mix.drums  = clamped(s.value("drums",  1.0f), 0.0f, 2.0f);
+        out.stem_mix.bass   = clamped(s.value("bass",   1.0f), 0.0f, 2.0f);
+        out.stem_mix.other  = clamped(s.value("other",  1.0f), 0.0f, 2.0f);
     }
     if (j.contains("effects") && j["effects"].is_array()) {
         for (const auto& eff : j["effects"]) {
             engines::EffectStep step;
             step.op = eff.value("op", std::string{});
+            if (!engines::is_known_op(step.op)) {
+                juce::Logger::writeToLog(
+                    juce::String("[preset] ") + out.id
+                    + ": dropping effect step with unknown op \"" + step.op + "\"");
+                continue;
+            }
             if (eff.contains("stems")) {
                 const auto& s = eff["stems"];
                 if (s.is_string())
@@ -106,26 +208,8 @@ parse_remix_preset(const nlohmann::json& j)
                     for (const auto& n : s)
                         step.stems.push_back(n.get<std::string>());
             }
-            if (eff.contains("params") && eff["params"].is_object()) {
-                const auto& q = eff["params"];
-                step.params.factor        = q.value("factor",        step.params.factor);
-                step.params.semitones     = q.value("semitones",     step.params.semitones);
-                step.params.mix           = q.value("mix",           step.params.mix);
-                step.params.room_size     = q.value("room_size",     step.params.room_size);
-                step.params.interval_ms   = q.value("interval_ms",   step.params.interval_ms);
-                step.params.db            = q.value("db",            step.params.db);
-                step.params.cutoff_hz     = q.value("cutoff_hz",     step.params.cutoff_hz);
-                step.params.division      = q.value("division",      step.params.division);
-                step.params.offset_beats  = q.value("offset_beats",  step.params.offset_beats);
-                step.params.min_gap_ms    = q.value("min_gap_ms",    step.params.min_gap_ms);
-                step.params.threshold     = q.value("threshold",     step.params.threshold);
-                step.params.beats_per_bar = q.value("beats_per_bar", step.params.beats_per_bar);
-                step.params.threshold_db  = q.value("threshold_db",  step.params.threshold_db);
-                step.params.hold_ms       = q.value("hold_ms",       step.params.hold_ms);
-                step.params.n_segments    = q.value("n_segments",    step.params.n_segments);
-                step.params.mode          = q.value("mode",          step.params.mode);
-                step.params.repeat        = q.value("repeat",        step.params.repeat);
-            }
+            if (eff.contains("params") && eff["params"].is_object())
+                detail::parse_op_params(eff["params"], step.params);
             out.effects.push_back(std::move(step));
         }
     }
@@ -194,6 +278,8 @@ parse_mashup_preset(const nlohmann::json& j)
 {
     NativeMashupPreset out;
     out.id          = j.value("id",          std::string{});
+    if (out.id.empty())
+        throw std::runtime_error("preset is missing required \"id\"");
     out.version     = j.value("version",     std::string{"1.0"});
     out.name        = j.value("name",        out.id);
     out.description = j.value("description", std::string{});
@@ -226,25 +312,20 @@ parse_mashup_preset(const nlohmann::json& j)
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// Built-in routing: filename → remix vs mashup
+// Built-in routing: JSON content → remix vs mashup
 //
-// juce_add_binary_data converts each source filename to a C identifier
-// (e.g. "drum_swap.json" → "drum_swap_json"). namedResourceList iterates
-// these mangled names; we route by comparing against the known mashup ids.
+// juce_add_binary_data embeds every preset JSON under one resource list, so
+// remix and mashup presets arrive interleaved. Mashup presets are the only
+// ones carrying per-track stem gains / target modes — route on that instead
+// of maintaining a filename list that silently misroutes new presets.
 // ───────────────────────────────────────────────────────────────────────────
 
 namespace detail {
 
-inline bool is_mashup_resource(const char* name)
+inline bool is_mashup_json(const nlohmann::json& j)
 {
-    static constexpr std::array<const char*, 8> kMashupResources = {
-        "vocal_acapella_json", "drum_swap_json", "slowed_mashup_json",
-        "nightcore_mashup_json", "dub_echo_json", "instrumental_layer_json",
-        "bass_swap_json", "frankenstein_json"
-    };
-    for (const char* r : kMashupResources)
-        if (std::strcmp(name, r) == 0) return true;
-    return false;
+    return j.contains("stem_gains_a") || j.contains("stem_gains_b")
+        || j.contains("target_bpm_mode") || j.contains("target_key_mode");
 }
 
 inline void
@@ -263,7 +344,7 @@ load_builtins_from_binary(std::vector<NativeRemixPreset>&  remix_out,
         const std::string body(data, (size_t) size);
         try {
             const auto j = nlohmann::json::parse(body);
-            if (is_mashup_resource(name))
+            if (is_mashup_json(j))
                 mashup_out.push_back(parse_mashup_preset(j));
             else
                 remix_out .push_back(parse_remix_preset(j));

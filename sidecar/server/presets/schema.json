@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://autoremix/schemas/remix-preset-2.0.json",
+  "$id": "https://autoremix/schemas/remix-preset-2.1.json",
   "title": "RemixPreset",
   "description": "Declarative remix mode definition. When effects is non-empty, engine field is ignored and the effect chain interpreter runs instead.",
   "type": "object",
@@ -80,8 +80,15 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["time_stretch", "pitch_shift", "reverb", "chop", "bass_boost", "eq_highpass"],
-            "description": "Operation to apply. See design-spec.md for per-op param shapes."
+            "enum": [
+              "time_stretch", "pitch_shift", "reverb", "chop", "bass_boost", "eq_highpass",
+              "chop_beats", "chop_onsets", "chop_bars", "gate_energy", "structural_cut",
+              "saturation", "bitcrusher",
+              "delay_pingpong", "delay_tape", "delay_reverse", "delay_dotted",
+              "reverb_plate", "reverb_gated", "reverb_reverse",
+              "filter_sweep", "vinyl_sim", "sidechain"
+            ],
+            "description": "Operation to apply. Ops through structural_cut run everywhere; the rest are native-plugin (v5) ops — the Python sidecar skips them with a warning. See design-spec.md for per-op param shapes."
           },
           "stems": {
             "oneOf": [
@@ -101,6 +108,90 @@
           "params": {
             "type": "object",
             "description": "Op-specific parameters. Runtime-validated by interpreter. See design-spec.md."
+          }
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "description": "Structure-aware template (Phase 31-03, native plugin only). Assembles an arrangement of sections anchored to the analyzed song structure.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "arrangement": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "section": {
+                "type": "string",
+                "description": "Informational label: intro, verse, chorus, drop, outro, ..."
+              },
+              "length_bars": {
+                "type": "integer", "minimum": 0, "default": 0,
+                "description": "Slot length in bars. 0 = auto-detect from section boundaries."
+              },
+              "anchor": {
+                "type": "string", "default": "first",
+                "description": "Source position in the song: first | second | last | energy_peak | bar:N"
+              },
+              "loop": {
+                "type": "integer", "minimum": 1, "default": 1,
+                "description": "Repeat this slot N times before advancing."
+              },
+              "layer": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "vocals": { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+                  "drums":  { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+                  "bass":   { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+                  "other":  { "type": "number", "minimum": 0.0, "maximum": 2.0 }
+                }
+              },
+              "effects": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Per-slot effect op ids (Phase 35 — parsed now, applied later)."
+              }
+            }
+          }
+        },
+        "scratch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled":       { "type": "boolean", "default": false },
+            "position":      { "type": "string", "default": "pre_drop" },
+            "style":         { "type": "string", "enum": ["baby", "transformer", "chirp", "forward"], "default": "baby" },
+            "duration_bars": { "type": "integer", "minimum": 1, "default": 1 },
+            "stem":          { "type": "string", "enum": ["mix", "vocals", "drums", "bass", "other"], "default": "mix" }
+          }
+        },
+        "build_up": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled":      { "type": "boolean", "default": false },
+            "length_bars":  { "type": "integer", "minimum": 1, "default": 4 },
+            "add_riser":    { "type": "boolean", "default": true },
+            "filter_sweep": { "type": "boolean", "default": true }
+          }
+        },
+        "samples": {
+          "type": "array",
+          "description": "Auto-placed samples from the user library (Phase 33-03).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path":      { "type": "string", "description": "Explicit WAV path; omit to auto-select by category." },
+              "placement": { "type": "string", "default": "pre_drop", "description": "pre_drop | drop | vocal_gap | end | bar:N | phrase:N" },
+              "category":  { "type": "string", "description": "riser | impact | loop | adlib | fx | one_shot" },
+              "gain":      { "type": "number", "minimum": 0.0, "maximum": 2.0, "default": 1.0 },
+              "fade_ms":   { "type": "number", "minimum": 0.0, "default": 10.0 }
+            }
           }
         }
       }

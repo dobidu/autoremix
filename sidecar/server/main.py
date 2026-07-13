@@ -76,7 +76,7 @@ async def list_presets():
     return [
         PresetSummary(id=p.id, name=p.name, engine=p.engine,
                       params=p.params, stem_mix=p.stem_mix,
-                      effects=p.effects)
+                      effects=p.effects, structure=p.structure)
         for p in _presets.values()
     ]
 

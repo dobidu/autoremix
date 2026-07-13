@@ -1,0 +1,27 @@
+{
+  "id": "bitcrush_bounce",
+  "version": "2.1",
+  "name": "Bitcrush Bounce",
+  "description": "Glitchy sped-up bounce: half-beat vocal stutter into ping-pong delay, crushed synths, saturated drums, and a sidechain pump on the low end.",
+  "author": "AutoRemix",
+  "tags": ["glitch", "hyperpop", "club", "chop", "bitcrush"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 1.15,
+    "pitch_shift_semi": 0.0,
+    "reverb_mix": 0.0,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 1.2, "bass": 1.1, "other": 0.8 },
+  "effects": [
+    { "op": "time_stretch",   "stems": ["drums","bass","other"], "params": { "factor": 1.15 } },
+    { "op": "chop_beats",     "stems": "vocals",                 "params": { "division": 0.5, "repeat": 2, "offset_beats": 0 } },
+    { "op": "delay_pingpong", "stems": "vocals",                 "params": { "delay_ms": 190, "feedback": 0.40, "stereo_width": 1.0 } },
+    { "op": "bitcrusher",     "stems": "other",                  "params": { "bit_depth": 6 } },
+    { "op": "saturation",     "stems": "drums",                  "params": { "drive": 0.45 } },
+    { "op": "sidechain",      "stems": ["bass","other"],         "params": { "duck_depth_db": -10.0, "duck_rate_hz": 2.0, "duck_attack_ms": 8, "duck_release_ms": 120 } },
+    { "op": "bass_boost",     "stems": "bass",                   "params": { "db": 5.0 } }
+  ]
+}

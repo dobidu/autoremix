@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import numpy as np
 import librosa
@@ -5,6 +6,8 @@ import soundfile as sf
 from ..separators.base import StemPaths
 from ..models import RemixPreset
 from .ops import OP_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 STEM_NAMES = ["vocals", "drums", "bass", "other"]
 
@@ -30,9 +33,20 @@ class EffectChainEngine:
 
             op_fn = OP_REGISTRY.get(op_name)
             if op_fn is None:
-                raise ValueError(f"Unknown effect op: {op_name!r}")
+                # Preset JSONs are shared with the native (v5) plugin, which
+                # supports more ops than the sidecar. Skip what we can't run
+                # so the rest of the chain still renders.
+                logger.warning(
+                    "Skipping unknown effect op %r in preset %s", op_name, preset.id
+                )
+                continue
 
-            if stems_spec == "all":
+            # "all" may appear as a bare string or inside a list (the native
+            # interpreter accepts both) — normalize before dispatching.
+            is_all = stems_spec == "all" or (
+                isinstance(stems_spec, list) and "all" in stems_spec
+            )
+            if is_all:
                 mix = sum(stem_arrays[n] for n in STEM_NAMES)
                 processed = op_fn(mix, sr, params)
                 share = processed / len(STEM_NAMES)
@@ -42,6 +56,11 @@ class EffectChainEngine:
                 stem_arrays[stems_spec] = op_fn(stem_arrays[stems_spec], sr, params)
             else:
                 for name in stems_spec:
+                    if name not in stem_arrays:
+                        logger.warning(
+                            "Skipping unknown stem %r in preset %s", name, preset.id
+                        )
+                        continue
                     stem_arrays[name] = op_fn(stem_arrays[name], sr, params)
 
         mix_cfg = preset.stem_mix

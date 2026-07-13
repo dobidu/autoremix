@@ -111,6 +111,9 @@ class RemixPreset(BaseModel):
     tags: list[str] = []
     stem_mix: StemMix = StemMix()
     effects: list = []
+    # Structure-aware template block (Phase 31-03). Opaque here — the native
+    # plugin interprets it; the sidecar just round-trips it.
+    structure: dict = {}
 
 
 class PresetSummary(BaseModel):
@@ -120,6 +123,7 @@ class PresetSummary(BaseModel):
     params: PresetParams
     stem_mix: StemMix
     effects: list = []
+    structure: dict = {}
 
 
 class MashupRequest(BaseModel):

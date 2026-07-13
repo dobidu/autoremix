@@ -1,0 +1,26 @@
+{
+  "id": "tape_dream",
+  "version": "2.1",
+  "name": "Tape Dream",
+  "description": "Slowed dreamy lo-fi: wobbly tape delay on vocals, plate reverb wash, vinyl crackle on the beat, and a warm low end.",
+  "author": "AutoRemix",
+  "tags": ["lofi", "dreamy", "tape", "slow", "ambient"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.85,
+    "pitch_shift_semi": -2.0,
+    "reverb_mix": 0.30,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 1.0, "drums": 0.9, "bass": 1.0, "other": 1.1 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["vocals","drums","bass","other"], "params": { "factor": 0.85 } },
+    { "op": "pitch_shift",  "stems": ["vocals","other"],                "params": { "semitones": -2.0 } },
+    { "op": "delay_tape",   "stems": "vocals",                          "params": { "delay_ms": 420, "feedback": 0.45, "wow_depth": 0.004, "flutter_rate": 5.0 } },
+    { "op": "reverb_plate", "stems": ["vocals","other"],                "params": { "mix": 0.35 } },
+    { "op": "vinyl_sim",    "stems": ["drums","other"],                 "params": { "crackle_amount": 0.04, "wow_rate": 0.4, "wow_depth": 0.002 } },
+    { "op": "bass_boost",   "stems": "bass",                            "params": { "db": 4.0 } }
+  ]
+}

@@ -18,10 +18,10 @@ namespace autoremix::dsp::presets {
 
 // ── Structure-aware template types (Phase 31-03) ─────────────────────────────
 
-// Per-section stem layer: which stems are active + optional effect ops.
+// Per-section stem layer: which stems are active in this section.
+// Per-section effect ops live in ArrangementSlot::effects.
 struct SectionLayer {
     float vocals = 1.0f, drums = 1.0f, bass = 1.0f, other = 1.0f;
-    std::vector<std::string> ops;   // effect_chain op ids to apply in this section
 };
 
 // One slot in the arrangement sequence.

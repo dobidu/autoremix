@@ -1,0 +1,27 @@
+{
+  "id": "dub_wise",
+  "version": "2.1",
+  "name": "Dub Wise",
+  "description": "Dub treatment: cavernous tape echo on vocals, dotted delay throws on the music, heavy bass forward, and a slightly relaxed tempo.",
+  "author": "AutoRemix",
+  "tags": ["dub", "reggae", "echo", "bass", "space"],
+  "engine": "effect_chain",
+  "params": {
+    "tempo_factor": 0.92,
+    "pitch_shift_semi": 0.0,
+    "reverb_mix": 0.25,
+    "chop_interval_ms": 0.0,
+    "bass_boost_db": 0.0,
+    "drums_tempo_factor": 1.0
+  },
+  "stem_mix": { "vocals": 0.9, "drums": 1.1, "bass": 1.3, "other": 0.7 },
+  "effects": [
+    { "op": "time_stretch", "stems": ["vocals","drums","bass","other"], "params": { "factor": 0.92 } },
+    { "op": "delay_tape",   "stems": "vocals",                          "params": { "delay_ms": 375, "feedback": 0.55, "wow_depth": 0.003, "flutter_rate": 4.0 } },
+    { "op": "reverb",       "stems": "vocals",                          "params": { "mix": 0.30, "room_size": 0.9 } },
+    { "op": "delay_dotted", "stems": "other",                           "params": { "delay_division": 0.375, "feedback": 0.45 } },
+    { "op": "eq_highpass",  "stems": "other",                           "params": { "cutoff_hz": 300 } },
+    { "op": "bass_boost",   "stems": "bass",                            "params": { "db": 8.0 } },
+    { "op": "bass_boost",   "stems": "drums",                           "params": { "db": 3.0 } }
+  ]
+}

@@ -25,6 +25,10 @@ juce_add_binary_data(AutoRemixPresetsData
     ../sidecar/server/presets/trap_banger_structured.json
     ../sidecar/server/presets/lo_fi_banger.json
     ../sidecar/server/presets/trap_banger_with_samples.json
+    ../sidecar/server/presets/tape_dream.json
+    ../sidecar/server/presets/bitcrush_bounce.json
+    ../sidecar/server/presets/dub_wise.json
+    ../sidecar/server/presets/festival_lift_structured.json
     ../sidecar/server/mashup_presets/vocal_acapella.json
     ../sidecar/server/mashup_presets/drum_swap.json
     ../sidecar/server/mashup_presets/slowed_mashup.json

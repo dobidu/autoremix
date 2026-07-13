@@ -9,6 +9,7 @@
 // Final output is a weighted sum across the 4 stems using StemMix.
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -34,37 +35,68 @@ struct EffectStep {
 
 namespace detail {
 
+using OpFn = juce::AudioBuffer<float> (*)(const juce::AudioBuffer<float>&,
+                                          double, const ops::OpParams&);
+
+struct OpEntry { const char* name; OpFn fn; };
+
+// Single source of truth for op-name → implementation. Preset loaders use
+// find_op() to validate op names at load time; dispatch uses it at run time.
+inline const std::array<OpEntry, 23>& op_table()
+{
+    using namespace ops;
+    static const std::array<OpEntry, 23> kOps = {{
+        { "time_stretch",   &time_stretch   },
+        { "pitch_shift",    &pitch_shift    },
+        { "reverb",         &reverb         },
+        { "chop",           &chop           },
+        { "bass_boost",     &bass_boost     },
+        { "eq_highpass",    &eq_highpass    },
+        { "chop_beats",     &chop_beats     },
+        { "chop_onsets",    &chop_onsets    },
+        { "chop_bars",      &chop_bars      },
+        { "gate_energy",    &gate_energy    },
+        { "structural_cut", &structural_cut },
+        // Phase 32-01: distortion + delay ops
+        { "saturation",     &saturation     },
+        { "bitcrusher",     &bitcrusher     },
+        { "delay_pingpong", &delay_pingpong },
+        { "delay_tape",     &delay_tape     },
+        { "delay_reverse",  &delay_reverse  },
+        { "delay_dotted",   &delay_dotted   },
+        // Phase 32-02: creative reverbs + filter sweep + vinyl sim + sidechain
+        { "reverb_plate",   &reverb_plate   },
+        { "reverb_gated",   &reverb_gated   },
+        { "reverb_reverse", &reverb_reverse },
+        { "filter_sweep",   &filter_sweep   },
+        { "vinyl_sim",      &vinyl_sim      },
+        { "sidechain",      &sidechain      },
+    }};
+    return kOps;
+}
+
+inline OpFn find_op(const std::string& name)
+{
+    for (const auto& e : op_table())
+        if (name == e.name) return e.fn;
+    return nullptr;
+}
+
+} // namespace detail
+
+inline bool is_known_op(const std::string& name)
+{
+    return detail::find_op(name) != nullptr;
+}
+
+namespace detail {
+
 inline juce::AudioBuffer<float>
 dispatch_op(const std::string& name,
             const juce::AudioBuffer<float>& in, double sr,
             const ops::OpParams& p)
 {
-    using namespace ops;
-    if (name == "time_stretch")   return time_stretch(in, sr, p);
-    if (name == "pitch_shift")    return pitch_shift(in, sr, p);
-    if (name == "reverb")         return reverb(in, sr, p);
-    if (name == "chop")           return chop(in, sr, p);
-    if (name == "bass_boost")     return bass_boost(in, sr, p);
-    if (name == "eq_highpass")    return eq_highpass(in, sr, p);
-    if (name == "chop_beats")     return chop_beats(in, sr, p);
-    if (name == "chop_onsets")    return chop_onsets(in, sr, p);
-    if (name == "chop_bars")      return chop_bars(in, sr, p);
-    if (name == "gate_energy")    return gate_energy(in, sr, p);
-    if (name == "structural_cut") return structural_cut(in, sr, p);
-    // Phase 32-01: distortion + delay ops
-    if (name == "saturation")     return saturation(in, sr, p);
-    if (name == "bitcrusher")     return bitcrusher(in, sr, p);
-    if (name == "delay_pingpong") return delay_pingpong(in, sr, p);
-    if (name == "delay_tape")     return delay_tape(in, sr, p);
-    if (name == "delay_reverse")  return delay_reverse(in, sr, p);
-    if (name == "delay_dotted")   return delay_dotted(in, sr, p);
-    // Phase 32-02: creative reverbs + filter sweep + vinyl sim + sidechain
-    if (name == "reverb_plate")   return reverb_plate(in, sr, p);
-    if (name == "reverb_gated")   return reverb_gated(in, sr, p);
-    if (name == "reverb_reverse") return reverb_reverse(in, sr, p);
-    if (name == "filter_sweep")   return filter_sweep(in, sr, p);
-    if (name == "vinyl_sim")      return vinyl_sim(in, sr, p);
-    if (name == "sidechain")      return sidechain(in, sr, p);
+    if (OpFn fn = find_op(name)) return fn(in, sr, p);
     juce::AudioBuffer<float> out; out.makeCopyOf(in); return out;
 }
 

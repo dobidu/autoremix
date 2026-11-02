@@ -71,5 +71,8 @@ private:
                                                const std::filesystem::path& out_path);
     autoremix::MashupResult  runMashupNative(const autoremix::MashupParams& params);
 
+    // Test-only access to internals (tests/plugin). No effect on the shipped plugin.
+    friend struct EditorTestAccess;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutoRemixAudioProcessorEditor)
 };

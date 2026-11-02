@@ -4,6 +4,8 @@
 add_executable(autoremix_tests
   test_main.cpp
   test_harness_sanity.cpp
+  test_cue_reader.cpp
+  test_preset_hardening.cpp
 )
 
 target_include_directories(autoremix_tests PRIVATE
@@ -57,6 +59,41 @@ include(Catch)
 # PRE_TEST: discover at ctest time, not as a POST_BUILD step — avoids running
 # sanitizer-instrumented binaries during the build and is faster on /mnt/e.
 catch_discover_tests(autoremix_tests
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 300
+)
+
+# ── Plugin-level tests ──────────────────────────────────────────────────────
+# Links the plugin's shared-code static library (target AutoRemix), which
+# already contains the compiled JUCE modules — do not link juce:: modules here
+# again (duplicate symbols). Compile definitions and include directories are
+# copied from the plugin target so JUCE config macros match exactly.
+add_executable(autoremix_plugin_tests
+  test_main.cpp
+  plugin/test_editor_lifetime.cpp
+)
+
+target_include_directories(autoremix_plugin_tests PRIVATE
+  $<TARGET_PROPERTY:AutoRemix,INCLUDE_DIRECTORIES>
+  ${CMAKE_SOURCE_DIR}/plugin/include
+  ${CMAKE_SOURCE_DIR}/tests/support
+)
+target_compile_definitions(autoremix_plugin_tests PRIVATE
+  $<TARGET_PROPERTY:AutoRemix,COMPILE_DEFINITIONS>
+)
+target_link_libraries(autoremix_plugin_tests PRIVATE
+  Catch2::Catch2
+  AutoRemix
+)
+target_compile_features(autoremix_plugin_tests PRIVATE cxx_std_20)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(autoremix_plugin_tests PRIVATE -Wno-float-equal)
+endif()
+if(AUTOREMIX_SANITIZER STREQUAL "thread" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set_property(TARGET autoremix_plugin_tests PROPERTY CROSSCOMPILING_EMULATOR
+    "${AUTOREMIX_SETARCH};${CMAKE_SYSTEM_PROCESSOR};-R")
+endif()
+catch_discover_tests(autoremix_plugin_tests
   DISCOVERY_MODE PRE_TEST
   PROPERTIES TIMEOUT 300
 )

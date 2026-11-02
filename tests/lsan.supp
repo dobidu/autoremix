@@ -1,0 +1,4 @@
+# LeakSanitizer suppressions (LSAN_OPTIONS=suppressions=...).
+# Only third-party, non-instrumented code may be listed here — never plugin/ code.
+# Prebuilt ONNX Runtime keeps a process-wide environment alive until exit.
+leak:libonnxruntime.so

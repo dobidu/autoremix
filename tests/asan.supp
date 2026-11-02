@@ -1,0 +1,3 @@
+# AddressSanitizer suppressions (ASAN_OPTIONS=suppressions=...).
+# Only third-party, non-instrumented code may be listed here — never plugin/ code.
+# Format: interceptor_via_lib:<lib> / interceptor_name:<fn>

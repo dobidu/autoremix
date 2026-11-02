@@ -43,6 +43,16 @@ target_compile_definitions(autoremix_tests PRIVATE
   JUCE_MODAL_LOOPS_PERMITTED=1
 )
 
+# ThreadSanitizer on Linux kernels with high mmap ASLR entropy aborts with
+# "unexpected memory mapping". Run the test binary (discovery + tests) with
+# ASLR disabled instead of requiring a sysctl change on the host.
+set(AUTOREMIX_SANITIZER "" CACHE STRING "Sanitizer the tree is built with (address|thread|empty)")
+if(AUTOREMIX_SANITIZER STREQUAL "thread" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_program(AUTOREMIX_SETARCH setarch REQUIRED)
+  set_property(TARGET autoremix_tests PROPERTY CROSSCOMPILING_EMULATOR
+    "${AUTOREMIX_SETARCH};${CMAKE_SYSTEM_PROCESSOR};-R")
+endif()
+
 include(Catch)
 # PRE_TEST: discover at ctest time, not as a POST_BUILD step — avoids running
 # sanitizer-instrumented binaries during the build and is faster on /mnt/e.

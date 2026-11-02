@@ -1,0 +1,5 @@
+# ThreadSanitizer suppressions (TSAN_OPTIONS=suppressions=...).
+# Only third-party, non-instrumented code may be listed here — never plugin/ code.
+# Prebuilt ONNX Runtime is not TSAN-instrumented; its internal thread pool would
+# produce false positives.
+called_from_lib:libonnxruntime.so

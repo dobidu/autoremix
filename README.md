@@ -463,6 +463,22 @@ build/plugin/AutoRemix_artefacts/Release/VST3/AutoRemix.vst3/
 build/plugin/AutoRemix_artefacts/Release/AU/AutoRemix.component/       # macOS only
 ```
 
+### Running tests
+
+The automated suite (Catch2) builds with CMake presets. Each preset uses its own
+`build-<preset>/` directory and 4 build jobs:
+
+```bash
+cmake --preset debug && cmake --build --preset debug && ctest --preset debug
+
+# Sanitizers (Linux/macOS): AddressSanitizer + UBSan, and ThreadSanitizer
+cmake --preset asan && cmake --build --preset asan --target autoremix_tests && ctest --preset asan
+cmake --preset tsan && cmake --build --preset tsan --target autoremix_tests && ctest --preset tsan
+```
+
+Tests tagged `[editor]` need a display; without one they are reported as skipped.
+On a headless Linux box run them under `xvfb-run -a ctest --preset debug`.
+
 ### Windows
 
 ```bat
@@ -647,3 +663,9 @@ All processing is native C++. No HTTP IPC, no child processes.
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
+
+### Test-only dependencies (not shipped)
+
+| Dependency | Licence | Use |
+|---|---|---|
+| [Catch2](https://github.com/catchorg/Catch2) v3.7.1 | BSL-1.0 | unit / regression test framework (`tests/`) |

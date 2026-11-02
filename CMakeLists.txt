@@ -139,7 +139,15 @@ add_subdirectory(plugin)
 option(AUTOREMIX_BUILD_TESTS "Build tests" ON)
 if(AUTOREMIX_BUILD_TESTS)
   enable_testing()
-  # add_subdirectory(tests/cpp)  # habilitar na Fase 05
+  # Catch2 v3 (BSL-1.0) — test-only dependency, never linked into the plugin.
+  FetchContent_Declare(Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.7.1
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(Catch2)
+  list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+  add_subdirectory(tests)
 endif()
 
 # Scratch smoke tests (manual, not run by CTest)

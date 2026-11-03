@@ -95,6 +95,11 @@ target_link_libraries(autoremix_plugin_tests PRIVATE
   AutoRemix
 )
 target_compile_features(autoremix_plugin_tests PRIVATE cxx_std_20)
+if(AUTOREMIX_SANITIZER STREQUAL "thread")
+  target_compile_definitions(autoremix_plugin_tests PRIVATE AUTOREMIX_TEST_TIME_SCALE=8)
+elseif(AUTOREMIX_SANITIZER STREQUAL "address")
+  target_compile_definitions(autoremix_plugin_tests PRIVATE AUTOREMIX_TEST_TIME_SCALE=3)
+endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(autoremix_plugin_tests PRIVATE -Wno-float-equal)
 endif()

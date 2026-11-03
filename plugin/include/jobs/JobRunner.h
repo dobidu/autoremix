@@ -117,8 +117,7 @@ public:
 
     ~JobRunner()
     {
-        cancelAll();
-        waitForAll(5000);
+        shutdown();
     }
 
     /** Run work(token) on the pool, then done(result, cancelled) on the
@@ -171,12 +170,27 @@ public:
      *  waits for. */
     bool waitForAll(int timeout_ms)
     {
-        const auto deadline = juce::Time::getMillisecondCounter() + (juce::uint32) juce::jmax(0, timeout_ms);
+        // timeout_ms < 0 waits until idle (used on shutdown: never destroy
+        // what a running job may still reference).
+        const auto start = juce::Time::getMillisecondCounter();
         while (pool_.getNumJobs() > 0) {
-            if (juce::Time::getMillisecondCounter() >= deadline) return false;
+            if (timeout_ms >= 0 && juce::Time::getMillisecondCounter() - start >= (juce::uint32) timeout_ms)
+                return false;
             juce::Thread::sleep(1);
         }
         return true;
+    }
+
+    /** Cancel everything and block until the pool is idle. Logs if that takes
+     *  longer than `warn_after_ms` (a job is inside a long, uninterruptible
+     *  step), but never returns early. */
+    void shutdown(int warn_after_ms = 5000)
+    {
+        cancelAll();
+        if (!waitForAll(warn_after_ms)) {
+            juce::Logger::writeToLog("[jobs] waiting for background work to reach a cancellation point...");
+            waitForAll(-1);
+        }
     }
 
     int numJobs() const { return pool_.getNumJobs(); }

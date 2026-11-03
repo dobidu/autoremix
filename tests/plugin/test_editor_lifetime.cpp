@@ -183,5 +183,5 @@ TEST_CASE("Closing the editor mid-analysis and mid-separation is safe and shutdo
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - t0).count();
     CAPTURE(ms);
-    REQUIRE(ms < 5000);
+    REQUIRE(ms < 5000 * kTimeScale);   // sanitizers run several times slower
 }

@@ -79,7 +79,9 @@ catch_discover_tests(autoremix_tests
 # copied from the plugin target so JUCE config macros match exactly.
 add_executable(autoremix_plugin_tests
   test_main.cpp
+  support/AllocationCounter.cpp
   plugin/test_editor_lifetime.cpp
+  plugin/test_processor_audio.cpp
 )
 
 target_include_directories(autoremix_plugin_tests PRIVATE

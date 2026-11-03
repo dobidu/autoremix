@@ -57,7 +57,7 @@ juce::Button* find_button(juce::Component& root, const juce::String& text)
 
 } // namespace
 
-TEST_CASE("R-01: editor status callback after editor deletion", "[editor][lifetime][R-01][.][repro]")
+TEST_CASE("R-01: editor status callback after editor deletion", "[editor][lifetime][R-01]")
 {
     REQUIRE_DISPLAY();
     auto proc = std::make_unique<AutoRemixAudioProcessor>();
@@ -75,7 +75,7 @@ TEST_CASE("R-01: editor status callback after editor deletion", "[editor][lifeti
     SUCCEED("no use-after-free");
 }
 
-TEST_CASE("R-02: mashup completion after the screen is gone", "[editor][lifetime][R-02][.][repro]")
+TEST_CASE("R-02: mashup completion after the screen is gone", "[editor][lifetime][R-02]")
 {
     REQUIRE_DISPLAY();
     ScreenContext ctx;
@@ -106,7 +106,7 @@ TEST_CASE("R-02: mashup completion after the screen is gone", "[editor][lifetime
     SUCCEED("no use-after-free");
 }
 
-TEST_CASE("R-03: model status dot background check after deletion", "[editor][lifetime][R-03][.][repro]")
+TEST_CASE("R-03: model status dot background check after deletion", "[editor][lifetime][R-03]")
 {
     REQUIRE_DISPLAY();
     // Heap-allocated: ASan only tracks use-after-free on the heap by default.
@@ -118,14 +118,16 @@ TEST_CASE("R-03: model status dot background check after deletion", "[editor][li
 }
 
 TEST_CASE("R-04: a newer file's analysis is not overwritten by an older one",
-          "[editor][lifetime][R-04][!shouldfail]")
+          "[editor][lifetime][R-04]")
 {
     REQUIRE_DISPLAY();
     const double sr = 44100.0;
     const auto slow = write_wav(click_track(90.0, 8.0, sr), sr, "r04_slow_90");
     const auto fast = write_wav(click_track(128.0, 2.0, sr), sr, "r04_fast_128");
 
+    autoremix::jobs::JobRunner runner;               // outlives the screen
     ScreenContext ctx;
+    ctx.jobs = &runner;
     // Deterministic analysis: the first file takes longer than the second.
     ScreenEmpty::AnalyzeFn analyze = [slow](const juce::String& path) {
         autoremix::FileAnalysis fa;
@@ -147,4 +149,39 @@ TEST_CASE("R-04: a newer file's analysis is not overwritten by an older one",
 
     CHECK(ctx.file_path == fast.getFullPathName());
     CHECK(ctx.detected_bpm == 128.0f);              // R-04b: stale result must be dropped
+}
+
+TEST_CASE("Closing the editor mid-analysis and mid-separation is safe and shutdown is bounded",
+          "[editor][lifetime][R-01][R-19]")
+{
+    REQUIRE_DISPLAY();
+    const double sr = 44100.0;
+    const auto track = write_wav(pink_noise(30.0, sr, 3), sr, "lifetime_30s");
+
+    auto proc = std::make_unique<AutoRemixAudioProcessor>();
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> ed(proc->createEditor());
+        auto* editor = dynamic_cast<AutoRemixAudioProcessorEditor*>(ed.get());
+        REQUIRE(editor != nullptr);
+        editor->filesDropped({ track.getFullPathName() }, 0, 0);   // analysis job
+        pump(20);
+        ed.reset();                                                // host closes the window
+        pump(3000);
+    }
+    {
+        std::unique_ptr<juce::AudioProcessorEditor> ed(proc->createEditor());
+        auto* editor = dynamic_cast<AutoRemixAudioProcessorEditor*>(ed.get());
+        auto& ctx = EditorTestAccess::ctx(*editor);
+        ctx.file_path = track.getFullPathName();
+        ctx.navigate(ScreenId::Separating);                        // algorithmic separation job
+        pump(20);
+        ed.reset();
+        pump(3000);
+    }
+    const auto t0 = std::chrono::steady_clock::now();
+    proc.reset();                                                  // cancels + joins jobs
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - t0).count();
+    CAPTURE(ms);
+    REQUIRE(ms < 5000);
 }

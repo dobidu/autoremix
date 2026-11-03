@@ -10,6 +10,8 @@
 #include "ScreenContext.h"
 #include "ScreenBase.h"
 #include "dsp/NativePresetTypes.h"
+#include "jobs/JobRunner.h"
+#include "jobs/NativeJobs.h"
 
 class AutoRemixAudioProcessorEditor : public juce::AudioProcessorEditor,
                                        public juce::FileDragAndDropTarget {
@@ -60,16 +62,15 @@ private:
     void navigateTo(ScreenId id, bool animate = true);
     void installScreen(ScreenId id, bool animate);
 
-    // Native runtime impls (Phase 27-01). Synchronous; run on the
-    // background threads spawned by the screens.
-    autoremix::FileAnalysis  analyzeFileNative(const juce::String& path);
-    autoremix::StemPaths     separateNative(const std::filesystem::path& in,
-                                            const std::filesystem::path& out,
-                                            const std::string& sep_id);
-    autoremix::ProcessResult renderRemixNative(const autoremix::StemPaths& stems,
-                                               const autoremix::RemixParams& params,
-                                               const std::filesystem::path& out_path);
-    autoremix::MashupResult  runMashupNative(const autoremix::MashupParams& params);
+    // Background work goes through the processor's JobRunner (plan 34.5-02).
+    // Job bodies live in jobs/NativeJobs.h and never touch the editor.
+    autoremix::jobs::JobEvents makeJobEvents();
+    void trackJob(autoremix::jobs::CancelToken t);
+
+    // Declared last: destroyed first, so no callback can see a half-destroyed
+    // editor. Guards every completion and status post the editor makes.
+    std::vector<autoremix::jobs::CancelToken> jobs_started_;
+    autoremix::jobs::Lifetime                 alive_ = autoremix::jobs::make_lifetime();
 
     // Test-only access to internals (tests/plugin). No effect on the shipped plugin.
     friend struct EditorTestAccess;

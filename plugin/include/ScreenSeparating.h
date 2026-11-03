@@ -1,6 +1,5 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <thread>
 #include <atomic>
 #include <array>
 #include <filesystem>
@@ -12,10 +11,13 @@ class ScreenSeparating : public ScreenBase,
                          public juce::Timer
 {
 public:
+    // Runs on a JobRunner worker. Must not touch any UI object; it receives
+    // everything it needs by value plus the job's cancel token.
     using SeparateFn = std::function<autoremix::StemPaths(
         const std::filesystem::path&,
         const std::filesystem::path&,
-        const std::string&)>;
+        const std::string&,
+        const autoremix::jobs::CancelToken&)>;
 
     ScreenSeparating(ScreenContext& ctx, SeparateFn separate_fn)
         : ScreenBase(ctx), separate_fn_(std::move(separate_fn)), progress_value_(-1.0)
@@ -54,8 +56,6 @@ public:
     void onEnter() override
     {
         elapsed_secs_ = 0;
-        cancel_token_ = std::make_shared<std::atomic<bool>>(false);
-        ctx_.separation_cancel_token = cancel_token_;  // shared ownership keeps atomic alive
         mashup_mode_  = ctx_.mashup_mode_separating;
         header_lbl_.setText(mashup_mode_ ? "SEPARATING TRACK B" : "SEPARATING STEMS",
                             juce::dontSendNotification);
@@ -68,8 +68,9 @@ public:
     void onExit() override
     {
         stopTimer();
-        ctx_.separation_cancel_token.reset();
+        if (cancel_token_) cancel_token_->store(true);
     }
+
 
     void timerCallback() override
     {
@@ -158,10 +159,9 @@ private:
         const char* subdir = mashup_mode_ ? "stems_b" : "stems";
 
         juce::File inputFile(inputPathStr);
-        auto stemsDirJuce = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                                .getChildFile("autoremix")
-                                .getChildFile(subdir)
-                                .getChildFile(inputFile.getFileNameWithoutExtension());
+        // Unique per job: a re-run never shares files with a cancelled run (R-19).
+        auto stemsDirJuce = autoremix::jobs::unique_job_dir(subdir,
+                                                            inputFile.getFileNameWithoutExtension());
         std::filesystem::path outputDir = stemsDirJuce.getFullPathName().toStdString();
         std::filesystem::create_directories(outputDir);
 
@@ -169,54 +169,41 @@ private:
             ? "algorithmic"
             : ctx_.separators[(size_t)ctx_.selected_separator_idx].id;
 
-        // Capture cancel_token_ by value — keeps atomic alive past screen destruction.
-        // Thread must NOT access `this` after separate_fn_ returns; use `cancel` instead.
-        auto cancel = cancel_token_;
+        for (auto& st : stems_) st.status = StemStatus::Separating;
+        repaint();
 
-        std::thread([this, cancel,
-                     inputPath = inputPathStr.toStdString(),
-                     outputDir, separator_id]() mutable {
-            juce::MessageManager::callAsync([this, cancel] {
-                if (cancel->load()) return;
-                for (auto& s : stems_) s.status = StemStatus::Separating;
+        if (ctx_.jobs == nullptr) { jassertfalse; return; }
+
+        // The work lambda owns copies only (R-01..R-04): no `this`.
+        auto work = [fn = separate_fn_, inputPath = inputPathStr.toStdString(),
+                     outputDir, separator_id](const autoremix::jobs::CancelToken& token) {
+            return fn(std::filesystem::path(inputPath), outputDir, separator_id, token);
+        };
+        // Runs on the message thread, only while this screen is alive.
+        auto done = [this](autoremix::StemPaths result, bool cancelled) {
+            if (cancelled) return;
+            if (result.valid) {
+                for (auto& st : stems_) st.status = StemStatus::Done;
                 repaint();
-            });
-
-            auto result = separate_fn_(
-                std::filesystem::path(inputPath),
-                outputDir,
-                separator_id
-            );
-
-            // If cancelled: cancel->load() is true → screen already destroyed → stop.
-            // If not cancelled: screen is still alive (cancel happens synchronously on
-            // the message thread, setting the flag before any navigation).
-            if (cancel->load()) return;
-
-            juce::MessageManager::callAsync([this, cancel, result]() mutable {
-                if (cancel->load()) return;  // guard against race before callAsync fired
-                if (result.valid) {
-                    for (auto& s : stems_) s.status = StemStatus::Done;
-                    repaint();
-                    if (mashup_mode_) {
-                        ctx_.stems_b = result;
-                        ctx_.mashup_mode_separating = false;
-                        if (ctx_.set_status) ctx_.set_status("Track B ready");
-                        ctx_.navigate(ScreenId::Mashup);
-                    } else {
-                        ctx_.stems = result;
-                        if (ctx_.set_status) ctx_.set_status("Stems ready");
-                        ctx_.navigate(ScreenId::StemsReady);
-                    }
+                if (mashup_mode_) {
+                    ctx_.stems_b = result;
+                    ctx_.mashup_mode_separating = false;
+                    if (ctx_.set_status) ctx_.set_status("Track B ready");
+                    ctx_.navigate(ScreenId::Mashup);
                 } else {
-                    for (auto& s : stems_) s.status = StemStatus::Failed;
-                    repaint();
-                    ctx_.set_status(mashup_mode_
-                        ? juce::String("Track B separation failed.")
-                        : juce::String("Stem separation failed."));
+                    ctx_.stems = result;
+                    if (ctx_.set_status) ctx_.set_status("Stems ready");
+                    ctx_.navigate(ScreenId::StemsReady);
                 }
-            });
-        }).detach();
+            } else {
+                for (auto& st : stems_) st.status = StemStatus::Failed;
+                repaint();
+                if (ctx_.set_status)
+                    ctx_.set_status(mashup_mode_ ? juce::String("Track B separation failed.")
+                                                 : juce::String("Stem separation failed."));
+            }
+        };
+        cancel_token_ = ctx_.jobs->submit<autoremix::StemPaths>(alive_, std::move(work), std::move(done));
     }
 
     void requestCancel()
@@ -244,7 +231,8 @@ private:
 
     int  elapsed_secs_ = 0;
     bool mashup_mode_  = false;
-    std::shared_ptr<std::atomic<bool>> cancel_token_;
+    autoremix::jobs::CancelToken cancel_token_;
+    autoremix::jobs::Lifetime    alive_ = autoremix::jobs::make_lifetime();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenSeparating)
 };

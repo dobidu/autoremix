@@ -536,8 +536,11 @@ private:
         params.master_reverb_room      = ctx_.mashup_master_reverb_room;
         params.highpass_b_hz           = ctx_.mashup_highpass_b_hz;
 
+        // The job can finish after this screen is gone (R-02): guard on our Lifetime.
         ctx_.run_mashup(std::move(params),
-                        [this](autoremix::MashupResult r) { handleResult(std::move(r)); });
+                        autoremix::jobs::guarded<autoremix::MashupResult>(
+                            alive_,
+                            [this](autoremix::MashupResult r) { handleResult(std::move(r)); }));
     }
 
     void handleResult(autoremix::MashupResult r)
@@ -595,6 +598,8 @@ private:
     juce::Label  master_reverb_lbl_;juce::Slider master_reverb_slider_;
     juce::Label  reverb_room_lbl_;  juce::Slider reverb_room_slider_;
     juce::Label  hpf_b_lbl_;        juce::Slider hpf_b_slider_;
+
+    autoremix::jobs::Lifetime alive_ = autoremix::jobs::make_lifetime();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenMashup)
 };

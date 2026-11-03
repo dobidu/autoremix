@@ -6,6 +6,7 @@ add_executable(autoremix_tests
   test_harness_sanity.cpp
   test_cue_reader.cpp
   test_preset_hardening.cpp
+  test_job_runner.cpp
 )
 
 target_include_directories(autoremix_tests PRIVATE

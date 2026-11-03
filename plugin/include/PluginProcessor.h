@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include "jobs/JobRunner.h"
 
 class AutoRemixAudioProcessorEditor;
 
@@ -33,6 +34,11 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
     juce::AudioFormatManager&  getFormatManager() { return format_manager_; }
+
+    // Background work (analysis, separation, render, mashup). Owned here so it
+    // outlives any editor; the destructor cancels and joins it before the
+    // format manager goes away.
+    autoremix::jobs::JobRunner& getJobRunner() { return jobs_; }
 
     // Preview playback — original or remix, exclusive
     void loadPreviewFile(const juce::File& f);
@@ -70,4 +76,7 @@ private:
     };
     StemPlayer             stem_players_[4];
     juce::MixerAudioSource mixer_;
+
+    // Declared last: destroyed first, before anything a job may reference.
+    autoremix::jobs::JobRunner jobs_ { 2 };
 };

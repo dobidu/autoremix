@@ -3,7 +3,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <algorithm>
 #include <cmath>
-#include <thread>
 #include <atomic>
 #include "ScreenBase.h"
 #include "AutoRemixLookAndFeel.h"
@@ -307,51 +306,59 @@ private:
 
     void runAnalysis()
     {
-        cancel_analysis_token_ = std::make_shared<std::atomic<bool>>(false);
-        auto cancel = cancel_analysis_token_;
-        auto path = ctx_.file_path;
-        std::thread([this, cancel, path]() {
-            auto info = analyze_fn_(path);
-            if (cancel->load()) return;
+        // A new file supersedes any analysis still running (R-04b).
+        if (cancel_analysis_token_) cancel_analysis_token_->store(true);
+        const uint64_t job_id = ++analysis_job_id_;
+        if (ctx_.jobs == nullptr) { jassertfalse; return; }
 
-            // Full structure analysis for cue point auto-detection
+        // Work owns copies only (R-04a): no `this`, no member format manager.
+        auto work = [analyze = analyze_fn_, path = ctx_.file_path]
+                    (const autoremix::jobs::CancelToken& cancel) {
+            AnalysisOutcome out;
+            out.info = analyze(path);
+            if (autoremix::jobs::is_cancelled(cancel)) return out;
+
+            // Full structure analysis for cue point auto-detection.
             namespace an = autoremix::dsp::analysis;
-            an::SongStructure song_struct;
-            {
-                std::unique_ptr<juce::AudioFormatReader> reader(
-                    format_manager_.createReaderFor(juce::File(path)));
-                if (reader && reader->lengthInSamples > 0) {
-                    const int    n  = static_cast<int>(reader->lengthInSamples);
-                    const double sr = reader->sampleRate;
-                    const int    ch = static_cast<int>(reader->numChannels);
-                    juce::AudioBuffer<float> buf(std::max(ch, 2), n);
-                    buf.clear();
-                    reader->read(&buf, 0, n, 0, true, true);
-                    juce::AudioBuffer<float> mono(1, n);
-                    mono.clear();
-                    const float gain = 1.0f / static_cast<float>(buf.getNumChannels());
-                    for (int c = 0; c < buf.getNumChannels(); ++c)
-                        mono.addFrom(0, 0, buf, c, 0, n, gain);
-                    if (!cancel->load())
-                        song_struct = an::analyze_structure(mono, sr);
-                }
+            juce::AudioFormatManager fmt;          // local: never shared across threads
+            fmt.registerBasicFormats();
+            std::unique_ptr<juce::AudioFormatReader> reader(fmt.createReaderFor(juce::File(path)));
+            if (reader && reader->lengthInSamples > 0) {
+                const int    n  = static_cast<int>(reader->lengthInSamples);
+                const double sr = reader->sampleRate;
+                const int    ch = static_cast<int>(reader->numChannels);
+                juce::AudioBuffer<float> buf(std::max(ch, 2), n);
+                buf.clear();
+                reader->read(&buf, 0, n, 0, true, true);
+                juce::AudioBuffer<float> mono(1, n);
+                mono.clear();
+                const float gain = 1.0f / static_cast<float>(buf.getNumChannels());
+                for (int c = 0; c < buf.getNumChannels(); ++c)
+                    mono.addFrom(0, 0, buf, c, 0, n, gain);
+                if (!autoremix::jobs::is_cancelled(cancel))
+                    out.structure = an::analyze_structure(mono, sr);
             }
-            if (cancel->load()) return;
+            return out;
+        };
 
-            float        bpm = info.valid() ? info.bpm  : 120.0f;
-            juce::String key = info.valid() ? juce::String(info.key) : "";
-            juce::MessageManager::callAsync(
-                [this, cancel, bpm, key, ss = std::move(song_struct)]() mutable {
-                    if (cancel->load()) return;
-                    ctx_.detected_bpm   = bpm;
-                    ctx_.detected_key   = key;
-                    ctx_.song_structure = std::move(ss);
-                    loadAndMergeCues();
-                    updateAnalysisLabel();
-                    repaint();
-                });
-        }).detach();
+        // Message thread, only while this screen is alive, and only for the
+        // most recent file.
+        auto done = [this, job_id](AnalysisOutcome out, bool cancelled) {
+            if (cancelled || job_id != analysis_job_id_) return;
+            ctx_.detected_bpm   = out.info.valid() ? out.info.bpm : 120.0f;
+            ctx_.detected_key   = out.info.valid() ? juce::String(out.info.key) : juce::String();
+            ctx_.song_structure = std::move(out.structure);
+            loadAndMergeCues();
+            updateAnalysisLabel();
+            repaint();
+        };
+        cancel_analysis_token_ = ctx_.jobs->submit<AnalysisOutcome>(alive_, std::move(work), std::move(done));
     }
+
+    struct AnalysisOutcome {
+        autoremix::FileAnalysis                 info;
+        autoremix::dsp::analysis::SongStructure structure;
+    };
 
     AnalyzeFn     analyze_fn_;
     FileChooserFn open_chooser_fn_;
@@ -365,7 +372,9 @@ private:
 
     juce::String       analysis_text_;
     bool               drag_over_ = false;
-    std::shared_ptr<std::atomic<bool>> cancel_analysis_token_;
+    autoremix::jobs::CancelToken cancel_analysis_token_;
+    uint64_t                     analysis_job_id_ = 0;
+    autoremix::jobs::Lifetime    alive_ = autoremix::jobs::make_lifetime();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScreenEmpty)
 };

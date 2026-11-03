@@ -34,6 +34,10 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
 
 AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
 {
+    // Stop background jobs first: they use format_manager_ (R-01..R-04).
+    jobs_.cancelAll();
+    if (!jobs_.waitForAll(5000))
+        juce::Logger::writeToLog("[jobs] background work did not stop within 5 s");
     mixer_.removeAllInputs();
     for (auto& sp : stem_players_) {
         sp.transport.stop();

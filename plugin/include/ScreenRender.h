@@ -1,7 +1,6 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <thread>
 #include <atomic>
 #include <filesystem>
 #include "ScreenBase.h"
@@ -13,10 +12,12 @@ class ScreenRender : public ScreenBase,
                      public juce::ChangeListener
 {
 public:
+    // Runs on a JobRunner worker. Must not touch any UI object.
     using RenderFn = std::function<autoremix::ProcessResult(
         const autoremix::StemPaths&,
         const autoremix::RemixParams&,
-        const std::filesystem::path&)>;
+        const std::filesystem::path&,
+        const autoremix::jobs::CancelToken&)>;
 
     ScreenRender(ScreenContext& ctx, RenderFn render_fn)
         : ScreenBase(ctx),
@@ -125,7 +126,6 @@ public:
     {
         elapsed_secs_ = 0;
         preview_mode_ = PreviewMode::None;
-        cancel_token_ = std::make_shared<std::atomic<bool>>(false);
         timer_lbl_.setText("0 s", juce::dontSendNotification);
 
         in_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.file_path)));
@@ -438,43 +438,38 @@ private:
             params.engine_id = ctx_.presets[(size_t)ctx_.selected_preset_idx].id;
 
         juce::File inFile(ctx_.file_path);
-        juce::String outName = inFile.getFileNameWithoutExtension() + "_remix.wav";
+        // Unique per job: a re-run never shares files with a cancelled run (R-19).
+        const auto outDir = autoremix::jobs::unique_job_dir("output", inFile.getFileNameWithoutExtension());
         std::filesystem::path outputPath =
-            juce::File::getSpecialLocation(juce::File::tempDirectory)
-                .getChildFile("autoremix")
-                .getChildFile("output")
-                .getChildFile(outName)
-                .getFullPathName().toStdString();
-        std::filesystem::create_directories(std::filesystem::path(outputPath).parent_path());
+            outDir.getChildFile(inFile.getFileNameWithoutExtension() + "_remix.wav")
+                  .getFullPathName().toStdString();
 
-        auto stems  = ctx_.stems;
-        auto render = render_fn_;
+        if (ctx_.jobs == nullptr) { jassertfalse; return; }
 
-        auto cancel = cancel_token_;  // shared_ptr keeps atomic alive past screen destruction
-        std::thread([this, cancel, params, stems, outputPath, render]() mutable {
-            auto result = render(stems, params, outputPath);
-            if (cancel->load()) return;
-
-            juce::MessageManager::callAsync([this, cancel, result, outputPath]() mutable {
-                if (cancel->load()) return;
-                stopTimer();
-                if (result.success) {
-                    ctx_.output_path = juce::String(outputPath.string());
-                    out_thumb_.setSource(new juce::FileInputSource(
-                        juce::File(ctx_.output_path)));
-                    state_ = State::Done;
-                    preview_mode_ = PreviewMode::None;
-                    startTimer(100);
-                } else {
-                    state_ = State::Error;
-                    error_lbl_.setText(juce::String(result.error_message),
-                                       juce::dontSendNotification);
-                }
-                applyState();
-                resized();
-                repaint();
-            });
-        }).detach();
+        // Work owns copies only (R-01..R-04, R-38): stems + params snapshot taken here.
+        auto work = [render = render_fn_, stems = ctx_.stems, params, outputPath]
+                    (const autoremix::jobs::CancelToken& token) {
+            return render(stems, params, outputPath, token);
+        };
+        // Message thread, only while this screen is alive.
+        auto done = [this, outputPath](autoremix::ProcessResult result, bool cancelled) {
+            if (cancelled) return;
+            stopTimer();
+            if (result.success) {
+                ctx_.output_path = juce::String(outputPath.string());
+                out_thumb_.setSource(new juce::FileInputSource(juce::File(ctx_.output_path)));
+                state_ = State::Done;
+                preview_mode_ = PreviewMode::None;
+                startTimer(100);
+            } else {
+                state_ = State::Error;
+                error_lbl_.setText(juce::String(result.error_message), juce::dontSendNotification);
+            }
+            applyState();
+            resized();
+            repaint();
+        };
+        cancel_token_ = ctx_.jobs->submit<autoremix::ProcessResult>(alive_, std::move(work), std::move(done));
     }
 
     void requestCancel()
@@ -598,7 +593,8 @@ private:
     int         elapsed_secs_ = 0;
     double      preview_position_    = 0.0;
     bool        was_preview_playing_ = false;
-    std::shared_ptr<std::atomic<bool>> cancel_token_;
+    autoremix::jobs::CancelToken       cancel_token_;
+    autoremix::jobs::Lifetime          alive_ = autoremix::jobs::make_lifetime();
     RenderFn                           render_fn_;
 
     juce::AudioFormatManager  format_manager_;

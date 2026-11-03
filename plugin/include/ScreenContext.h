@@ -7,6 +7,7 @@
 #include <vector>
 #include "PluginTypes.h"
 #include "dsp/NativeAnalysis.h"
+#include "jobs/JobRunner.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ScreenId — identifies which screen is currently displayed in the main area.
@@ -122,10 +123,9 @@ struct ScreenContext {
     // run the analyze+separate pipeline for the second track.
     std::function<void()> start_mashup_flow;
 
-    // Cancellation token for in-progress Demucs separation.
-    // ScreenSeparating creates and owns the atomic; sets this shared_ptr in onEnter,
-    // clears it in onExit. AutoRemixEditor::separateNative reads it for the demucs path.
-    std::shared_ptr<std::atomic<bool>> separation_cancel_token;
+    // Background job runner (owned by the processor, outlives every screen).
+    // Screens submit work here and guard completions with their own Lifetime.
+    autoremix::jobs::JobRunner* jobs = nullptr;
 
     // ── Structural analysis + cue points (Phase 34) ───────────────────────────
     autoremix::dsp::analysis::SongStructure              song_structure;

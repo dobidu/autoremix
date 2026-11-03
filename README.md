@@ -472,8 +472,8 @@ The automated suite (Catch2) builds with CMake presets. Each preset uses its own
 cmake --preset debug && cmake --build --preset debug && ctest --preset debug
 
 # Sanitizers (Linux/macOS): AddressSanitizer + UBSan, and ThreadSanitizer
-cmake --preset asan && cmake --build --preset asan --target autoremix_tests && ctest --preset asan
-cmake --preset tsan && cmake --build --preset tsan --target autoremix_tests && ctest --preset tsan
+cmake --preset asan && cmake --build --preset asan --target autoremix_tests autoremix_plugin_tests && ctest --preset asan
+cmake --preset tsan && cmake --build --preset tsan --target autoremix_tests autoremix_plugin_tests && ctest --preset tsan
 ```
 
 Tests tagged `[editor]` need a display; without one they are reported as skipped.

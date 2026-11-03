@@ -72,14 +72,14 @@ jobs:
       - name: Configure (ASan + UBSan)
         run: cmake --preset asan
       - name: Build tests (ASan + UBSan)
-        run: cmake --build --preset asan --target autoremix_tests
+        run: cmake --build --preset asan --target autoremix_tests autoremix_plugin_tests
       - name: Test (ASan + UBSan)
         run: xvfb-run -a ctest --preset asan
 
       - name: Configure (TSAN)
         run: cmake --preset tsan
       - name: Build tests (TSAN)
-        run: cmake --build --preset tsan --target autoremix_tests
+        run: cmake --build --preset tsan --target autoremix_tests autoremix_plugin_tests
       - name: Test (TSAN)
         run: xvfb-run -a ctest --preset tsan
 

@@ -68,7 +68,7 @@ bool finishes_within(std::chrono::seconds limit, Fn fn)
 
 } // namespace
 
-TEST_CASE("R-06: hostile op parameters are clamped at load", "[unit][preset][R-06][!shouldfail]")
+TEST_CASE("R-06: hostile op parameters are clamped at load", "[unit][preset][R-06]")
 {
     const auto p = presets::parse_remix_preset(hostile_preset());
     CHECK(step(p, "chop_bars").params.beats_per_bar >= 1);
@@ -79,21 +79,74 @@ TEST_CASE("R-06: hostile op parameters are clamped at load", "[unit][preset][R-0
     CHECK(step(p, "delay_tape").params.delay_ms <= 4000.0);
 }
 
-// Render-level repro. Hidden: on unfixed code it divides by zero (SIGFPE),
-// overflows a buffer size, or loops forever, which kills the test process.
-TEST_CASE("R-06: hostile preset renders finite audio within 10 s", "[preset][R-06][.][repro]")
+// Render-level check. On the unfixed code this divided by zero (SIGFPE),
+// overflowed a buffer size, or looped forever.
+TEST_CASE("R-06: hostile preset renders finite audio in bounded time", "[preset][R-06]")
 {
     const auto p  = presets::parse_remix_preset(hostile_preset());
     const auto st = synthetic_stems(44100.0);
     auto out = std::make_shared<juce::AudioBuffer<float>>();
 
-    const bool ok = finishes_within(std::chrono::seconds(10), [&p, &st, out] {
+    const bool ok = finishes_within(std::chrono::seconds(10 * kTimeScale), [&p, &st, out] {
         *out = engines::process_effect_chain(st, p.effects, p.stem_mix, 44100.0);
     });
-    if (!ok) { FAIL_CHECK("render did not return within 10 s"); std::quick_exit(1); }
+    if (!ok) { FAIL_CHECK("render did not return within " << 10 * kTimeScale << " s"); std::quick_exit(1); }
 
     REQUIRE(out->getNumSamples() > 0);
     for (int ch = 0; ch < out->getNumChannels(); ++ch)
         for (int i = 0; i < out->getNumSamples(); ++i)
             REQUIRE(std::isfinite(out->getSample(ch, i)));
+}
+
+TEST_CASE("every op parameter row has a sane range containing its default", "[unit][preset]")
+{
+    const autoremix::dsp::ops::OpParams defaults;
+    for (const auto& r : presets::detail::OpParamKeys::doubles()) {
+        CAPTURE(r.key);
+        REQUIRE(r.lo < r.hi);
+        REQUIRE(defaults.*(r.member) >= r.lo);
+        REQUIRE(defaults.*(r.member) <= r.hi);
+    }
+    for (const auto& r : presets::detail::OpParamKeys::ints()) {
+        CAPTURE(r.key);
+        REQUIRE(r.lo < r.hi);
+        REQUIRE((double) (defaults.*(r.member)) >= r.lo);
+        REQUIRE((double) (defaults.*(r.member)) <= r.hi);
+    }
+    REQUIRE(presets::detail::op_param_range("feedback").known);
+    REQUIRE_FALSE(presets::detail::op_param_range("no_such_key").known);
+}
+
+TEST_CASE("clamping leaves every built-in preset's values unchanged", "[unit][preset]")
+{
+    const juce::File dir(AUTOREMIX_PRESET_SOURCE_DIR);
+    REQUIRE(dir.isDirectory());
+    int checked = 0;
+    for (const auto& f : dir.findChildFiles(juce::File::findFiles, false, "*.json")) {
+        if (f.getFileName() == "schema.json") continue;
+        const auto raw = nlohmann::json::parse(f.loadFileAsString().toStdString());
+        if (!raw.contains("effects")) continue;
+        const auto p = presets::parse_remix_preset(raw);
+        size_t k = 0;
+        for (const auto& eff : raw["effects"]) {
+            if (!engines::is_known_op(eff.value("op", std::string{}))) continue;
+            REQUIRE(k < p.effects.size());
+            const auto& loaded = p.effects[k++].params;
+            if (!eff.contains("params")) continue;
+            for (const auto& r : presets::detail::OpParamKeys::doubles())
+                if (eff["params"].contains(r.key)) {
+                    CAPTURE(f.getFileName(), r.key);
+                    REQUIRE(loaded.*(r.member) == eff["params"][r.key].get<double>());
+                    ++checked;
+                }
+            for (const auto& r : presets::detail::OpParamKeys::ints())
+                if (eff["params"].contains(r.key)) {
+                    CAPTURE(f.getFileName(), r.key);
+                    REQUIRE(loaded.*(r.member) == eff["params"][r.key].get<int>());
+                    ++checked;
+                }
+        }
+    }
+    CAPTURE(checked);
+    REQUIRE(checked > 20);
 }

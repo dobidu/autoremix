@@ -43,11 +43,11 @@ std::vector<uint8_t> id3_with_geob_payload(const std::vector<uint8_t>& frame_dat
 
 } // namespace
 
-TEST_CASE("R-05: GEOB frame without a description does not throw", "[unit][cue][R-05][!shouldfail]")
+TEST_CASE("R-05: GEOB frame without a description does not throw", "[unit][cue][R-05]")
 {
     const auto f = write_temp_audio(truncated_geob_id3(), "truncated");
     std::vector<CuePoint> cues;
-    REQUIRE_NOTHROW(cues = parse_serato_id3(f));
+    REQUIRE_NOTHROW(cues = parse_dj_cue_geob(f));
     REQUIRE(cues.empty());
     REQUIRE_NOTHROW(cues = load_cues_for_file(f));
     REQUIRE(cues.empty());
@@ -58,17 +58,17 @@ TEST_CASE("R-05: GEOB frame whose size runs past the tag is ignored", "[unit][cu
     const std::vector<uint8_t> data = { 0x00, 'x', 0x00 };
     const auto f = write_temp_audio(id3_with_geob_payload(data, 4096), "pastend");
     std::vector<CuePoint> cues;
-    REQUIRE_NOTHROW(cues = parse_serato_id3(f));
+    REQUIRE_NOTHROW(cues = parse_dj_cue_geob(f));
     REQUIRE(cues.empty());
 }
 
 TEST_CASE("R-05: zero-length and header-only files are ignored", "[unit][cue][R-05]")
 {
     std::vector<CuePoint> cues;
-    REQUIRE_NOTHROW(cues = parse_serato_id3(write_temp_audio({}, "empty")));
+    REQUIRE_NOTHROW(cues = parse_dj_cue_geob(write_temp_audio({}, "empty")));
     REQUIRE(cues.empty());
     const std::vector<uint8_t> hdr = { 'I', 'D', '3', 0x03, 0x00, 0x00, 0x7f, 0x7f, 0x7f, 0x7f };
-    REQUIRE_NOTHROW(cues = parse_serato_id3(write_temp_audio(hdr, "hdronly")));
+    REQUIRE_NOTHROW(cues = parse_dj_cue_geob(write_temp_audio(hdr, "hdronly")));
     REQUIRE(cues.empty());
 }
 

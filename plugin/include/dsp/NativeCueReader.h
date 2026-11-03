@@ -9,14 +9,18 @@
 // ── NativeCueReader — Phase 34-02 ───────────────────────────────────────────
 // Header-only. Three public functions:
 //   parse_cue_sheet()    — reads .cue sidecar file
-//   parse_serato_id3()   — reads Serato Markers2 GEOB frame from audio file
+//   parse_dj_cue_geob()  — reads DJ-software hot cues stored in an ID3 GEOB frame
 //   load_cues_for_file() — calls both, merges, deduplicates, sorts
+//
+// Every public entry point catches everything and returns {} on malformed
+// input: metadata from user files must never throw on the message thread
+// (REVIEW R-05).
 
 using autoremix::dsp::analysis::CuePoint;
 
 // ── .cue sheet parser ────────────────────────────────────────────────────────
 
-inline std::vector<CuePoint> parse_cue_sheet(const juce::File& audio_file)
+inline std::vector<CuePoint> parse_cue_sheet_unchecked(const juce::File& audio_file)
 {
     // Check for sidecar by replacing extension or appending ".cue"
     juce::File sidecar = audio_file.getSiblingFile(
@@ -81,7 +85,18 @@ inline std::vector<CuePoint> parse_cue_sheet(const juce::File& audio_file)
     return result;
 }
 
-// ── Serato GEOB ID3 parser ───────────────────────────────────────────────────
+// ── DJ hot cues in ID3 GEOB ───────────────────────────────────────────────────
+
+/** Cues from a .cue sheet next to the audio file. Never throws. */
+inline std::vector<CuePoint> parse_cue_sheet(const juce::File& audio_file)
+{
+    try { return parse_cue_sheet_unchecked(audio_file); }
+    catch (...) {
+        juce::Logger::writeToLog("NativeCueReader: ignoring unreadable cue sheet for "
+                                 + audio_file.getFullPathName());
+    }
+    return {};
+}
 
 namespace detail
 {
@@ -107,8 +122,13 @@ namespace detail
         return p;
     }
 
-    // Parse hot cues from decoded Serato Markers2 binary blob
-    inline std::vector<CuePoint> parse_serato_binary(const juce::MemoryBlock& decoded)
+    // GEOB description that marks the hot-cue blob. This is a file-format
+    // identifier written by third-party DJ software and must match the bytes
+    // on disk exactly; it is not used anywhere as a name.
+    inline constexpr const char* kGeobMarkersDescription = "Serato Markers2";
+
+    // Parse hot cues from the decoded markers blob
+    inline std::vector<CuePoint> parse_dj_cue_markers(const juce::MemoryBlock& decoded)
     {
         std::vector<CuePoint> cues;
         const auto* data = static_cast<const uint8_t*>(decoded.getData());
@@ -153,7 +173,7 @@ namespace detail
                 CuePoint cp;
                 cp.position_sec = position_ms / 1000.0;
                 cp.color_rgb    = 0xFF000000u | (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
-                cp.source       = "serato";
+                cp.source       = "id3_geob";
                 cp.name         = label.empty() ? ("hotcue_" + std::to_string(idx)) : label;
                 cues.push_back(std::move(cp));
             }
@@ -165,7 +185,8 @@ namespace detail
     }
 } // namespace detail
 
-inline std::vector<CuePoint> parse_serato_id3(const juce::File& audio_file)
+namespace detail {
+inline std::vector<CuePoint> parse_dj_cue_geob_unchecked(const juce::File& audio_file)
 {
     if (!audio_file.existsAsFile())
         return {};
@@ -183,7 +204,9 @@ inline std::vector<CuePoint> parse_serato_id3(const juce::File& audio_file)
     // Total tag size (syncsafe)
     const uint32_t tag_size = detail::syncsafe_to_uint(header + 6);
 
-    if (tag_size == 0 || tag_size > 64 * 1024 * 1024) return {}; // sanity cap 64 MB
+    // Sanity caps: real tags are far below 16 MB and can't exceed the file.
+    if (tag_size == 0 || tag_size > 16u * 1024u * 1024u) return {};
+    if ((juce::int64) tag_size + 10 > audio_file.getSize()) return {};
 
     // Read entire ID3 tag body
     juce::MemoryBlock tag_body(tag_size);
@@ -225,13 +248,17 @@ inline std::vector<CuePoint> parse_serato_id3(const juce::File& audio_file)
             p = detail::skip_cstring(p, fend); // MIME
             p = detail::skip_cstring(p, fend); // filename
 
-            // Description — check if "Serato Markers2"
+            // Description — the markers blob is identified by its description.
             const uint8_t* desc_start = p;
+            if (desc_start >= fend) { offset += frame_size; continue; }   // no description (R-05)
             p = detail::skip_cstring(p, fend);
-            const std::string description(reinterpret_cast<const char*>(desc_start),
-                                          static_cast<size_t>(p - 1 - desc_start));
+            // skip_cstring stops after the terminator, or at fend if there is none.
+            const size_t desc_len = (p > desc_start && p[-1] == 0)
+                                  ? static_cast<size_t>(p - 1 - desc_start)
+                                  : static_cast<size_t>(p - desc_start);
+            const std::string description(reinterpret_cast<const char*>(desc_start), desc_len);
 
-            if (description == "Serato Markers2" && p < fend)
+            if (description == detail::kGeobMarkersDescription && p < fend)
             {
                 // Remainder is base64-encoded binary
                 const juce::String b64_str(reinterpret_cast<const char*>(p),
@@ -239,30 +266,45 @@ inline std::vector<CuePoint> parse_serato_id3(const juce::File& audio_file)
                 juce::MemoryOutputStream mos;
                 if (!juce::Base64::convertFromBase64(mos, b64_str))
                 {
-                    juce::Logger::writeToLog("NativeCueReader: failed to base64-decode Serato Markers2");
+                    juce::Logger::writeToLog("NativeCueReader: failed to base64-decode the GEOB markers blob");
                     return {};
                 }
-                return detail::parse_serato_binary(mos.getMemoryBlock());
+                return detail::parse_dj_cue_markers(mos.getMemoryBlock());
             }
         }
 
         offset += frame_size;
     }
 
-    return {}; // no Serato Markers2 frame found
+    return {}; // no markers frame found
+}
+} // namespace detail
+
+/** Hot cues stored by DJ software in an ID3v2 GEOB frame. Never throws. */
+inline std::vector<CuePoint> parse_dj_cue_geob(const juce::File& audio_file)
+{
+    try { return detail::parse_dj_cue_geob_unchecked(audio_file); }
+    catch (const std::exception& e) {
+        juce::Logger::writeToLog(juce::String("NativeCueReader: ignoring malformed GEOB tag: ") + e.what());
+    }
+    catch (...) {
+        juce::Logger::writeToLog("NativeCueReader: ignoring malformed GEOB tag");
+    }
+    return {};
 }
 
 // ── load_cues_for_file ───────────────────────────────────────────────────────
 
-inline std::vector<CuePoint> load_cues_for_file(const juce::File& audio_file)
+namespace detail {
+inline std::vector<CuePoint> load_cues_for_file_unchecked(const juce::File& audio_file)
 {
-    std::vector<CuePoint> serato  = parse_serato_id3(audio_file);
+    std::vector<CuePoint> geob    = parse_dj_cue_geob(audio_file);
     std::vector<CuePoint> cuesheet = parse_cue_sheet(audio_file);
 
     // Merge
     std::vector<CuePoint> merged;
-    merged.reserve(serato.size() + cuesheet.size());
-    for (auto& cp : serato)   merged.push_back(std::move(cp));
+    merged.reserve(geob.size() + cuesheet.size());
+    for (auto& cp : geob)     merged.push_back(std::move(cp));
     for (auto& cp : cuesheet) merged.push_back(std::move(cp));
 
     if (merged.empty()) return {};
@@ -274,7 +316,7 @@ inline std::vector<CuePoint> load_cues_for_file(const juce::File& audio_file)
               });
 
     // Deduplicate: within ±0.1s window, keep non-auto over auto;
-    // between two non-auto, keep first (serato before cue_sheet per merge order)
+    // between two non-auto, keep first (GEOB cues before cue_sheet per merge order)
     std::vector<CuePoint> deduped;
     deduped.reserve(merged.size());
 
@@ -303,4 +345,16 @@ inline std::vector<CuePoint> load_cues_for_file(const juce::File& audio_file)
               });
 
     return deduped;
+}
+} // namespace detail
+
+/** All cues for a file (GEOB + .cue sheet), merged and deduplicated. Never throws. */
+inline std::vector<CuePoint> load_cues_for_file(const juce::File& audio_file)
+{
+    try { return detail::load_cues_for_file_unchecked(audio_file); }
+    catch (...) {
+        juce::Logger::writeToLog("NativeCueReader: ignoring unreadable cue metadata for "
+                                 + audio_file.getFullPathName());
+    }
+    return {};
 }

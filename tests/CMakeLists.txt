@@ -33,12 +33,20 @@ target_link_libraries(autoremix_tests PRIVATE
 
 target_compile_features(autoremix_tests PRIVATE cxx_std_20)
 
+# Wall-clock limits in tests are multiplied by this (sanitizers are slower).
+if(AUTOREMIX_SANITIZER STREQUAL "thread")
+  target_compile_definitions(autoremix_tests PRIVATE AUTOREMIX_TEST_TIME_SCALE=8)
+elseif(AUTOREMIX_SANITIZER STREQUAL "address")
+  target_compile_definitions(autoremix_tests PRIVATE AUTOREMIX_TEST_TIME_SCALE=3)
+endif()
+
 # Tests compare synthetic signals bit-exactly on purpose.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(autoremix_tests PRIVATE -Wno-float-equal)
 endif()
 
 target_compile_definitions(autoremix_tests PRIVATE
+  AUTOREMIX_PRESET_SOURCE_DIR="${CMAKE_SOURCE_DIR}/sidecar/server/presets"
   JUCE_STANDALONE_APPLICATION=1
   JUCE_USE_CURL=0
   JUCE_WEB_BROWSER=0

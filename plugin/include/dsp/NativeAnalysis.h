@@ -65,7 +65,7 @@ struct CuePoint {
     std::string name;               // "drop", "intro_end", "chorus", "A", etc.
     double      position_sec = 0.0;
     uint32_t    color_rgb    = 0xFF4A9EDB; // default: blue (ARGB)
-    std::string source;             // "auto" | "user" | "serato" | "cue_sheet"
+    std::string source;             // "auto" | "user" | "id3_geob" | "cue_sheet"
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -325,7 +325,8 @@ detect_bars(const juce::AudioBuffer<float>& audio, double sr,
 {
     auto beats = detect_beats(audio, sr);
     std::vector<double> bars;
-    for (size_t i = 0; i < beats.size(); i += (size_t) beats_per_bar)
+    const size_t step = (size_t) std::max(1, beats_per_bar);   // guard: 0 loops forever (R-06)
+    for (size_t i = 0; i < beats.size(); i += step)
         bars.push_back(beats[i]);
     return bars;
 }

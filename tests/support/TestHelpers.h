@@ -10,7 +10,14 @@
 #include <cstring>
 #include <memory>
 
+#ifndef AUTOREMIX_TEST_TIME_SCALE
+ #define AUTOREMIX_TEST_TIME_SCALE 1
+#endif
+
 namespace autoremix::test {
+
+/** Multiplier for wall-clock limits: sanitizer builds run several times slower. */
+inline constexpr int kTimeScale = AUTOREMIX_TEST_TIME_SCALE;
 
 /** True when a GUI can be created (Linux needs an X display). */
 inline bool has_display()

@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 #include <algorithm>
+#include <cmath>
 #include <array>
 #include <string>
 #include <string_view>
@@ -69,54 +70,62 @@ namespace detail {
 template <typename T>
 inline T clamped(T v, T lo, T hi) { return std::min(hi, std::max(lo, v)); }
 
-// Every OpParams field, keyed by its JSON name. New ops only need a row
-// here — forgetting one no longer silently drops the param at load time.
+// Every OpParams field, keyed by its JSON name, with its accepted range.
+// New ops only need a row here. Loading clamps every value into [lo, hi] and
+// replaces non-finite values with the default (REVIEW R-06). Ranges follow
+// sidecar/server/presets/schema.json and the op implementations.
+template <typename T>
+struct OpParamRow {
+    const char*        key;
+    T ops::OpParams::* member;
+    double             lo;
+    double             hi;
+};
+
 struct OpParamKeys {
-    static constexpr std::array<std::pair<const char*, double ops::OpParams::*>, 29>
-    doubles() {
+    static constexpr std::array<OpParamRow<double>, 29> doubles() {
         using P = ops::OpParams;
         return {{
-            { "factor",            &P::factor            },
-            { "semitones",         &P::semitones         },
-            { "mix",               &P::mix               },
-            { "room_size",         &P::room_size         },
-            { "interval_ms",       &P::interval_ms       },
-            { "db",                &P::db                },
-            { "cutoff_hz",         &P::cutoff_hz         },
-            { "division",          &P::division          },
-            { "min_gap_ms",        &P::min_gap_ms        },
-            { "threshold",         &P::threshold         },
-            { "threshold_db",      &P::threshold_db      },
-            { "hold_ms",           &P::hold_ms           },
-            { "drive",             &P::drive             },
-            { "delay_ms",          &P::delay_ms          },
-            { "feedback",          &P::feedback          },
-            { "stereo_width",      &P::stereo_width      },
-            { "wow_depth",         &P::wow_depth         },
-            { "flutter_rate",      &P::flutter_rate      },
-            { "delay_division",    &P::delay_division    },
-            { "sweep_start_hz",    &P::sweep_start_hz    },
-            { "sweep_end_hz",      &P::sweep_end_hz      },
-            { "crackle_amount",    &P::crackle_amount    },
-            { "wow_rate",          &P::wow_rate          },
-            { "duck_depth_db",     &P::duck_depth_db     },
-            { "duck_attack_ms",    &P::duck_attack_ms    },
-            { "duck_release_ms",   &P::duck_release_ms   },
-            { "duck_rate_hz",      &P::duck_rate_hz      },
-            { "gate_threshold_db", &P::gate_threshold_db },
-            { "gate_hold_ms",      &P::gate_hold_ms      },
+            { "factor",            &P::factor,            0.25,    4.0     },
+            { "semitones",         &P::semitones,        -24.0,    24.0    },
+            { "mix",               &P::mix,               0.0,     1.0     },
+            { "room_size",         &P::room_size,         0.0,     1.0     },
+            { "interval_ms",       &P::interval_ms,       0.0,     10000.0 },
+            { "db",                &P::db,               -24.0,    24.0    },
+            { "cutoff_hz",         &P::cutoff_hz,         0.0,     20000.0 },
+            { "division",          &P::division,          0.0625,  16.0    },
+            { "min_gap_ms",        &P::min_gap_ms,        1.0,     5000.0  },
+            { "threshold",         &P::threshold,         0.0,     1.0     },
+            { "threshold_db",      &P::threshold_db,     -120.0,   0.0     },
+            { "hold_ms",           &P::hold_ms,           0.0,     5000.0  },
+            { "drive",             &P::drive,             0.0,     1.0     },
+            { "delay_ms",          &P::delay_ms,          1.0,     4000.0  },
+            { "feedback",          &P::feedback,          0.0,     0.95    },
+            { "stereo_width",      &P::stereo_width,      0.0,     1.0     },
+            { "wow_depth",         &P::wow_depth,         0.0,     0.05    },
+            { "flutter_rate",      &P::flutter_rate,      0.0,     50.0    },
+            { "delay_division",    &P::delay_division,    0.03125, 4.0     },
+            { "sweep_start_hz",    &P::sweep_start_hz,    20.0,    20000.0 },
+            { "sweep_end_hz",      &P::sweep_end_hz,      20.0,    20000.0 },
+            { "crackle_amount",    &P::crackle_amount,    0.0,     1.0     },
+            { "wow_rate",          &P::wow_rate,          0.0,     20.0    },
+            { "duck_depth_db",     &P::duck_depth_db,    -60.0,    0.0     },
+            { "duck_attack_ms",    &P::duck_attack_ms,    0.1,     1000.0  },
+            { "duck_release_ms",   &P::duck_release_ms,   0.1,     5000.0  },
+            { "duck_rate_hz",      &P::duck_rate_hz,      0.01,    50.0    },
+            { "gate_threshold_db", &P::gate_threshold_db,-120.0,   0.0     },
+            { "gate_hold_ms",      &P::gate_hold_ms,      0.0,     5000.0  },
         }};
     }
-    static constexpr std::array<std::pair<const char*, int ops::OpParams::*>, 6>
-    ints() {
+    static constexpr std::array<OpParamRow<int>, 6> ints() {
         using P = ops::OpParams;
         return {{
-            { "offset_beats",  &P::offset_beats  },
-            { "beats_per_bar", &P::beats_per_bar },
-            { "n_segments",    &P::n_segments    },
-            { "repeat",        &P::repeat        },
-            { "bit_depth",     &P::bit_depth     },
-            { "sweep_bars",    &P::sweep_bars    },
+            { "offset_beats",  &P::offset_beats,  -64.0, 64.0  },
+            { "beats_per_bar", &P::beats_per_bar,   1.0, 16.0  },
+            { "n_segments",    &P::n_segments,      1.0, 128.0 },
+            { "repeat",        &P::repeat,          1.0, 64.0  },
+            { "bit_depth",     &P::bit_depth,       2.0, 24.0  },
+            { "sweep_bars",    &P::sweep_bars,      1.0, 64.0  },
         }};
     }
     static constexpr std::array<std::pair<const char*, std::string ops::OpParams::*>, 2>
@@ -129,24 +138,41 @@ struct OpParamKeys {
     }
 };
 
-inline void parse_op_params(const nlohmann::json& q, ops::OpParams& p)
+/** Accepted range of a numeric op parameter, or {0,0,false} if unknown. */
+struct OpParamRange { double lo; double hi; bool known; };
+inline OpParamRange op_param_range(std::string_view key)
 {
-    auto read = [&](const auto& table, auto caster) {
-        for (const auto& [key, member] : table)
-            if (q.contains(key)) caster(q[key], p.*member);
+    for (const auto& r : OpParamKeys::doubles()) if (key == r.key) return { r.lo, r.hi, true };
+    for (const auto& r : OpParamKeys::ints())    if (key == r.key) return { r.lo, r.hi, true };
+    return { 0.0, 0.0, false };
+}
+
+inline void parse_op_params(const nlohmann::json& q, ops::OpParams& p,
+                            const std::string& preset_id = {}, const std::string& op = {})
+{
+    auto note = [&](const char* key, const char* what) {
+        juce::Logger::writeToLog(juce::String("[preset] ") + preset_id + " / " + op + "."
+                                 + key + ": " + what);
     };
-    auto asDouble = [](const nlohmann::json& v, double& dst) {
-        if (v.is_number()) dst = v.get<double>();
+    // Read as double first so huge ints can't overflow, then clamp.
+    auto read_number = [&](const char* key, double lo, double hi, double& out) -> bool {
+        if (!q.contains(key) || !q[key].is_number()) return false;
+        const double v = q[key].get<double>();
+        if (!std::isfinite(v)) { note(key, "non-finite value ignored"); return false; }
+        out = std::clamp(v, lo, hi);
+        if (out != v) note(key, "value clamped to its range");
+        return true;
     };
-    auto asInt = [](const nlohmann::json& v, int& dst) {
-        if (v.is_number()) dst = v.get<int>();
-    };
-    auto asString = [](const nlohmann::json& v, std::string& dst) {
-        if (v.is_string()) dst = v.get<std::string>();
-    };
-    read(OpParamKeys::doubles(), asDouble);
-    read(OpParamKeys::ints(),    asInt);
-    read(OpParamKeys::strings(), asString);
+    for (const auto& r : OpParamKeys::doubles()) {
+        double v = 0.0;
+        if (read_number(r.key, r.lo, r.hi, v)) p.*(r.member) = v;
+    }
+    for (const auto& r : OpParamKeys::ints()) {
+        double v = 0.0;
+        if (read_number(r.key, r.lo, r.hi, v)) p.*(r.member) = (int) std::lround(v);
+    }
+    for (const auto& [key, member] : OpParamKeys::strings())
+        if (q.contains(key) && q[key].is_string()) p.*member = q[key].get<std::string>();
 }
 
 } // namespace detail
@@ -209,7 +235,7 @@ parse_remix_preset(const nlohmann::json& j)
                         step.stems.push_back(n.get<std::string>());
             }
             if (eff.contains("params") && eff["params"].is_object())
-                detail::parse_op_params(eff["params"], step.params);
+                detail::parse_op_params(eff["params"], step.params, out.id, step.op);
             out.effects.push_back(std::move(step));
         }
     }
@@ -223,9 +249,10 @@ parse_remix_preset(const nlohmann::json& j)
             for (const auto& slot_j : s["arrangement"]) {
                 ArrangementSlot slot;
                 slot.section_type  = slot_j.value("section",     std::string{});
-                slot.length_bars   = slot_j.value("length_bars", 0);
+                // Read as double then clamp, so huge values can't overflow (R-06).
+                slot.length_bars   = (int) detail::clamped(slot_j.value("length_bars", 0.0), 0.0, 256.0);
                 slot.source_anchor = slot_j.value("anchor",      std::string{"first"});
-                slot.loop_count    = slot_j.value("loop",        1);
+                slot.loop_count    = (int) detail::clamped(slot_j.value("loop",        1.0), 1.0, 16.0);
                 if (slot_j.contains("effects") && slot_j["effects"].is_array())
                     for (const auto& e : slot_j["effects"])
                         slot.effects.push_back(e.get<std::string>());

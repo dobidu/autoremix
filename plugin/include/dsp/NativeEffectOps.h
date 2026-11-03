@@ -11,6 +11,7 @@
 // All return a new juce::AudioBuffer<float>.
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 #include <random>
 #include <string>
@@ -95,14 +96,18 @@ chop_at_boundaries(const juce::AudioBuffer<float>& in,
     const int rep = std::max(1, repeat);
 
     // Build chunk list (each chunk = pair of indices repeated `rep` times)
+    // The result is trimmed to N below, so stop once N samples are covered:
+    // same output, and a huge `repeat` can no longer overflow `total` (R-06).
     std::vector<std::pair<int,int>> chunks;
-    chunks.reserve(boundaries.size() * (size_t) rep);
-    for (size_t i = 0; i + 1 < boundaries.size(); ++i) {
+    int64_t covered = 0;
+    for (size_t i = 0; i + 1 < boundaries.size() && covered < N; ++i) {
         const int s = boundaries[i];
         const int e = boundaries[i + 1];
         if (e <= s) continue;
-        for (int k = 0; k < rep; ++k)
+        for (int k = 0; k < rep && covered < N; ++k) {
             chunks.emplace_back(s, e);
+            covered += (e - s);
+        }
     }
     if (chunks.empty()) {
         juce::AudioBuffer<float> out; out.makeCopyOf(in); return out;
@@ -145,7 +150,8 @@ time_stretch(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
     TimePitchStretcher s((int) sr, in.getNumChannels());
     // RubberBand convention: ratio>1 = longer. v3 librosa convention:
     // rate<1 = slower (= longer). Invert to match v3 semantics.
-    s.setTimeRatio(1.0 / p.factor);
+    // Guard: factor 0 would be an infinite ratio (R-06).
+    s.setTimeRatio(1.0 / std::clamp(p.factor, 0.25, 4.0));
     return s.process(in);
 }
 
@@ -694,7 +700,7 @@ sidechain(const juce::AudioBuffer<float>& in, double sr, const OpParams& p)
     const int ch = out.getNumChannels();
 
     const double rate_hz = std::max(0.1, p.duck_rate_hz);
-    const int period = (int)(sr / rate_hz);
+    const int period = std::max(1, (int)(sr / rate_hz));   // guard: i % 0 (R-06)
     const float duck_gain = juce::Decibels::decibelsToGain((float)p.duck_depth_db);
     const int att_samp = std::max(1, (int)(p.duck_attack_ms  / 1000.0 * sr));
     const int rel_samp = std::max(1, (int)(p.duck_release_ms / 1000.0 * sr));

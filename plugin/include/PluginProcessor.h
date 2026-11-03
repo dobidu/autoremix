@@ -2,6 +2,9 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "jobs/JobRunner.h"
+#include "audio/ClipPlayer.h"
+#include <array>
+#include <functional>
 
 class AutoRemixAudioProcessorEditor;
 
@@ -65,17 +68,23 @@ public:
 private:
     juce::AudioFormatManager format_manager_;
 
-    std::unique_ptr<juce::AudioFormatReaderSource> preview_reader_;
-    juce::AudioTransportSource                     preview_transport_;
+    // ── Preview / stem playback (plan 34.5-03) ────────────────────────────────
+    // Lock-free engine for the audio thread; clips decoded on the job runner;
+    // lifetimes owned on the message thread. Voices 0..3 = stems, 4 = preview.
+    static constexpr int kPreviewVoice = 4;
+    void requestClip(int voice, const juce::File& f, bool play_when_ready);
+    double voiceRatio(int voice) const;
 
-    struct StemPlayer {
-        std::unique_ptr<juce::AudioFormatReaderSource> reader;
-        juce::AudioTransportSource                     transport;
-        StemPlayer() = default;
-        JUCE_DECLARE_NON_COPYABLE(StemPlayer)
+    struct GcTimer : juce::Timer {
+        std::function<void()> fn;
+        void timerCallback() override { if (fn) fn(); }
     };
-    StemPlayer             stem_players_[4];
-    juce::MixerAudioSource mixer_;
+
+    autoremix::audio::PlayerEngine engine_;
+    autoremix::audio::ClipStore    clips_ { engine_ };
+    std::array<uint64_t, autoremix::audio::PlayerEngine::kVoices> load_gen_ {};
+    GcTimer                        gc_timer_;
+    autoremix::jobs::Lifetime      alive_ = autoremix::jobs::make_lifetime();
 
     // Declared last: destroyed first, before anything a job may reference.
     autoremix::jobs::JobRunner jobs_ { 2 };

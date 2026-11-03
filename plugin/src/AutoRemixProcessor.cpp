@@ -30,6 +30,8 @@ AutoRemixAudioProcessor::AutoRemixAudioProcessor()
     // Phase 27-01: Python sidecar lifecycle removed. Native runtime
     // needs no startup work.
     format_manager_.registerBasicFormats();
+    gc_timer_.fn = [this] { clips_.collect(); };
+    gc_timer_.startTimer(250);
 }
 
 AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
@@ -37,100 +39,98 @@ AutoRemixAudioProcessor::~AutoRemixAudioProcessor()
     // Stop background jobs first: they use format_manager_ (R-01..R-04).
     // Blocks until every job has returned; never proceeds while one runs.
     jobs_.shutdown();
-    mixer_.removeAllInputs();
-    for (auto& sp : stem_players_) {
-        sp.transport.stop();
-        sp.transport.setSource(nullptr);
-    }
-    preview_transport_.stop();
-    preview_transport_.setSource(nullptr);
+    gc_timer_.stopTimer();
+    engine_.release();
 }
 
 //==============================================================================
+// Playback (plan 34.5-03). Everything here runs on the message thread and
+// only touches the engine through atomics; decoding runs on the job runner.
+
+void AutoRemixAudioProcessor::requestClip(int voice, const juce::File& f, bool play_when_ready)
+{
+    auto& v = engine_.voice(voice);
+    const uint64_t gen = ++load_gen_[(size_t) voice];   // a newer request wins
+    clips_.assign(voice, nullptr);                        // never play the previous file meanwhile
+    if (play_when_ready) v.play_from(0); else v.stop();
+
+    const auto key = autoremix::audio::ClipStore::key_for(f);
+    if (auto hit = clips_.cached(key)) { clips_.assign(voice, std::move(hit)); return; }
+
+    using ClipPtr = std::shared_ptr<const autoremix::audio::Clip>;
+    jobs_.submit<ClipPtr>(alive_,
+        [f](const autoremix::jobs::CancelToken&) { return autoremix::audio::decode_clip(f); },
+        [this, voice, gen, key](ClipPtr clip, bool cancelled) {
+            if (cancelled || clip == nullptr || gen != load_gen_[(size_t) voice]) return;
+            clips_.remember(key, clip);
+            clips_.assign(voice, std::move(clip));
+        });
+}
+
+double AutoRemixAudioProcessor::voiceRatio(int voice) const
+{
+    const auto* c = clips_.live(voice);
+    const int len = c ? c->audio.getNumSamples() : 0;
+    return len > 0 ? std::clamp(engine_.voice(voice).position() / (double) len, 0.0, 1.0) : 0.0;
+}
+
 void AutoRemixAudioProcessor::loadPreviewFile(const juce::File& f)
 {
-    preview_transport_.stop();
-    preview_transport_.setSource(nullptr);
-    preview_reader_.reset();
-    if (auto* reader = format_manager_.createReaderFor(f)) {
-        preview_reader_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-        preview_transport_.setSource(preview_reader_.get(), 0, nullptr, reader->sampleRate);
-    }
+    requestClip(kPreviewVoice, f, false);
 }
 
 void AutoRemixAudioProcessor::togglePreview()
 {
-    if (preview_transport_.isPlaying())
-        preview_transport_.stop();
-    else {
-        preview_transport_.setPosition(0.0);
-        preview_transport_.start();
-    }
+    auto& v = engine_.voice(kPreviewVoice);
+    if (v.wants_play()) v.stop();
+    else                v.play_from(0);
 }
 
-void AutoRemixAudioProcessor::stopPreview()     { preview_transport_.stop(); }
-bool AutoRemixAudioProcessor::isPreviewPlaying() const { return preview_transport_.isPlaying(); }
+void AutoRemixAudioProcessor::stopPreview()            { engine_.voice(kPreviewVoice).stop(); }
+bool AutoRemixAudioProcessor::isPreviewPlaying() const { return engine_.voice(kPreviewVoice).wants_play(); }
 
 void AutoRemixAudioProcessor::playStem(int idx, const juce::File& f)
 {
     if (idx < 0 || idx >= 4) return;
-    auto& sp = stem_players_[idx];
-    sp.transport.stop();
-    sp.transport.setSource(nullptr);
-    sp.reader.reset();
-    if (auto* reader = format_manager_.createReaderFor(f)) {
-        sp.reader = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-        sp.transport.setSource(sp.reader.get(), 0, nullptr, reader->sampleRate);
-        sp.transport.setPosition(0.0);
-        sp.transport.start();
-    }
+    requestClip(idx, f, true);
 }
 
 void AutoRemixAudioProcessor::stopStem(int idx)
 {
     if (idx < 0 || idx >= 4) return;
-    stem_players_[idx].transport.stop();
+    engine_.voice(idx).stop();
 }
 
 bool AutoRemixAudioProcessor::isStemPlaying(int idx) const
 {
     if (idx < 0 || idx >= 4) return false;
-    return stem_players_[idx].transport.isPlaying();
+    return engine_.voice(idx).wants_play();
 }
 
 void AutoRemixAudioProcessor::stopAllStems()
 {
-    for (auto& sp : stem_players_)
-        sp.transport.stop();
+    for (int i = 0; i < 4; ++i) engine_.voice(i).stop();
 }
 
-double AutoRemixAudioProcessor::getPreviewPosition() const
-{
-    double len = preview_transport_.getLengthInSeconds();
-    return (len > 0.0) ? preview_transport_.getCurrentPosition() / len : 0.0;
-}
+double AutoRemixAudioProcessor::getPreviewPosition() const { return voiceRatio(kPreviewVoice); }
 
 double AutoRemixAudioProcessor::getStemPosition(int idx) const
 {
     if (idx < 0 || idx >= 4) return 0.0;
-    double len = stem_players_[idx].transport.getLengthInSeconds();
-    return (len > 0.0) ? stem_players_[idx].transport.getCurrentPosition() / len : 0.0;
+    return voiceRatio(idx);
 }
 
 void AutoRemixAudioProcessor::seekStem(int idx, double ratio)
 {
     if (idx < 0 || idx >= 4) return;
-    auto& t = stem_players_[(size_t)idx].transport;
-    const double len = t.getLengthInSeconds();
-    if (len > 0.0)
-        t.setPosition(std::clamp(ratio, 0.0, 1.0) * len);
+    if (const auto* c = clips_.live(idx))
+        engine_.voice(idx).seek((int64_t) (std::clamp(ratio, 0.0, 1.0) * c->audio.getNumSamples()));
 }
 
 void AutoRemixAudioProcessor::seekPreview(double ratio)
 {
-    const double len = preview_transport_.getLengthInSeconds();
-    if (len > 0.0)
-        preview_transport_.setPosition(std::clamp(ratio, 0.0, 1.0) * len);
+    if (const auto* c = clips_.live(kPreviewVoice))
+        engine_.voice(kPreviewVoice).seek((int64_t) (std::clamp(ratio, 0.0, 1.0) * c->audio.getNumSamples()));
 }
 
 //==============================================================================
@@ -173,29 +173,13 @@ void   AutoRemixAudioProcessor::changeProgramName(int, const juce::String&) {}
 //==============================================================================
 void AutoRemixAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    for (auto& sp : stem_players_)
-        sp.transport.prepareToPlay(samplesPerBlock, sampleRate);
-    preview_transport_.prepareToPlay(samplesPerBlock, sampleRate);
-
-    mixer_.removeAllInputs();
-    for (auto& sp : stem_players_)
-        mixer_.addInputSource(&sp.transport, false);
-    mixer_.addInputSource(&preview_transport_, false);
-    mixer_.prepareToPlay(samplesPerBlock, sampleRate);
+    engine_.prepare(sampleRate, samplesPerBlock);
 }
 
 void AutoRemixAudioProcessor::releaseResources()
 {
-    mixer_.removeAllInputs();
-    for (auto& sp : stem_players_) {
-        sp.transport.stop();
-        sp.transport.setSource(nullptr);
-        sp.reader.reset();
-    }
-    preview_transport_.stop();
-    preview_transport_.setSource(nullptr);
-    preview_reader_.reset();
-    mixer_.releaseResources();
+    // Loaded clips stay loaded (R-18); the engine just stops being "running".
+    engine_.release();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -219,17 +203,19 @@ bool AutoRemixAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts)
 
 void AutoRemixAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
+    // Real-time safe: no allocation, locks, file I/O or logging (R-17).
     juce::ScopedNoDenormals noDenormals;
-    buffer.clear();
+    const int n    = buffer.getNumSamples();
+    const int ins  = getTotalNumInputChannels();
+    const int outs = getTotalNumOutputChannels();
 
-    bool anyPlaying = preview_transport_.isPlaying();
-    for (auto& sp : stem_players_)
-        anyPlaying = anyPlaying || sp.transport.isPlaying();
+    // Pass the input through (R-07, decision D4); clear only output channels
+    // that have no matching input.
+    for (int ch = ins; ch < outs; ++ch)
+        buffer.clear(ch, 0, n);
 
-    if (anyPlaying) {
-        juce::AudioSourceChannelInfo info(buffer);
-        mixer_.getNextAudioBlock(info);
-    }
+    // Preview / stems are added on top.
+    engine_.render(buffer, outs, n);
 }
 
 //==============================================================================

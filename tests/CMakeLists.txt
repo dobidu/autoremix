@@ -7,6 +7,7 @@ add_executable(autoremix_tests
   test_cue_reader.cpp
   test_preset_hardening.cpp
   test_job_runner.cpp
+  test_clip_player.cpp
 )
 
 target_include_directories(autoremix_tests PRIVATE

@@ -74,7 +74,7 @@ struct Rig {
 
 } // namespace
 
-TEST_CASE("R-07: input passes through when nothing is playing", "[editor][audio][R-07][!shouldfail]")
+TEST_CASE("R-07: input passes through when nothing is playing", "[editor][audio][R-07]")
 {
     REQUIRE_DISPLAY();
     Rig rig;
@@ -85,7 +85,7 @@ TEST_CASE("R-07: input passes through when nothing is playing", "[editor][audio]
     REQUIRE(buffer_hash(buf) == buffer_hash(in));
 }
 
-TEST_CASE("R-16: stopping a stem is immediate and click-free", "[editor][audio][R-16][!shouldfail]")
+TEST_CASE("R-16: stopping a stem is immediate and click-free", "[editor][audio][R-16]")
 {
     REQUIRE_DISPLAY();
     Rig rig;
@@ -145,18 +145,17 @@ TEST_CASE("R-17: processBlock does not allocate while stems play", "[editor][aud
     CHECK(rt::allocations() == 0);
 }
 
-TEST_CASE("R-17: processBlock takes no locks while stems play", "[editor][audio][R-17][!shouldfail]")
+TEST_CASE("R-17: processBlock takes no locks while stems play", "[editor][audio][R-17]")
 {
     REQUIRE_DISPLAY();
-    // Lock counting interposes pthread_mutex_lock: Linux non-sanitizer builds
-    // only. Elsewhere this test reports the expected failure without checking.
-    if (!rt::lock_counting_available()) FAIL("lock counting unavailable in this build");
+    // Lock counting interposes pthread_mutex_lock: Linux non-sanitizer builds only.
+    if (!rt::lock_counting_available()) SKIP("lock counting unavailable in this build");
     run_rt_probe();
     CAPTURE(rt::locks());
     CHECK(rt::locks() == 0);
 }
 
-TEST_CASE("R-37: a mono output receives both channels of a stereo stem", "[editor][audio][R-37][!shouldfail]")
+TEST_CASE("R-37: a mono output receives both channels of a stereo stem", "[editor][audio][R-37]")
 {
     REQUIRE_DISPLAY();
     Rig rig(1);

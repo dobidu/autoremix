@@ -32,7 +32,9 @@ jobs:
         run: cmake --build build --parallel
 
   test-linux:
-    runs-on: ubuntu-22.04
+    # GCC 13 (24.04): GCC 11's libtsan reports a false "double lock of a
+    # mutex" inside juce::Thread::startThread on every thread start.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
